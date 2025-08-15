@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>OOTID - Session [NUMBER]</title>
+    <link rel="stylesheet" href="../../styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <h2>Navigation</h2>
+            <ul>
+                <li><a href="../../index.html">Home</a></li>
+                <li><a href="../../people/people.html">People</a></li>
+                <li><a href="../../places/places.html">Places</a></li>
+                <li><a href="../sessions.html">Sessions</a></li>
+            </ul>
+        </aside>
+        <main class="content">
+            <h1>Sessions [NUMBER] - [SESSION TITLE]</h1>
+
+            <h2>Player Characters Involved</h2>
+            <ul>
+                <li>[CHARACTER 1]</li>
+                <li>[CHARACTER 2]</li>
+                <li>[CHARACTER 3]</li>
+                <li>[CHARACTER 4]</li>
+            </ul>
+
+            <h2>Time In Game</h2>
+            <p></p>
+
+            <h2>DM Summary</h2>
+            <p></p>
+
+            <h2>[CHARACTER 1]'s Notes</h2>
+            <p></p>
+
+            <h2>[CHARACTER 2]'s Notes</h2>
+            <p></p>
+
+            <h2>[CHARACTER 3]'s Notes</h2>
+            <p></p>
+
+            <h2>[CHARACTER 4]'s Notes</h2>
+            <p></p>
+        </main>
+    </div>
+</body>
+
+</html>
