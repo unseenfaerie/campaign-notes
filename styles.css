@@ -96,3 +96,7 @@ tr:nth-child(even) td {
 tr:nth-child(odd) td {
     background-color: #fff;
 }
+
+.statblock {
+    width: 33%;
+}
