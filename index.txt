@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>The World</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div id="sidebar-container"></div>
+        <main class="content">
+            <h1>The World</h1>
+            <h2>[Characters]</h2>
+            <h2>[Places]</h2>
+            <h2>[Sessions]</h2>
+            <h1>Project Ethos and Goals</h1>
+            <h2>Ethos</h2>
+            <p>This project is intended to house the most up-to-date information regarding my campaign world. I want to
+                focus on hosting as much content as possible, not making the project more complicated than it must be to
+                hold campaign materials.</p>
+            <h2>Goals</h2>
+            <h3>To-Do</h3>
+            <ul>
+                <li>Create workable template for new towns</li>
+                <li>Create workable template for NPCs</li>
+                <li>Create workable template for Player Characters</li>
+                <li>Clickable map!!!</li>
+            </ul>
+            <h3>Done</h3>
+            <ul>
+                <li>Use javascript to handle the nav bar with absolute paths</li>
+                <li>Figure out where deities go</li>
+                <li>Figure out where organizations go</li>
+            </ul>
+        </main>
+    </div>
+    <script src="/links.js"></script>
+    <script src="/navbar.js"></script>
+</body>
+
+</html>
