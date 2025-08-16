@@ -7,26 +7,70 @@
                 "Alann Barnett",
                 "Alann"
             ],
-            "href": "/characters/player-characters/alann-barnett.html",
-            "class": "Cleric",
-            "level": 3,
-            "alignment": "Lawful Good"
+            "href": "/characters/player-characters/alann-barnett.html"
         },
         {
             "id": "releas-neb",
             "name": "Releas Neb",
             "aliases": [
                 "Releas Neb",
-                "Releas",
-                "Rel"
+                "Rel",
+                "Releas Scarnewman"
             ],
-            "href": "/characters/player-characters/releas-neb.html",
-            "class": "Magic User",
-            "level": 3,
-            "alignment": "Neutral Good"
+            "href": "/characters/player-characters/releas-neb.html"
+        },
+        {
+            "id": "polly",
+            "name": "Polly",
+            "aliases": [
+                "Polly"
+            ],
+            "href": "/characters/player-characters/polly.html"
+        },
+        {
+            "id": "durchir",
+            "name": "Durchir of the Angry Orchard",
+            "aliases": [
+                "Durchir of the Angry Orchard",
+                "Durchir"
+            ],
+            "href": "/characters/player-characters/durchir.html"
+        },
+        {
+            "id": "bert-verinwort",
+            "name": "Bert Verinwort",
+            "aliases": [
+                "Bert Verinwort",
+                "Bert"
+            ],
+            "href": "/characters/non-player-characters/bert-verinwort.html"
+        },
+        {
+            "id": "gereg",
+            "name": "Gereg",
+            "aliases": [
+                "Gereg"
+            ],
+            "href": "/characters/non-player-characters/gereg.html"
+        },
+        {
+            "id": "leo",
+            "name": "Leo",
+            "aliases": [
+                "Leo"
+            ],
+            "href": "/characters/non-player-characters/leo.html"
         }
     ],
     "places": [
+        {
+            "id": "anash",
+            "name": "Anash",
+            "aliases": [
+                "Anash"
+            ],
+            "href": "/places/othlorin/itholis/weinmere/anash.html"
+        },
         {
             "id": "wavethorn",
             "name": "Wavethorn",
@@ -34,6 +78,14 @@
                 "Wavethorn"
             ],
             "href": "/places/othlorin/wavethorn/wavethorn.html"
+        },
+        {
+            "id": "niba",
+            "name": "Niba",
+            "aliases": [
+                "Niba"
+            ],
+            "href": "/places/othlorin/niba/niba.html"
         }
     ]
 }
