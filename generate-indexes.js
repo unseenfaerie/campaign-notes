@@ -39,16 +39,7 @@ function listDirRecursiveHeader(dir, baseDir = dir, depth = 2) {
         .filter(item => !SKIP_DIRS.has(item.name) && !item.name.startsWith('.'));
 
     let html = '';
-    for (const item of items) {
-        if (item.isDirectory()) {
-            // Use depth to determine header level (max h6)
-            const headerLevel = Math.min(depth, 6);
-            const dirDisplay = getDisplayName(item.name);
-            const relPath = path.relative(baseDir, path.join(dir, item.name, `${item.name}.html`)).replace(/\\/g, '/');
-            html += `<h${headerLevel}><a href="./${relPath}">${dirDisplay}</a></h${headerLevel}>\n`;
-            html += listDirRecursiveHeader(path.join(dir, item.name), baseDir, depth + 1);
-        }
-    }
+
     // List files in this directory
     const files = items.filter(item =>
         item.isFile() &&
@@ -64,6 +55,18 @@ function listDirRecursiveHeader(dir, baseDir = dir, depth = 2) {
         }
         html += '</ul>\n';
     }
+
+    for (const item of items) {
+        if (item.isDirectory()) {
+            // Use depth to determine header level (max h6)
+            const headerLevel = Math.min(depth, 6);
+            const dirDisplay = getDisplayName(item.name);
+            const relPath = path.relative(baseDir, path.join(dir, item.name, `${item.name}.html`)).replace(/\\/g, '/');
+            html += `<h${headerLevel}><a href="./${relPath}">${dirDisplay}</a></h${headerLevel}>\n`;
+            html += listDirRecursiveHeader(path.join(dir, item.name), baseDir, depth + 1);
+        }
+    }
+
     return html;
 }
 
