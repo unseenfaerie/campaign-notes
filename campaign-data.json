@@ -7,6 +7,14 @@
                 "Alann Barnett",
                 "Alann"
             ],
+            "statblock": {
+                "strength": 13,
+                "dexterity": 8,
+                "constitution": 11,
+                "intelligence": 10,
+                "wisdom": 14,
+                "charisma": 11
+            },
             "href": "/characters/player-characters/alann-barnett.html"
         },
         {
@@ -18,15 +26,33 @@
                 "Releas Scarnewman",
                 "Releas"
             ],
+            "statblock": {
+                "strength": 13,
+                "dexterity": 8,
+                "constitution": 11,
+                "intelligence": 18,
+                "wisdom": 14,
+                "charisma": 11
+            },
             "href": "/characters/player-characters/releas-neb.html"
         },
         {
-            "id": "polly",
-            "name": "Polly",
+            "id": "appolonia-palleday",
+            "name": "Appolonia Palleday",
             "aliases": [
+                "Appolonia Palleday",
+                "Appolonia",
                 "Polly"
             ],
-            "href": "/characters/player-characters/polly.html"
+            "statblock": {
+                "strength": 13,
+                "dexterity": 8,
+                "constitution": 11,
+                "intelligence": 10,
+                "wisdom": 14,
+                "charisma": 11
+            },
+            "href": "/characters/player-characters/appolonia-palleday.html"
         },
         {
             "id": "durchir",
@@ -35,6 +61,14 @@
                 "Durchir of the Angry Orchard",
                 "Durchir"
             ],
+            "statblock": {
+                "strength": 13,
+                "dexterity": 8,
+                "constitution": 11,
+                "intelligence": 10,
+                "wisdom": 14,
+                "charisma": 11
+            },
             "href": "/characters/player-characters/durchir.html"
         },
         {
@@ -43,6 +77,14 @@
             "aliases": [
                 "Cormac"
             ],
+            "statblock": {
+                "strength": 9,
+                "dexterity": 16,
+                "constitution": 7,
+                "intelligence": 15,
+                "wisdom": 14,
+                "charisma": 7
+            },
             "href": "/characters/player-characters/cormac.html"
         }
     ],
