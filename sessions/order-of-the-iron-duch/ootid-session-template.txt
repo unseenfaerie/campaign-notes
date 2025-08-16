@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>OOTID - Session [NUMBER]</title>
+    <title>OOTID - Session X</title>
     <link rel="stylesheet" href="../../styles.css">
 </head>
 
@@ -11,37 +11,37 @@
     <div class="container">
         <div id="sidebar-container"></div>
         <main class="content">
-            <h1>Sessions [NUMBER] - [SESSION TITLE]</h1>
-
+            <h1>Session X - [Session Title]</h1>
             <h2>Player Characters Involved</h2>
             <ul>
-                <li>[CHARACTER 1]</li>
-                <li>[CHARACTER 2]</li>
-                <li>[CHARACTER 3]</li>
-                <li>[CHARACTER 4]</li>
+                <li>[Character 1]</li>
+                <li>[Character 2]</li>
+                <li>[Character 3]</li>
+                <li>[Character 4]</li>
             </ul>
-
             <h2>Time In Game</h2>
-            <p></p>
-
+            <p>[Date or time period]</p>
             <h2>DM Summary</h2>
-            <p></p>
+            <p>[Brief summary of the session’s events, major plot points, and outcomes.]</p>
 
-            <h2>[CHARACTER 1]'s Notes</h2>
-            <p></p>
+            <h2>[Character 1]'s Notes</h2>
+            <p>[In-character notes for Character 1]</p>
 
-            <h2>[CHARACTER 2]'s Notes</h2>
-            <p></p>
+            <h2>[Character 2]'s Notes</h2>
+            <p>[In-character notes for Character 2]</p>
 
-            <h2>[CHARACTER 3]'s Notes</h2>
-            <p></p>
+            <h2>[Character 3]'s Notes</h2>
+            <p>[In-character notes for Character 3]</p>
 
-            <h2>[CHARACTER 4]'s Notes</h2>
-            <p></p>
+            <h2>[Character 4]'s Notes</h2>
+            <p>[In-character notes for Character 4]</p>
+
         </main>
     </div>
+    <script src="/load-campaign-data.js"></script>
     <script src="/links.js"></script>
     <script src="/navbar.js"></script>
+    <script src="/breadcrumbs.js"></script>
 </body>
 
 </html>
