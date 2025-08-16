@@ -7,7 +7,7 @@
 
     // Build alias-to-href map
     const aliasToHref = {};
-    for (const group of ['player-characters', 'items', 'places']) {
+    for (const group of ['playerCharacters', 'nonPlayerCharacters', 'items', 'places']) {
         (window.CAMPAIGN[group] || []).forEach(item => {
             (item.aliases || []).forEach(alias => {
                 aliasToHref[alias] = item.href;

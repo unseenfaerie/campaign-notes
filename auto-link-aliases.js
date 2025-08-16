@@ -9,7 +9,9 @@ const campaign = JSON.parse(fs.readFileSync(path.join(ROOT, 'campaign-data.json'
 
 // 2. Build linkEntries from campaign data
 const linkEntries = [
-    ...(campaign.characters || []).map(c => ({ href: c.href, aliases: c.aliases })),
+    ...(campaign.playerCharacters || []).map(c => ({ href: c.href, aliases: c.aliases })),
+    ...(campaign.nonPlayerCharacters || []).map(p => ({ href: p.href, aliases: p.aliases })),
+    ...(campaign.items || []).map(p => ({ href: p.href, aliases: p.aliases })),
     ...(campaign.places || []).map(p => ({ href: p.href, aliases: p.aliases })),
     // Add more entity types if needed
 ];

@@ -1,5 +1,5 @@
 {
-    "player-characters": [
+    "playerCharacters": [
         {
             "id": "alann-barnett",
             "name": "Alann Barnett",
@@ -44,7 +44,9 @@
                 "Cormac"
             ],
             "href": "/characters/player-characters/cormac.html"
-        },
+        }
+    ],
+    "nonPlayerCharacters": [
         {
             "id": "bert-verinwort",
             "name": "Bert Verinwort",
