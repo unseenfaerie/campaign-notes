@@ -67,6 +67,11 @@ function bracketAliasesInFile(filePath) {
             const closeA = before.lastIndexOf('</a>');
             if (openA > closeA) return match; // inside <a>
 
+            // Check if inside <title>...</title>
+            const openTitle = before.lastIndexOf('<title>');
+            const closeTitle = before.lastIndexOf('</title>');
+            if (openTitle > closeTitle) return match; // inside <title>
+
             // Otherwise, bracket it
             changed = true;
             return `[${match}]`;
