@@ -4,14 +4,8 @@ const path = require('path');
 const SKIP_DIRS = new Set(['.git', 'node_modules', '.vscode']);
 const ROOT = __dirname;
 
-// 1. Load CAMPAIGN data from global-data.js
-const globalDataJs = fs.readFileSync(path.join(ROOT, 'global-data.js'), 'utf8');
-const campaignMatch = globalDataJs.match(/window\.CAMPAIGN\s*=\s*({[\s\S]*?});/);
-if (!campaignMatch) {
-    console.error('Could not find CAMPAIGN object in global-data.js');
-    process.exit(1);
-}
-const campaign = eval('(' + campaignMatch[1] + ')'); // Safe if you control the file
+// 1. Load CAMPAIGN data from campaign-data.json
+const campaign = JSON.parse(fs.readFileSync(path.join(ROOT, 'campaign-data.json'), 'utf8'));
 
 // 2. Build linkEntries from campaign data
 const linkEntries = [

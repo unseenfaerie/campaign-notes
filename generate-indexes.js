@@ -116,7 +116,6 @@ function generateIndex(dir, isRoot = false) {
 
     html += `        </main>
     </div>
-    <script src="${getRelativeResource(dir, 'links.js')}"></script>
     <script src="${getRelativeResource(dir, 'navbar.js')}"></script>
     <script src="${getRelativeResource(dir, 'breadcrumbs.js')}"></script>
 </body>
@@ -129,7 +128,9 @@ function generateIndex(dir, isRoot = false) {
 }
 
 function walk(dir, isRoot = false) {
-    generateIndex(dir, isRoot);
+    if (!isRoot) {
+        generateIndex(dir, isRoot);
+    }
     const items = fs.readdirSync(dir, { withFileTypes: true });
     for (const item of items) {
         if (item.isDirectory() && !SKIP_DIRS.has(item.name) && !item.name.startsWith('.')) {

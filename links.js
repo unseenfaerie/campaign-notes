@@ -1,49 +1,65 @@
-const linkEntries = [
-    ...window.CAMPAIGN.characters.map(c => ({ href: c.href, aliases: c.aliases })),
-    ...window.CAMPAIGN.places.map(p => ({ href: p.href, aliases: p.aliases })),
-    // ...add other entity types
-];
+(function () {
+    // Wait until CAMPAIGN data is loaded
+    if (!window.CAMPAIGN) {
+        console.error("CAMPAIGN data not loaded!");
+        return;
+    }
 
-const legacyLinkEntries = [
-    { href: "/places/othlorin/wavethorn/wavethorn.html", aliases: ["Wavethorn"] },
-    { href: "/places/othlorin/itholis/weinmere/anash.html", aliases: ["Anash"] },
-    { href: "/characters/player-characters/alann-barnett.html", aliases: ["Alann Barnett", "Alann"] },
-    { href: "/characters/player-characters/releas-neb.html", aliases: ["Releas Scarnewman", "Releas", "Rel"] },
-    { href: "/characters/player-characters/durchir.html", aliases: ["Durchir of the Angry Orchard", "Durchir"] },
-    { href: "/characters/player-characters/cormac.html", aliases: ["Cormac"] },
-    { href: "/characters/player-characters/constellis-tyrannus.html", aliases: ["Constellis Tyrannus", "Constellis"] },
-    { href: "/characters/non-player-characters/bert-verinwort.html", aliases: ["Bert Verinwort", "Bert"] },
-    { href: "/characters/non-player-characters/gereg.html", aliases: ["Gereg"] },
-    { href: "/characters/non-player-characters/leo.html", aliases: ["Leo"] }
-    // Add more as needed!
-];
+    // Build alias-to-href map
+    const aliasToHref = {};
+    for (const group of ['characters', 'places']) {
+        (window.CAMPAIGN[group] || []).forEach(item => {
+            (item.aliases || []).forEach(alias => {
+                aliasToHref[alias] = item.href;
+            });
+        });
+    }
 
-// Helper to find href by alias
-function findHrefByAlias(alias) {
-    for (const entry of linkEntries) {
-        if (entry.aliases.includes(alias)) {
-            return entry.href;
+    // Helper: recursively walk text nodes and replace [Alias] with <a>
+    function linkifyBrackets(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            // Find all [Alias] in this text node
+            const regex = /\[([^\[\]]+)\]/g;
+            let match, lastIndex = 0;
+            const parent = node.parentNode;
+            const frag = document.createDocumentFragment();
+            let text = node.nodeValue;
+            let changed = false;
+
+            while ((match = regex.exec(text)) !== null) {
+                const alias = match[1];
+                const href = aliasToHref[alias];
+                if (href) {
+                    // Text before the match
+                    if (match.index > lastIndex) {
+                        frag.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+                    }
+                    // The link
+                    const a = document.createElement('a');
+                    a.href = href;
+                    a.textContent = alias;
+                    frag.appendChild(a);
+                    lastIndex = regex.lastIndex;
+                    changed = true;
+                }
+            }
+            // Text after the last match
+            if (changed) {
+                if (lastIndex < text.length) {
+                    frag.appendChild(document.createTextNode(text.slice(lastIndex)));
+                }
+                parent.replaceChild(frag, node);
+            }
+        } else if (node.nodeType === Node.ELEMENT_NODE && node.childNodes) {
+            // Don't process inside <a> tags (avoid double-linking)
+            if (node.tagName === 'A') return;
+            // Recursively process children
+            // Use Array.from to avoid live NodeList issues when replacing nodes
+            Array.from(node.childNodes).forEach(linkifyBrackets);
         }
     }
-    return null;
-}
 
-// Replace [LinkText] with <a href="...">LinkText</a>
-function autoLinkContent() {
-    document.querySelectorAll('.content').forEach(section => {
-        section.innerHTML = section.innerHTML.replace(
-            /\[([^\]]+)\]/g,
-            (match, p1) => {
-                const href = findHrefByAlias(p1);
-                return href ? `<a href="${href}">${p1}</a>` : match;
-            }
-        );
-    });
-}
-
-// Run after DOM is loaded
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', autoLinkContent);
-} else {
-    autoLinkContent();
-}
+    // Run on all content inside <main class="content">, or body if not found
+    const root = document.querySelector('main.content') || document.body;
+    linkifyBrackets(root);
+})();

@@ -1,0 +1,39 @@
+{
+    "characters": [
+        {
+            "id": "alann-barnett",
+            "name": "Alann Barnett",
+            "aliases": [
+                "Alann Barnett",
+                "Alann"
+            ],
+            "href": "/characters/player-characters/alann-barnett.html",
+            "class": "Cleric",
+            "level": 3,
+            "alignment": "Lawful Good"
+        },
+        {
+            "id": "releas-neb",
+            "name": "Releas Neb",
+            "aliases": [
+                "Releas Neb",
+                "Releas",
+                "Rel"
+            ],
+            "href": "/characters/player-characters/releas-neb.html",
+            "class": "Magic User",
+            "level": 3,
+            "alignment": "Neutral Good"
+        }
+    ],
+    "places": [
+        {
+            "id": "wavethorn",
+            "name": "Wavethorn",
+            "aliases": [
+                "Wavethorn"
+            ],
+            "href": "/places/othlorin/wavethorn/wavethorn.html"
+        }
+    ]
+}
