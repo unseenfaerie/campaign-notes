@@ -127,3 +127,7 @@ tr:nth-child(odd) td {
 .statblock {
     width: 33%;
 }
+
+.fullstatblock {
+    width: 75%;
+}
