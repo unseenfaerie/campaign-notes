@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 
-const SKIP_DIRS = new Set(['.git', 'node_modules', '.vscode']);
 const ROOT = __dirname;
 
 // 1. Load CAMPAIGN data from campaign-data.json
@@ -13,31 +12,24 @@ const linkEntries = [
     ...(campaign.nonPlayerCharacters || []).map(p => ({ href: p.href, aliases: p.aliases })),
     ...(campaign.items || []).map(p => ({ href: p.href, aliases: p.aliases })),
     ...(campaign.places || []).map(p => ({ href: p.href, aliases: p.aliases })),
-    // Add more entity types if needed
+    ...(campaign.sessions || []).map(p => ({ href: p.href, aliases: p.aliases })),
+    ...(campaign.organizations || []).map(p => ({ href: p.href, aliases: p.aliases })),
 ];
 
 // 3. Build a flat list of all aliases (sorted by length descending)
-const allAliases = linkEntries.flatMap(e => e.aliases).sort((a, b) => b.length - a.length);
+const allAliases = linkEntries.flatMap(e => e.aliases).filter(Boolean).sort((a, b) => b.length - a.length);
 
-// 4. Recursively scan for non-index HTML files
-function getHtmlFiles(dir) {
-    let files = [];
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        if (SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) continue;
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-            files = files.concat(getHtmlFiles(fullPath));
-        } else if (
-            entry.isFile() &&
-            entry.name.endsWith('.html') &&
-            !entry.name.startsWith('index') &&
-            entry.name !== `${path.basename(dir)}.html`
-        ) {
-            console.log('looking at: ' + fullPath);
-            files.push(fullPath);
-        }
-    }
-    return files;
+const debug = process.argv[3]
+
+// 4. Get file path from command line
+const filePath = process.argv[2];
+if (!filePath) {
+    console.error('Usage: node auto-link-aliases.js <path-to-html-file> -debug');
+    process.exit(1);
+}
+if (!fs.existsSync(filePath)) {
+    console.error('File does not exist:', filePath);
+    process.exit(1);
 }
 
 // 5. Replace plain aliases with [Alias] (not inside <a> or already in [])
@@ -47,15 +39,17 @@ function bracketAliasesInFile(filePath) {
 
     for (const alias of allAliases) {
         // Replace plain alias (word boundary) not inside <a>...</a> or [] or <title>...</title>
-        const aliasRegex = new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g');
+        // For multi-word aliases, \b will only match at the start/end if the alias is surrounded by non-word chars.
+        // To handle multi-word, use lookbehind/lookahead for non-word or start/end.
+        const aliasRegex = new RegExp(`(?<!\\[|<a[^>]*?>|\\w)${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\]|</a>|\\w)`, 'g');
+        if (debug) { console.log('looking for ' + alias); }
         content = content.replace(aliasRegex, (match, offset) => {
-            console.log('looking for: ' + match);
+            debug ?? console.log('looking for ' + alias + ', hitting ' + match);
             // Check if inside []
             const before = content.slice(0, offset);
             const openBracket = before.lastIndexOf('[');
             const closeBracket = before.lastIndexOf(']');
             if (openBracket > closeBracket) {
-                console.log('rejecting: ' + match + ', bracket');
                 return match;
             } // inside []
 
@@ -63,7 +57,6 @@ function bracketAliasesInFile(filePath) {
             const openA = before.lastIndexOf('<a');
             const closeA = before.lastIndexOf('</a>');
             if (openA > closeA) {
-                console.log('rejecting: ' + match + ', <a>');
                 return match;
             } // inside <a>
 
@@ -71,25 +64,23 @@ function bracketAliasesInFile(filePath) {
             const openTitle = before.lastIndexOf('<title>');
             const closeTitle = before.lastIndexOf('</title>');
             if (openTitle > closeTitle) {
-                console.log('rejecting: ' + match + ', <title>');
                 return match; // inside <title>
             }
 
             changed = true;
-            const finalBracketed = `[${match}]`;
-            console.log('Changing: ' + finalBracketed);
-            return finalBracketed;
+            if (debug) { console.log(`[${match}]`); }
+            return `[${match}]`;
         });
     }
 
     if (changed) {
         fs.writeFileSync(filePath, content, 'utf8');
-        console.log(`Updated: ${filePath}`);
+        console.log('Updated:', filePath);
+    } else {
+        console.log('No changes needed:', filePath);
     }
 }
 
-// 6. Run for all files
-const htmlFiles = getHtmlFiles(ROOT);
-htmlFiles.forEach(bracketAliasesInFile);
+bracketAliasesInFile(filePath);
 
 console.log('Alias auto-bracketing complete.');

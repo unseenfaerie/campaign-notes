@@ -19,6 +19,11 @@
             <p>[Description including names of front facing members]</p>
             <h3>[Next most local government]</h3>
             <p>[Description including names, etc]</p>
+            <h2>Religions</h>
+            <h3>[Religion Name]</h3>
+            <p>[Description regarding deities, behaviors, holidays, etc.]</p>
+            <h3>[Religion Name]</h3>
+            <p>[Description regarding deities, behaviors, holidays, etc.]</p>
             <h2>Establishments</h2>
             <h3>[Establisment - Type]</h3>
             <p>[Description including names]</p>

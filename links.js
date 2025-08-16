@@ -7,7 +7,7 @@
 
     // Build alias-to-href map
     const aliasToHref = {};
-    for (const group of ['playerCharacters', 'nonPlayerCharacters', 'items', 'places']) {
+    for (const group of ['playerCharacters', 'nonPlayerCharacters', 'items', 'places', 'sessions', 'organizations']) {
         (window.CAMPAIGN[group] || []).forEach(item => {
             (item.aliases || []).forEach(alias => {
                 aliasToHref[alias] = item.href;
@@ -29,6 +29,7 @@
             while ((match = regex.exec(text)) !== null) {
                 const alias = match[1];
                 const href = aliasToHref[alias];
+                console.log('Bracket found:', alias, 'href:', href); // Add this line
                 if (href) {
                     // Text before the match
                     if (match.index > lastIndex) {

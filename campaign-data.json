@@ -150,5 +150,19 @@
             ],
             "href": "/places/othlorin/niba/niba.html"
         }
-    ]
+    ],
+    "sessions": [
+        {
+            "id": "ootid-session-1-and-2",
+            "name": "The Coup of Wavethorn",
+            "aliases": [
+                "Coup of Wavethorn",
+                "Coup of 200",
+                "Wavethorn Coup",
+                "OOTID Sessions 1 and 2"
+            ],
+            "href": "/sessions/order-of-the-iron-duch/session-1-and-2.html"
+        }
+    ],
+    "organizations": []
 }
