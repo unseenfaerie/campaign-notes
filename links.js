@@ -1,4 +1,10 @@
 const linkEntries = [
+    ...window.CAMPAIGN.characters.map(c => ({ href: c.href, aliases: c.aliases })),
+    ...window.CAMPAIGN.places.map(p => ({ href: p.href, aliases: p.aliases })),
+    // ...add other entity types
+];
+
+const legacyLinkEntries = [
     { href: "/places/othlorin/wavethorn/wavethorn.html", aliases: ["Wavethorn"] },
     { href: "/places/othlorin/itholis/weinmere/anash.html", aliases: ["Anash"] },
     { href: "/characters/player-characters/alann-barnett.html", aliases: ["Alann Barnett", "Alann"] },
