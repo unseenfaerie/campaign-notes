@@ -27,12 +27,12 @@
                 "Releas"
             ],
             "statblock": {
-                "strength": 13,
-                "dexterity": 8,
-                "constitution": 11,
+                "strength": 5,
+                "dexterity": 14,
+                "constitution": 10,
                 "intelligence": 18,
-                "wisdom": 14,
-                "charisma": 11
+                "wisdom": 13,
+                "charisma": 9
             },
             "href": "/characters/player-characters/releas-neb.html"
         },
@@ -62,11 +62,11 @@
                 "Durchir"
             ],
             "statblock": {
-                "strength": 13,
-                "dexterity": 8,
-                "constitution": 11,
-                "intelligence": 10,
-                "wisdom": 14,
+                "strength": 18,
+                "dexterity": 10,
+                "constitution": 12,
+                "intelligence": 15,
+                "wisdom": 10,
                 "charisma": 11
             },
             "href": "/characters/player-characters/durchir.html"
