@@ -1,5 +1,5 @@
 {
-    "characters": [
+    "player-characters": [
         {
             "id": "alann-barnett",
             "name": "Alann Barnett",
@@ -38,6 +38,14 @@
             "href": "/characters/player-characters/durchir.html"
         },
         {
+            "id": "cormac",
+            "name": "Cormac",
+            "aliases": [
+                "Cormac"
+            ],
+            "href": "/characters/player-characters/cormac.html"
+        },
+        {
             "id": "bert-verinwort",
             "name": "Bert Verinwort",
             "aliases": [
@@ -63,6 +71,16 @@
             "href": "/characters/non-player-characters/leo.html"
         }
     ],
+    "items": [
+        {
+            "id": "cormac-spellbook",
+            "name": "Cormac's Spellbook",
+            "aliases": [
+                "Cormac's Spellbook"
+            ],
+            "href": "/items/tomes/cormac-spellbook.html"
+        }
+    ],
     "places": [
         {
             "id": "anash",
@@ -78,7 +96,7 @@
             "aliases": [
                 "Wavethorn"
             ],
-            "href": "/places/othlorin/wavethorn/wavethorn.html"
+            "href": "/places/othlorin/wavethorn-area/wavethorn.html"
         },
         {
             "id": "niba",
