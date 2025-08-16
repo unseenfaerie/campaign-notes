@@ -33,6 +33,7 @@ function getHtmlFiles(dir) {
             !entry.name.startsWith('index') &&
             entry.name !== `${path.basename(dir)}.html`
         ) {
+            console.log('looking at: ' + fullPath);
             files.push(fullPath);
         }
     }
@@ -45,31 +46,39 @@ function bracketAliasesInFile(filePath) {
     let changed = false;
 
     for (const alias of allAliases) {
-        // Skip if already in [Alias]
-        const bracketed = new RegExp(`\\[${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]`, 'g');
-        if (bracketed.test(content)) continue;
-
-        // Replace plain alias (word boundary) not inside <a>...</a> or []
+        // Replace plain alias (word boundary) not inside <a>...</a> or [] or <title>...</title>
         const aliasRegex = new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g');
         content = content.replace(aliasRegex, (match, offset) => {
+            console.log('looking for: ' + match);
             // Check if inside []
             const before = content.slice(0, offset);
             const openBracket = before.lastIndexOf('[');
             const closeBracket = before.lastIndexOf(']');
-            if (openBracket > closeBracket) return match; // inside []
+            if (openBracket > closeBracket) {
+                console.log('rejecting: ' + match + ', bracket');
+                return match;
+            } // inside []
 
             // Check if inside <a ...>...</a>
             const openA = before.lastIndexOf('<a');
             const closeA = before.lastIndexOf('</a>');
-            if (openA > closeA) return match; // inside <a>
+            if (openA > closeA) {
+                console.log('rejecting: ' + match + ', <a>');
+                return match;
+            } // inside <a>
 
             // Check if inside <title>...</title>
             const openTitle = before.lastIndexOf('<title>');
             const closeTitle = before.lastIndexOf('</title>');
-            if (openTitle > closeTitle) return match; // inside <title>
+            if (openTitle > closeTitle) {
+                console.log('rejecting: ' + match + ', <title>');
+                return match; // inside <title>
+            }
 
             changed = true;
-            return `[${match}]`;
+            const finalBracketed = `[${match}]`;
+            console.log('Changing: ' + finalBracketed);
+            return finalBracketed;
         });
     }
 
