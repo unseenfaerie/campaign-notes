@@ -17,12 +17,12 @@ campaignData.playerCharacters = [
             "Alann"
         ],
         statblock: {
-            "strength": 13,
-            "dexterity": 8,
-            "constitution": 11,
-            "intelligence": 10,
-            "wisdom": 14,
-            "charisma": 11
+            strength: 13,
+            dexterity: 8,
+            constitution: 11,
+            intelligence: 10,
+            wisdom: 14,
+            charisma: 11
         },
         href: "/characters/player-characters/alann-barnett.html"
     },
