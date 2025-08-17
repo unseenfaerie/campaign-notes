@@ -7,7 +7,8 @@
 
     // Build alias-to-href map
     const aliasToHref = {};
-    for (const group of ['playerCharacters', 'nonPlayerCharacters', 'items', 'places', 'sessions', 'organizations']) {
+    // For each top-level category added here, also update: auto-link-aliases.js
+    for (const group of ['playerCharacters', 'nonPlayerCharacters', 'items', 'places', 'sessions', 'organizations', 'deities']) {
         (window.CAMPAIGN[group] || []).forEach(item => {
             (item.aliases || []).forEach(alias => {
                 aliasToHref[alias] = item.href;
