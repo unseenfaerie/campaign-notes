@@ -115,6 +115,28 @@
             "href": "/characters/non-player-characters/leo.html"
         }
     ],
+    "deities": [
+        {
+            "id": "achiel",
+            "name": "Achiel",
+            "aliases": [
+                "Achiel",
+                "Achiel, God of Light",
+                "Achiel God of Light"
+            ],
+            "href": "/characters/deities/achiel.html"
+        },
+        {
+            "id": "idona",
+            "name": "Idona",
+            "aliases": [
+                "Idona",
+                "Idona, Goddess of Humanity",
+                "Idona, Goddess of the Moon"
+            ],
+            "href": "/characters/deities/idona.html"
+        }
+    ],
     "items": [
         {
             "id": "cormac-spellbook",
