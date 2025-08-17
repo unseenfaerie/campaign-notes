@@ -186,5 +186,16 @@
             "href": "/sessions/order-of-the-iron-duch/session-1-and-2.html"
         }
     ],
-    "organizations": []
+    "organizations": [
+        {
+            "id": "church-of-achiels-light",
+            "name": "Church of Achiel's Light",
+            "aliases": [
+                "Church of Achiel's Light",
+                "Church of Achiel",
+                "High Church"
+            ],
+            "href": "/organizations/church-of-achiels-light.html"
+        }
+    ]
 }
