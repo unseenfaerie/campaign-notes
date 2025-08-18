@@ -24,7 +24,7 @@ CAMPAIGN.playerCharacters = [
             wisdom: 14,
             charisma: 11
         },
-        href: "/characters/player-characters/alann-barnett.html"
+        href: "/campaign-notes/characters/player-characters/alann-barnett.html"
     },
     {
         id: "releas-neb",
@@ -61,7 +61,7 @@ CAMPAIGN.playerCharacters = [
             wisdom: 14,
             charisma: 11
         },
-        href: "/characters/player-characters/appolonia-palleday.html"
+        href: "/campaign-notes/characters/player-characters/appolonia-palleday.html"
     },
     {
         id: "durchir",
@@ -94,7 +94,7 @@ CAMPAIGN.playerCharacters = [
             wisdom: 14,
             charisma: 7
         },
-        href: "/characters/player-characters/cormac.html"
+        href: "/campaign-notes/characters/player-characters/cormac.html"
     }
 ];
 CAMPAIGN.nonPlayerCharacters = [
@@ -105,7 +105,7 @@ CAMPAIGN.nonPlayerCharacters = [
             "Bert Verinwort",
             "Bert"
         ],
-        href: "/characters/non-player-characters/bert-verinwort.html"
+        href: "/campaign-notes/characters/non-player-characters/bert-verinwort.html"
     },
     {
         id: "gereg",
@@ -113,7 +113,7 @@ CAMPAIGN.nonPlayerCharacters = [
         aliases: [
             "Gereg"
         ],
-        href: "/characters/non-player-characters/gereg.html"
+        href: "/campaign-notes/characters/non-player-characters/gereg.html"
     },
     {
         id: "leo",
@@ -121,7 +121,7 @@ CAMPAIGN.nonPlayerCharacters = [
         aliases: [
             "Leo"
         ],
-        href: "/characters/non-player-characters/leo.html"
+        href: "/campaign-notes/characters/non-player-characters/leo.html"
     }
 ];
 CAMPAIGN.deities = [
@@ -133,7 +133,7 @@ CAMPAIGN.deities = [
             "Achiel, God of Light",
             "Achiel God of Light"
         ],
-        href: "/characters/deities/achiel.html"
+        href: "/campaign-notes/characters/deities/achiel.html"
     },
     {
         id: "idona",
@@ -143,7 +143,7 @@ CAMPAIGN.deities = [
             "Idona, Goddess of Humanity",
             "Idona, Goddess of the Moon"
         ],
-        href: "/characters/deities/idona.html"
+        href: "/campaign-notes/characters/deities/idona.html"
     }
 ];
 CAMPAIGN.organizations = [
@@ -155,7 +155,7 @@ CAMPAIGN.organizations = [
             "Church of Achiel",
             "High Church"
         ],
-        href: "/organizations/church-of-achiels-light.html"
+        href: "/campaign-notes/organizations/church-of-achiels-light.html"
     }
 ];
 CAMPAIGN.places = [
@@ -165,7 +165,7 @@ CAMPAIGN.places = [
         aliases: [
             "Anash"
         ],
-        href: "/places/othlorin/itholis/weinmere/anash.html"
+        href: "/campaign-notes/places/othlorin/itholis/weinmere/anash.html"
     },
     {
         id: "wavethorn",
@@ -173,7 +173,7 @@ CAMPAIGN.places = [
         aliases: [
             "Wavethorn"
         ],
-        href: "/places/othlorin/wavethorn-area/wavethorn.html"
+        href: "/campaign-notes/places/othlorin/wavethorn-area/wavethorn.html"
     },
     {
         id: "niba",
@@ -181,7 +181,7 @@ CAMPAIGN.places = [
         aliases: [
             "Niba"
         ],
-        href: "/places/othlorin/niba/niba.html"
+        href: "/campaign-notes/places/othlorin/niba/niba.html"
     }
 ];
 CAMPAIGN.items = [
@@ -191,7 +191,7 @@ CAMPAIGN.items = [
         aliases: [
             "Cormac's Spellbook"
         ],
-        href: "/items/tomes/cormac-spellbook.html"
+        href: "/campaign-notes/items/tomes/cormac-spellbook.html"
     }
 ];
 CAMPAIGN.sessions = [
@@ -204,6 +204,6 @@ CAMPAIGN.sessions = [
             "Wavethorn Coup",
             "OOTID Sessions 1 and 2"
         ],
-        href: "/sessions/order-of-the-iron-duch/session-1-and-2.html"
+        href: "/campaign-notes/sessions/order-of-the-iron-duch/session-1-and-2.html"
     }
 ];
