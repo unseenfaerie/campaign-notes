@@ -114,6 +114,14 @@ window.CAMPAIGN.nonPlayerCharacters = [
         name: "Leo",
         aliases: [],
         href: "/campaign-notes/places/othlorin/wavethorn-area/wavethorn.html#leo"
+    },
+    {
+        id: "sieg-ordoss",
+        name: "Sieg Ordoss",
+        aliases: [
+            "Ordoss"
+        ],
+        href: "/campaign-notes/people/non-player-characters/sieg-ordoss.html"
     }
 ];
 window.CAMPAIGN.deities = [
