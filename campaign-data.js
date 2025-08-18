@@ -1,3 +1,6 @@
+if (typeof window === 'undefined') {
+    global.window = {};
+}
 //Create global data structure containing playerCharacters, nonPlayerCharacters, places, items, sessions, organizations, and deities
 window.CAMPAIGN = {
     playerCharacters: [],
@@ -8,7 +11,7 @@ window.CAMPAIGN = {
     items: [],
     sessions: []
 };
-CAMPAIGN.playerCharacters = [
+window.CAMPAIGN.playerCharacters = [
     {
         id: "alann-barnett",
         name: "Alann Barnett",
@@ -97,7 +100,7 @@ CAMPAIGN.playerCharacters = [
         href: "/campaign-notes/characters/player-characters/cormac.html"
     }
 ];
-CAMPAIGN.nonPlayerCharacters = [
+window.CAMPAIGN.nonPlayerCharacters = [
     {
         id: "bert-verinwort",
         name: "Bert Verinwort",
@@ -124,7 +127,7 @@ CAMPAIGN.nonPlayerCharacters = [
         href: "/campaign-notes/characters/non-player-characters/leo.html"
     }
 ];
-CAMPAIGN.deities = [
+window.CAMPAIGN.deities = [
     {
         id: "achiel",
         name: "Achiel",
@@ -146,7 +149,7 @@ CAMPAIGN.deities = [
         href: "/campaign-notes/characters/deities/idona.html"
     }
 ];
-CAMPAIGN.organizations = [
+window.CAMPAIGN.organizations = [
     {
         id: "church-of-achiels-light",
         name: "Church of Achiel's Light",
@@ -158,7 +161,7 @@ CAMPAIGN.organizations = [
         href: "/campaign-notes/organizations/church-of-achiels-light.html"
     }
 ];
-CAMPAIGN.places = [
+window.CAMPAIGN.places = [
     {
         id: "anash",
         name: "Anash",
@@ -184,7 +187,7 @@ CAMPAIGN.places = [
         href: "/campaign-notes/places/othlorin/niba/niba.html"
     }
 ];
-CAMPAIGN.items = [
+window.CAMPAIGN.items = [
     {
         id: "cormac-spellbook",
         name: "Cormac's Spellbook",
@@ -192,9 +195,17 @@ CAMPAIGN.items = [
             "Cormac's Spellbook"
         ],
         href: "/campaign-notes/items/tomes/cormac-spellbook.html"
+    },
+    {
+        id: "polly-spellbook",
+        name: "Polly's Spellbook",
+        aliases: [
+            "Polly's Spellbook"
+        ],
+        href: "/campaign-notes/items/tomes/polly-spellbook.html"
     }
 ];
-CAMPAIGN.sessions = [
+window.CAMPAIGN.sessions = [
     {
         id: "ootid-session-1-and-2",
         name: "The Coup of Wavethorn",
@@ -207,3 +218,8 @@ CAMPAIGN.sessions = [
         href: "/campaign-notes/sessions/order-of-the-iron-duch/session-1-and-2.html"
     }
 ];
+
+// For Node.js compatibility
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = window.CAMPAIGN;
+}
