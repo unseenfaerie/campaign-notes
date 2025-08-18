@@ -121,7 +121,7 @@ window.CAMPAIGN.nonPlayerCharacters = [
         aliases: [
             "Ordoss"
         ],
-        href: "/campaign-notes/people/non-player-characters/sieg-ordoss.html"
+        href: "/campaign-notes/characters/non-player-characters/sieg-ordoss.html"
     }
 ];
 window.CAMPAIGN.deities = [
