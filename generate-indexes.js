@@ -40,12 +40,11 @@ function listDirRecursiveHeader(dir, baseDir = dir, depth = 2) {
 
     let html = '';
 
-    // List files in this directory
+    // List files in this directory (exclude index.html)
     const files = items.filter(item =>
         item.isFile() &&
         item.name.endsWith('.html') &&
-        !item.name.startsWith('index') &&
-        item.name !== `${path.basename(dir)}.html`
+        item.name !== 'index.html'
     );
     if (files.length > 0) {
         html += '<ul>\n';
@@ -61,7 +60,8 @@ function listDirRecursiveHeader(dir, baseDir = dir, depth = 2) {
             // Use depth to determine header level (max h6)
             const headerLevel = Math.min(depth, 6);
             const dirDisplay = getDisplayName(item.name);
-            const relPath = path.relative(baseDir, path.join(dir, item.name, `${item.name}.html`)).replace(/\\/g, '/');
+            // Always link to index.html in the subdirectory
+            const relPath = path.relative(baseDir, path.join(dir, item.name, 'index.html')).replace(/\\/g, '/');
             html += `<h${headerLevel}><a href="./${relPath}">${dirDisplay}</a></h${headerLevel}>\n`;
             html += listDirRecursiveHeader(path.join(dir, item.name), baseDir, depth + 1);
         }
@@ -77,11 +77,11 @@ function listDirFlat(dir) {
     // Subdirectories as headers
     for (const item of items) {
         if (item.isDirectory()) {
-            html += `<h2><a href="./${item.name}/${item.name}.html">${getDisplayName(item.name)}</a></h2>\n`;
+            html += `<h2><a href="./${item.name}/index.html">${getDisplayName(item.name)}</a></h2>\n`;
         }
     }
-    // Files as list
-    const files = items.filter(item => item.isFile() && item.name.endsWith('.html') && !item.name.startsWith('index'));
+    // Files as list (exclude index.html)
+    const files = items.filter(item => item.isFile() && item.name.endsWith('.html') && item.name !== 'index.html');
     if (files.length > 0) {
         html += '<ul>\n';
         for (const file of files) {
@@ -122,8 +122,8 @@ function generateIndex(dir, isRoot = false) {
 </html>
 `;
 
-    // Write the index file (e.g., places.html in /places)
-    const indexFile = path.join(dir, `${dirName}.html`);
+    // Write the index file (always index.html)
+    const indexFile = path.join(dir, 'index.html');
     fs.writeFileSync(indexFile, html, 'utf8');
 }
 

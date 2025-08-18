@@ -101,19 +101,19 @@ window.CAMPAIGN.nonPlayerCharacters = [
         aliases: [
             "Bert"
         ],
-        href: "/campaign-notes/places/othlorin/wavethorn-area/wavethorn.html#bert-verinwort"
+        href: "/campaign-notes/places/othlorin/wavethorn/wavethorn.html#bert-verinwort"
     },
     {
         id: "gereg",
         name: "Gereg",
         aliases: [],
-        href: "/campaign-notes/places/othlorin/wavethorn-area/wavethorn.html#gereg"
+        href: "/campaign-notes/places/othlorin/wavethorn/wavethorn.html#gereg"
     },
     {
         id: "leo",
         name: "Leo",
         aliases: [],
-        href: "/campaign-notes/places/othlorin/wavethorn-area/wavethorn.html#leo"
+        href: "/campaign-notes/places/othlorin/wavethorn/wavethorn.html#leo"
     },
     {
         id: "sieg-ordoss",
@@ -186,7 +186,7 @@ window.CAMPAIGN.places = [
             "City of Wavethorn",
             "Wavethorn (City)"
         ],
-        href: "/campaign-notes/places/othlorin/wavethorn-area/wavethorn.html"
+        href: "/campaign-notes/places/othlorin/wavethorn/wavethorn.html"
     },
     {
         id: "gharmil",
