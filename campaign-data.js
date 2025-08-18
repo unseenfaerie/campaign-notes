@@ -1,5 +1,5 @@
 //Create global data structure containing playerCharacters, nonPlayerCharacters, places, items, sessions, organizations, and deities
-const campaignData = {
+window.CAMPAIGN = {
     playerCharacters: [],
     nonPlayerCharacters: [],
     deities: [],
@@ -8,7 +8,7 @@ const campaignData = {
     items: [],
     sessions: []
 };
-campaignData.playerCharacters = [
+CAMPAIGN.playerCharacters = [
     {
         id: "alann-barnett",
         name: "Alann Barnett",
@@ -97,7 +97,7 @@ campaignData.playerCharacters = [
         href: "/characters/player-characters/cormac.html"
     }
 ];
-campaignData.nonPlayerCharacters = [
+CAMPAIGN.nonPlayerCharacters = [
     {
         id: "bert-verinwort",
         name: "Bert Verinwort",
@@ -124,7 +124,7 @@ campaignData.nonPlayerCharacters = [
         href: "/characters/non-player-characters/leo.html"
     }
 ];
-campaignData.deities = [
+CAMPAIGN.deities = [
     {
         id: "achiel",
         name: "Achiel",
@@ -146,7 +146,7 @@ campaignData.deities = [
         href: "/characters/deities/idona.html"
     }
 ];
-campaignData.organizations = [
+CAMPAIGN.organizations = [
     {
         id: "church-of-achiels-light",
         name: "Church of Achiel's Light",
@@ -158,7 +158,7 @@ campaignData.organizations = [
         href: "/organizations/church-of-achiels-light.html"
     }
 ];
-campaignData.places = [
+CAMPAIGN.places = [
     {
         id: "anash",
         name: "Anash",
@@ -184,7 +184,7 @@ campaignData.places = [
         href: "/places/othlorin/niba/niba.html"
     }
 ];
-campaignData.items = [
+CAMPAIGN.items = [
     {
         id: "cormac-spellbook",
         name: "Cormac's Spellbook",
@@ -194,7 +194,7 @@ campaignData.items = [
         href: "/items/tomes/cormac-spellbook.html"
     }
 ];
-campaignData.sessions = [
+CAMPAIGN.sessions = [
     {
         id: "ootid-session-1-and-2",
         name: "The Coup of Wavethorn",

@@ -34,7 +34,8 @@
             <p>[Detailed description of events. Link to sessions and people]</p>
         </main>
     </div>
-    <script src="/load-campaign-data.js"></script>
+    <script src="/campaign-data.js"></script>
+    <script src="/links.js"></script>
     <script src="/navbar.js"></script>
     <script src="/breadcrumbs.js"></script>
 </body>
