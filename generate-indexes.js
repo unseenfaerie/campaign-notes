@@ -99,7 +99,7 @@ function generateIndex(dir, isRoot = false) {
 <head>
     <meta charset="UTF-8">
     <title>${getDisplayName(dirName)}</title>
-    <link rel="stylesheet" href="${getRelativeResource(dir, 'styles.css')}">
+    <link rel="stylesheet" href="campaign-notes/styles.css">
 </head>
 <body>
     <div class="container">
