@@ -65,9 +65,9 @@ window.CAMPAIGN.playerCharacters = [
     },
     {
         id: "durchir",
-        name: "Durchir of the Angry Orchard",
+        name: "Durchir",
         aliases: [
-            "Durchir"
+            "Durchir of the Angry Orchard"
         ],
         statblock: {
             strength: 18,
@@ -214,9 +214,34 @@ window.CAMPAIGN.sessions = [
             "Coup of Wavethorn",
             "Coup of 200",
             "Wavethorn Coup",
-            "OOTID Sessions 1 and 2"
+            "OOTID Session 1",
+            "OOTID Session 2"
         ],
+        characters: [
+            "releas-neb",
+            "alann-barnett",
+            "durchir",
+            "cormac"
+        ],
+        previous: "",
+        next: "night-of-spiders",
         href: "/campaign-notes/sessions/order-of-the-iron-duch/coup-of-wavethorn.html"
+    },
+    {
+        id: "night-of-spiders",
+        name: "Night of Spiders",
+        aliases: [
+            "OOTID Session 3"
+        ],
+        characters: [
+            "releas-neb",
+            "alann-barnett",
+            "durchir",
+            "cormac"
+        ],
+        previous: "coup-of-wavethorn",
+        next: "",
+        href: "/campaign-notes/sessions/order-of-the-iron-duch/night-of-spiders.html"
     }
 ];
 
