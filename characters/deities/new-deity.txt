@@ -23,7 +23,7 @@
             <ul>
                 <li>Deity - Relationship</li>
                 <li>Deity - Relationship</li>
-            </ul
+            </ul>
             <h2>Main Sects</h2>
             <h3>Sect worshipping this Deity</h3>
             <p>Description</p>

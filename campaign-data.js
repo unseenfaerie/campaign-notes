@@ -135,6 +135,15 @@ window.CAMPAIGN.deities = [
             "Idona, Mother to Humankind"
         ],
         href: "/campaign-notes/characters/deities/idona.html"
+    },
+    {
+        id: "ponat",
+        name: "Ponat",
+        aliases: [
+            "Ponat, God of Fortress",
+            "Ponat, God of the Fortress"
+        ],
+        href: "/campaign-notes/characters/deities/ponat.html"
     }
 ];
 window.CAMPAIGN.organizations = [

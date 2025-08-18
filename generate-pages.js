@@ -43,7 +43,7 @@ function checkAndGeneratePages(arrays) {
             let hrefPath = entry.href.startsWith('/') ? entry.href.slice(1) : entry.href;
             hrefPath = hrefPath.replace(/campaign-notes\//, ''); // Remove leading /campaign-notes/
             const filePath = path.join(__dirname, hrefPath);
-            console.log(`Checking: ${filePath}`);
+            //console.log(`Checking: ${filePath}`);
             // If the file does not exist, generate it
             if (!fs.existsSync(filePath)) {
                 const dir = path.dirname(filePath);
