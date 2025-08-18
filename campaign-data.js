@@ -163,7 +163,14 @@ window.CAMPAIGN.organizations = [
             "High Church"
         ],
         href: "/campaign-notes/organizations/church-of-achiels-light.html"
+    },
+    {
+        id: "wyvernfang",
+        name: "Wyvernfang",
+        aliases: [],
+        href: "/campaign-notes/organizations/wyvernfang.html"
     }
+
 ];
 window.CAMPAIGN.places = [
     {
