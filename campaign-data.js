@@ -44,7 +44,7 @@ window.CAMPAIGN.playerCharacters = [
             wisdom: 13,
             charisma: 9
         },
-        href: "/characters/player-characters/releas-neb.html"
+        href: "/campaign-notes/characters/player-characters/releas-neb.html"
     },
     {
         id: "appolonia-palleday",
@@ -77,7 +77,7 @@ window.CAMPAIGN.playerCharacters = [
             wisdom: 10,
             charisma: 11
         },
-        href: "/characters/player-characters/durchir.html"
+        href: "/campaign-notes/characters/player-characters/durchir.html"
     },
     {
         id: "cormac",
@@ -131,7 +131,8 @@ window.CAMPAIGN.deities = [
         name: "Idona",
         aliases: [
             "Idona, Goddess of Humanity",
-            "Idona, Goddess of the Moon"
+            "Idona, Goddess of the Moon",
+            "Idona, Mother to Humankind"
         ],
         href: "/campaign-notes/characters/deities/idona.html"
     }

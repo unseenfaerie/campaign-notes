@@ -8,8 +8,18 @@
     // Build alias-to-href map
     const aliasToHref = {};
     // For each top-level category added here, also update: auto-link-aliases.js
+    function ensureNameInAliases(arr) {
+        return (arr || []).map(obj => {
+            const aliases = Array.isArray(obj.aliases) ? obj.aliases.slice() : [];
+            if (obj.name && !aliases.includes(obj.name)) {
+                aliases.push(obj.name);
+            }
+            return { ...obj, aliases };
+        });
+    }
+
     for (const group of ['playerCharacters', 'nonPlayerCharacters', 'items', 'places', 'sessions', 'organizations', 'deities']) {
-        (window.CAMPAIGN[group] || []).forEach(item => {
+        ensureNameInAliases(window.CAMPAIGN[group]).forEach(item => {
             (item.aliases || []).forEach(alias => {
                 aliasToHref[alias] = item.href;
             });
