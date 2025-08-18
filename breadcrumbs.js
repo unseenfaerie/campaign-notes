@@ -12,12 +12,13 @@
     if (debug) { console.log('Path parts:', pathParts); }
     if (pathParts.length === 1) return; // Already at root
 
-    // Determine if current page is an index page (e.g., /places/places.html)
+
+    // Determine if current page is an index page (e.g., /places/index.html)
     const currentFile = pathParts[pathParts.length - 1];
     const parentDir = pathParts.length > 1 ? pathParts[pathParts.length - 2] : null;
-    const isIndexPage = parentDir && currentFile === `${parentDir}.html`;
+    const isIndexPage = currentFile === 'index.html';
     const isParentIndex = parentDir === 'campaign-notes';
-    const weAreAtRoot = currentFile === 'index.html';
+    const weAreAtRoot = currentFile === 'index.html' && pathParts.length === 1;
 
     // Build breadcrumbs
     let breadcrumbs = [];
@@ -28,7 +29,7 @@
     if (isParentIndex || weAreAtRoot) {
         if (debug) { console.log("At Campaign Notes index, not adding extra breadcrumb"); }
     } else {
-        end = isIndexPage ? pathParts.length - 1 : pathParts.length; //isIndexPage ? pathParts.length - 1 : 
+        end = isIndexPage ? pathParts.length - 1 : pathParts.length;
         for (let i = 0; i < end - 1; i++) {
             currentPath += '/' + pathParts[i];
             if (pathParts[i] === 'campaign-notes') {
@@ -36,7 +37,7 @@
                 breadcrumbs.push(`<a href="/campaign-notes/index.html">Campaign Notes</a>`);
             } else {
                 if (debug) { console.log("Adding breadcrumb for:", pathParts[i]); }
-                indexFile = `${currentPath}/${pathParts[i]}.html`;
+                indexFile = `${currentPath}/index.html`;
                 breadcrumbs.push(`<a href="${indexFile}">${prettify(pathParts[i])}</a>`);
             }
         }

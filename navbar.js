@@ -1,10 +1,10 @@
 const navLinks = [
     { name: "Home", url: "/campaign-notes/index.html" },
-    { name: "Characters", url: "/campaign-notes/characters/characters.html" },
-    { name: "Places", url: "/campaign-notes/places/places.html" },
-    { name: "Items", url: "/campaign-notes/items/items.html" },
-    { name: "Organizations", url: "/campaign-notes/organizations/organizations.html" },
-    { name: "Sessions", url: "/campaign-notes/sessions/sessions.html" }
+    { name: "Characters", url: "/campaign-notes/characters/index.html" },
+    { name: "Places", url: "/campaign-notes/places/index.html" },
+    { name: "Items", url: "/campaign-notes/items/index.html" },
+    { name: "Organizations", url: "/campaign-notes/organizations/index.html" },
+    { name: "Sessions", url: "/campaign-notes/sessions/index.html" }
 ];
 
 function createSidebar() {
