@@ -58,7 +58,7 @@ function getHtmlFiles(dir) {
             !entry.name.startsWith('index') &&
             entry.name !== `${path.basename(dir)}.html`
         ) {
-            console.log('looking at: ' + fullPath);
+            if (debug) { console.log('looking at: ' + fullPath); }
             files.push(fullPath);
         }
     }
@@ -77,13 +77,13 @@ function bracketAliasesInFile(filePath) {
         const aliasRegex = new RegExp(`(?<!\\[|<a[^>]*?>|\\w)${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\]|</a>|\\w)`, 'g');
         if (debug) { console.log('looking for ' + alias); }
         content = content.replace(aliasRegex, (match, offset) => {
-            debug ?? console.log('looking for ' + alias + ', hitting ' + match);
+            if (debug) { console.log('looking for ' + alias + ', hitting ' + match); }
             // Check if inside []
             const before = content.slice(0, offset);
             const openBracket = before.lastIndexOf('[');
             const closeBracket = before.lastIndexOf(']');
             if (openBracket > closeBracket) {
-                debug ?? console.log('rejecting: ' + match + ', bracket');
+                if (debug) { console.log('rejecting: ' + match + ', bracket'); }
                 return match;
             } // inside []
 
@@ -91,7 +91,7 @@ function bracketAliasesInFile(filePath) {
             const openA = before.lastIndexOf('<a');
             const closeA = before.lastIndexOf('</a>');
             if (openA > closeA) {
-                debug ?? console.log('rejecting: ' + match + ', <a>');
+                if (debug) { console.log('rejecting: ' + match + ', <a>'); }
                 return match;
             } // inside <a>
 
@@ -99,7 +99,7 @@ function bracketAliasesInFile(filePath) {
             const openTitle = before.lastIndexOf('<title>');
             const closeTitle = before.lastIndexOf('</title>');
             if (openTitle > closeTitle) {
-                debug ?? console.log('rejecting: ' + match + ', inside <title>');
+                if (debug) { console.log('rejecting: ' + match + ', inside <title>'); }
                 return match; // inside <title>
             }
 
