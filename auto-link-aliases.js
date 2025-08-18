@@ -5,19 +5,29 @@ const ROOT = __dirname;
 
 const SKIP_DIRS = new Set(['.git', 'node_modules', '.vscode']);
 
-// 1. Load CAMPAIGN data from campaign-data.json
-const campaign = JSON.parse(fs.readFileSync(path.join(ROOT, 'campaign-data.json'), 'utf8'));
+// 1. Load CAMPAIGN data from campaign-data.js
+const campaign = require(path.join(ROOT, 'campaign-data.js'));
 
 // 2. Build linkEntries from campaign data
 // For each top-level category added here, also update: links.js
+function ensureNameInAliases(arr) {
+    return (arr || []).map(obj => {
+        const aliases = Array.isArray(obj.aliases) ? obj.aliases.slice() : [];
+        if (obj.name && !aliases.includes(obj.name)) {
+            aliases.push(obj.name);
+        }
+        return { ...obj, aliases };
+    });
+}
+
 const linkEntries = [
-    ...(campaign.playerCharacters || []).map(c => ({ href: c.href, aliases: c.aliases })),
-    ...(campaign.nonPlayerCharacters || []).map(p => ({ href: p.href, aliases: p.aliases })),
-    ...(campaign.items || []).map(p => ({ href: p.href, aliases: p.aliases })),
-    ...(campaign.places || []).map(p => ({ href: p.href, aliases: p.aliases })),
-    ...(campaign.sessions || []).map(p => ({ href: p.href, aliases: p.aliases })),
-    ...(campaign.organizations || []).map(p => ({ href: p.href, aliases: p.aliases })),
-    ...(campaign.deities || []).map(d => ({ href: d.href, aliases: d.aliases }))
+    ...ensureNameInAliases(campaign.playerCharacters).map(c => ({ href: c.href, aliases: c.aliases })),
+    ...ensureNameInAliases(campaign.nonPlayerCharacters).map(p => ({ href: p.href, aliases: p.aliases })),
+    ...ensureNameInAliases(campaign.items).map(p => ({ href: p.href, aliases: p.aliases })),
+    ...ensureNameInAliases(campaign.places).map(p => ({ href: p.href, aliases: p.aliases })),
+    ...ensureNameInAliases(campaign.sessions).map(p => ({ href: p.href, aliases: p.aliases })),
+    ...ensureNameInAliases(campaign.organizations).map(p => ({ href: p.href, aliases: p.aliases })),
+    ...ensureNameInAliases(campaign.deities).map(d => ({ href: d.href, aliases: d.aliases }))
 ];
 
 // 3. Build a flat list of all aliases (sorted by length descending)

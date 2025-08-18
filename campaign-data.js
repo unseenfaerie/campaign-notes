@@ -16,7 +16,6 @@ window.CAMPAIGN.playerCharacters = [
         id: "alann-barnett",
         name: "Alann Barnett",
         aliases: [
-            "Alann Barnett",
             "Alann"
         ],
         statblock: {
@@ -33,7 +32,6 @@ window.CAMPAIGN.playerCharacters = [
         id: "releas-neb",
         name: "Releas Neb",
         aliases: [
-            "Releas Neb",
             "Rel",
             "Releas Scarnewman",
             "Releas"
@@ -52,7 +50,6 @@ window.CAMPAIGN.playerCharacters = [
         id: "appolonia-palleday",
         name: "Appolonia Palleday",
         aliases: [
-            "Appolonia Palleday",
             "Appolonia",
             "Polly"
         ],
@@ -70,7 +67,6 @@ window.CAMPAIGN.playerCharacters = [
         id: "durchir",
         name: "Durchir of the Angry Orchard",
         aliases: [
-            "Durchir of the Angry Orchard",
             "Durchir"
         ],
         statblock: {
@@ -86,9 +82,7 @@ window.CAMPAIGN.playerCharacters = [
     {
         id: "cormac",
         name: "Cormac",
-        aliases: [
-            "Cormac"
-        ],
+        aliases: [],
         statblock: {
             strength: 9,
             dexterity: 16,
@@ -105,7 +99,6 @@ window.CAMPAIGN.nonPlayerCharacters = [
         id: "bert-verinwort",
         name: "Bert Verinwort",
         aliases: [
-            "Bert Verinwort",
             "Bert"
         ],
         href: "/campaign-notes/characters/non-player-characters/bert-verinwort.html"
@@ -113,17 +106,13 @@ window.CAMPAIGN.nonPlayerCharacters = [
     {
         id: "gereg",
         name: "Gereg",
-        aliases: [
-            "Gereg"
-        ],
+        aliases: [],
         href: "/campaign-notes/characters/non-player-characters/gereg.html"
     },
     {
         id: "leo",
         name: "Leo",
-        aliases: [
-            "Leo"
-        ],
+        aliases: [],
         href: "/campaign-notes/characters/non-player-characters/leo.html"
     }
 ];
@@ -132,7 +121,6 @@ window.CAMPAIGN.deities = [
         id: "achiel",
         name: "Achiel",
         aliases: [
-            "Achiel",
             "Achiel, God of Light",
             "Achiel God of Light"
         ],
@@ -142,7 +130,6 @@ window.CAMPAIGN.deities = [
         id: "idona",
         name: "Idona",
         aliases: [
-            "Idona",
             "Idona, Goddess of Humanity",
             "Idona, Goddess of the Moon"
         ],
@@ -154,7 +141,6 @@ window.CAMPAIGN.organizations = [
         id: "church-of-achiels-light",
         name: "Church of Achiel's Light",
         aliases: [
-            "Church of Achiel's Light",
             "Church of Achiel",
             "High Church"
         ],
@@ -165,49 +151,46 @@ window.CAMPAIGN.places = [
     {
         id: "anash",
         name: "Anash",
-        aliases: [
-            "Anash"
-        ],
+        aliases: [],
         href: "/campaign-notes/places/othlorin/itholis/weinmere/anash.html"
     },
     {
         id: "wavethorn",
         name: "Wavethorn",
         aliases: [
-            "Wavethorn"
+            "City of Wavethorn",
+            "Wavethorn (City)"
         ],
         href: "/campaign-notes/places/othlorin/wavethorn-area/wavethorn.html"
     },
     {
-        id: "niba",
-        name: "Niba",
+        id: "gharmil",
+        name: "Gharmil",
         aliases: [
-            "Niba"
+            "Niba (City)",
+            "Niba",
+            "Eye of the World"
         ],
-        href: "/campaign-notes/places/othlorin/niba/niba.html"
+        href: "/campaign-notes/places/othlorin/niba/gharmil.html"
     }
 ];
 window.CAMPAIGN.items = [
     {
         id: "cormac-spellbook",
         name: "Cormac's Spellbook",
-        aliases: [
-            "Cormac's Spellbook"
-        ],
+        aliases: [],
         href: "/campaign-notes/items/tomes/cormac-spellbook.html"
     },
     {
         id: "polly-spellbook",
         name: "Polly's Spellbook",
-        aliases: [
-            "Polly's Spellbook"
-        ],
+        aliases: [],
         href: "/campaign-notes/items/tomes/polly-spellbook.html"
     }
 ];
 window.CAMPAIGN.sessions = [
     {
-        id: "ootid-session-1-and-2",
+        id: "coup-of-wavethorn",
         name: "The Coup of Wavethorn",
         aliases: [
             "Coup of Wavethorn",
@@ -215,7 +198,7 @@ window.CAMPAIGN.sessions = [
             "Wavethorn Coup",
             "OOTID Sessions 1 and 2"
         ],
-        href: "/campaign-notes/sessions/order-of-the-iron-duch/session-1-and-2.html"
+        href: "/campaign-notes/sessions/order-of-the-iron-duch/coup-of-wavethorn.html"
     }
 ];
 
