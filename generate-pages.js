@@ -23,7 +23,7 @@ function findNearestTemplate(startDir) {
 }
 
 // Fill in the template with the entry's name for <title> and <h1>, and replace {{name}} placeholders
-function fillTemplate(template, entry) {
+function fillTemplate(template, entry, campaign) {
     let result = template;
     // Replace the <title> tag with the entry's name
     result = result.replace(/<title>.*?<\/title>/i, `<title>${entry.name}</title>`);
@@ -31,6 +31,55 @@ function fillTemplate(template, entry) {
     result = result.replace(/<h1>.*?<\/h1>/i, `<h1>${entry.name}</h1>`);
     // Replace all {{name}} placeholders (case-insensitive)
     result = result.replace(/\{\{name\}\}/gi, entry.name);
+
+    // Custom: Fill player characters and notes for sessions
+    if (entry.characters && Array.isArray(entry.characters)) {
+        // Map character IDs to names (from campaign.playerCharacters)
+        const idToName = {};
+        (campaign.playerCharacters || []).forEach(pc => {
+            idToName[pc.id] = pc.name;
+        });
+
+        // Build player characters list
+        const playerList = entry.characters.map(id => {
+            const name = idToName[id] || id;
+            return `<li>[${name}]</li>`;
+        }).join('\n');
+        result = result.replace(/\{\{player_characters\}\}/gi, playerList);
+
+        // Build character notes sections
+        const notesSections = entry.characters.map(id => {
+            const name = idToName[id] || id;
+            return `<h2>[${name}]'s Notes</h2>\n<p></p>`;
+        }).join('\n\n');
+        result = result.replace(/\{\{character_notes\}\}/gi, notesSections);
+    }
+
+    // Custom: Session navigation (previous/next)
+    if ('previous' in entry || 'next' in entry) {
+        let navHtml = '<nav class="session-nav">';
+        // Find previous session
+        if (entry.previous) {
+            const prev = (campaign.sessions || []).find(s => s.id === entry.previous);
+            if (prev) {
+                navHtml += `<a class="prev-session" href="${prev.href}">&laquo; Previous: ${prev.name}</a>`;
+            }
+        }
+        // Find next session
+        if (entry.next) {
+            const next = (campaign.sessions || []).find(s => s.id === entry.next);
+            if (next) {
+                if (entry.previous) navHtml += ' | ';
+                navHtml += `<a class="next-session" href="${next.href}">Next: ${next.name} &raquo;</a>`;
+            }
+        }
+        navHtml += '</nav>';
+        result = result.replace(/\{\{session_navigation\}\}/gi, navHtml);
+    } else {
+        // Remove placeholder if not present
+        result = result.replace(/\{\{session_navigation\}\}/gi, '');
+    }
+
     return result;
 }
 
@@ -59,7 +108,7 @@ function checkAndGeneratePages(arrays) {
                 if (templatePath) {
                     // Read the template and fill in the entry's data
                     let template = fs.readFileSync(templatePath, 'utf8');
-                    let filled = fillTemplate(template, entry);
+                    let filled = fillTemplate(template, entry, CAMPAIGN);
                     // Ensure the target directory exists
                     fs.mkdirSync(dir, { recursive: true });
                     // Write the filled template to the new HTML file

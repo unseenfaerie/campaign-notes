@@ -14,27 +14,16 @@
             <h1>Name</h1>
             <h2>Player Characters Involved</h2>
             <ul>
-                <li>[Character 1]</li>
-                <li>[Character 2]</li>
-                <li>[Character 3]</li>
-                <li>[Character 4]</li>
+                {{player_characters}}
             </ul>
             <h2>Time In Game</h2>
             <p>[Date or time period]</p>
             <h2>DM Summary</h2>
             <p>[Brief summary of the session’s events, major plot points, and outcomes.]</p>
 
-            <h2>[Character 1]'s Notes</h2>
-            <p>[In-character notes for Character 1]</p>
+            {{character_notes}}
 
-            <h2>[Character 2]'s Notes</h2>
-            <p>[In-character notes for Character 2]</p>
-
-            <h2>[Character 3]'s Notes</h2>
-            <p>[In-character notes for Character 3]</p>
-
-            <h2>[Character 4]'s Notes</h2>
-            <p>[In-character notes for Character 4]</p>
+            {{session_navigation}}
 
         </main>
     </div>
