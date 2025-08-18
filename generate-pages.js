@@ -42,9 +42,16 @@ function checkAndGeneratePages(arrays) {
             // Remove leading slash for path.join to avoid absolute path issues
             let hrefPath = entry.href.startsWith('/') ? entry.href.slice(1) : entry.href;
             hrefPath = hrefPath.replace(/campaign-notes\//, ''); // Remove leading /campaign-notes/
-            const filePath = path.join(__dirname, hrefPath);
-            //console.log(`Checking: ${filePath}`);
-            // If the file does not exist, generate it
+
+            // If href contains a fragment (e.g., #bert-verinwort), only check/generate the base file
+            let baseHrefPath = hrefPath;
+            let fragmentIdx = hrefPath.indexOf('#');
+            if (fragmentIdx !== -1) {
+                baseHrefPath = hrefPath.slice(0, fragmentIdx);
+            }
+            const filePath = path.join(__dirname, baseHrefPath);
+
+            // If the base file does not exist, generate it
             if (!fs.existsSync(filePath)) {
                 const dir = path.dirname(filePath);
                 // Find the nearest template file by searching upwards

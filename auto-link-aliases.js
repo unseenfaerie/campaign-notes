@@ -92,6 +92,37 @@ function bracketAliasesInFile(filePath) {
         }
     }
 
+    // --- New: Find skip sections for aliases with fragment hrefs ---
+    // Map alias => array of {start, end} ranges to skip in this file
+    const aliasSkipSections = {};
+    for (const entry of linkEntries) {
+        if (entry.href && entry.href.includes('#')) {
+            // Split href into file and fragment
+            const [filePart, fragment] = entry.href.split('#');
+            // Only process if this is the target file
+            // filePart may be absolute or relative, so just check if filePath ends with filePart
+            if (filePart && filePath.replace(/\\/g, '/').endsWith(filePart.replace(/^[.\/]+/, ''))) {
+                // Find the header with id=fragment
+                // Accept <h2> or <h3> (or any hN)
+                const headerRegex = new RegExp(`<h[1-6][^>]*id=["']${fragment}["'][^>]*>.*?<\/h[1-6]>`, 'i');
+                const headerMatch = content.match(headerRegex);
+                if (headerMatch) {
+                    const startIdx = content.indexOf(headerMatch[0]);
+                    // Find end of section: next <h2> or <h3> (or any hN) after startIdx
+                    const afterHeader = content.slice(startIdx + headerMatch[0].length);
+                    const nextHeaderMatch = afterHeader.match(/<h[1-6][^>]*>/i);
+                    const endIdx = nextHeaderMatch
+                        ? startIdx + headerMatch[0].length + nextHeaderMatch.index
+                        : content.length;
+                    for (const alias of entry.aliases || []) {
+                        if (!aliasSkipSections[alias]) aliasSkipSections[alias] = [];
+                        aliasSkipSections[alias].push({ start: startIdx, end: endIdx });
+                    }
+                }
+            }
+        }
+    }
+
     for (const alias of allAliases) {
         // Skip bracketing if alias matches the page name or any alias for the object with that name
         if (pageName && (alias === pageName || (pageAliases && pageAliases.includes(alias)))) {
@@ -102,7 +133,15 @@ function bracketAliasesInFile(filePath) {
         const aliasRegex = new RegExp(`(?<!\\[|<a[^>]*?>|\\w)${alias.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}(?!\\]|</a>|\\w)`, 'g');
         if (debug) { console.log('looking for ' + alias); }
         content = content.replace(aliasRegex, (match, offset) => {
-            if (debug) { console.log('looking for ' + alias + ', hitting ' + match); }
+            // --- New: Check if in skip section for this alias ---
+            if (aliasSkipSections[alias]) {
+                for (const section of aliasSkipSections[alias]) {
+                    if (offset >= section.start && offset < section.end) {
+                        if (debug) { console.log(`Skipping alias '${alias}' in its own section.`); }
+                        return match;
+                    }
+                }
+            }
             // Check if inside []
             const before = content.slice(0, offset);
             const openBracket = before.lastIndexOf('[');

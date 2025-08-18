@@ -101,19 +101,19 @@ window.CAMPAIGN.nonPlayerCharacters = [
         aliases: [
             "Bert"
         ],
-        href: "/campaign-notes/characters/non-player-characters/bert-verinwort.html"
+        href: "/campaign-notes/places/othlorin/wavethorn-area/wavethorn.html#bert-verinwort"
     },
     {
         id: "gereg",
         name: "Gereg",
         aliases: [],
-        href: "/campaign-notes/characters/non-player-characters/gereg.html"
+        href: "/campaign-notes/places/othlorin/wavethorn-area/wavethorn.html#gereg"
     },
     {
         id: "leo",
         name: "Leo",
         aliases: [],
-        href: "/campaign-notes/characters/non-player-characters/leo.html"
+        href: "/campaign-notes/places/othlorin/wavethorn-area/wavethorn.html#leo"
     }
 ];
 window.CAMPAIGN.deities = [
