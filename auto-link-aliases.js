@@ -66,15 +66,40 @@ function getHtmlFiles(dir) {
 }
 
 // 5. Replace plain aliases with [Alias] (not inside <a> or already in [])
+
+
 function bracketAliasesInFile(filePath) {
     let content = fs.readFileSync(filePath, 'utf8');
     let changed = false;
 
+    // Try to extract the page's name from the <title> tag
+    let pageName = null;
+    const titleMatch = content.match(/<title>([^<]+)<\/title>/i);
+    if (titleMatch) {
+        pageName = titleMatch[1].trim();
+        if (debug) { console.log('Page name detected:', pageName); }
+    }
+
+    // Find all aliases for the object whose name matches the page title
+    let pageAliases = [];
+    if (pageName) {
+        for (const entry of linkEntries) {
+            if (entry.aliases && entry.aliases.includes(pageName)) {
+                pageAliases = entry.aliases;
+                if (debug) { console.log('Page aliases detected:', pageAliases); }
+                break;
+            }
+        }
+    }
+
     for (const alias of allAliases) {
+        // Skip bracketing if alias matches the page name or any alias for the object with that name
+        if (pageName && (alias === pageName || (pageAliases && pageAliases.includes(alias)))) {
+            if (debug) { console.log('Skipping self-link alias:', alias); }
+            continue;
+        }
         // Replace plain alias (word boundary) not inside <a>...</a> or [] or <title>...</title>
-        // For multi-word aliases, \b will only match at the start/end if the alias is surrounded by non-word chars.
-        // To handle multi-word, use lookbehind/lookahead for non-word or start/end.
-        const aliasRegex = new RegExp(`(?<!\\[|<a[^>]*?>|\\w)${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\]|</a>|\\w)`, 'g');
+        const aliasRegex = new RegExp(`(?<!\\[|<a[^>]*?>|\\w)${alias.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}(?!\\]|</a>|\\w)`, 'g');
         if (debug) { console.log('looking for ' + alias); }
         content = content.replace(aliasRegex, (match, offset) => {
             if (debug) { console.log('looking for ' + alias + ', hitting ' + match); }
