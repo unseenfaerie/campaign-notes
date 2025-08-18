@@ -11,13 +11,13 @@
     // Determine if current page is an index page (e.g., /places/places.html)
     const currentFile = pathParts[pathParts.length - 1];
     const parentDir = pathParts.length > 1 ? pathParts[pathParts.length - 2] : null;
-    const isIndexPage = parentDir && currentFile === `${parentDir}.html`;
+    const isIndexPage = (parentDir && currentFile === `${parentDir}.html`) || currentFile === 'index.html';
 
     // Build breadcrumbs
     let breadcrumbs = [];
     let currentPath = '';
     // Only go up to the parent if this is an index page
-    const end = isIndexPage ? pathParts.length - 1 : pathParts.length;
+    const end = isIndexPage ? pathParts.length - 1 : pathParts.length; //isIndexPage ? pathParts.length - 1 : 
     for (let i = 0; i < end - 1; i++) {
         currentPath += '/' + pathParts[i];
         const indexFile = `${currentPath}/${pathParts[i]}.html`;
