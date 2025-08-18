@@ -9,13 +9,15 @@
 
     // Get the path parts between root and current file
     const pathParts = window.location.pathname.split('/').filter(Boolean);
-    if (pathParts.length === 0) return; // Already at root
+    if (debug) { console.log('Path parts:', pathParts); }
+    if (pathParts.length === 1) return; // Already at root
 
     // Determine if current page is an index page (e.g., /places/places.html)
     const currentFile = pathParts[pathParts.length - 1];
     const parentDir = pathParts.length > 1 ? pathParts[pathParts.length - 2] : null;
     const isIndexPage = parentDir && currentFile === `${parentDir}.html`;
     const isParentIndex = parentDir === 'campaign-notes';
+    const weAreAtRoot = currentFile === 'index.html';
 
     // Build breadcrumbs
     let breadcrumbs = [];
@@ -23,7 +25,7 @@
     let indexFile = '';
     let end = 0;
     // Only go up to the parent if this is an index page
-    if (isParentIndex) {
+    if (isParentIndex || weAreAtRoot) {
         if (debug) { console.log("At Campaign Notes index, not adding extra breadcrumb"); }
     } else {
         end = isIndexPage ? pathParts.length - 1 : pathParts.length; //isIndexPage ? pathParts.length - 1 : 
