@@ -33,7 +33,7 @@ const linkEntries = [
 // 3. Build a flat list of all aliases (sorted by length descending)
 const allAliases = linkEntries.flatMap(e => e.aliases).filter(Boolean).sort((a, b) => b.length - a.length);
 
-const debug = process.argv[3]
+const debug = false; //make true for console messages
 let recurse = false;
 
 // 4. Get file path from command line
