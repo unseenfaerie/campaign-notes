@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Name</title>
+    <link rel="stylesheet" href="/campaign-notes/styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div id="sidebar-container"></div>
+        <main class="content">
+            <h1>Name</h1>
+            <p>Overview</p>
+            <h2>Pantheon</h2>
+            <p>Pantheon Name</p>
+            <h2>Alignment and Ethos</h2>
+            <p>Description</p>
+            <h2>Spheres Granted</h2>
+            <p>Clerical Spheres of Influence</p>
+            <h2>Associations</h2>
+            <ul>
+                <li>Deity - Relationship</li>
+                <li>Deity - Relationship</li>
+            </ul
+            <h2>Main Sects</h2>
+            <h3>Sect worshipping this Deity</h3>
+            <p>Description</p>
+        </main>
+    </div>
+    <script src="/campaign-notes/campaign-data.js"></script>
+    <script src="/campaign-notes/links.js"></script>
+    <script src="/campaign-notes/navbar.js"></script>
+    <script src="/campaign-notes/breadcrumbs.js"></script>
+</body>
+
+</html>

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>[Character Name]</title>
+    <title>Name</title>
     <link rel="stylesheet" href="/campaign-notes/styles.css">
 </head>
 
@@ -11,7 +11,7 @@
     <div class="container">
         <div id="sidebar-container"></div>
         <main class="content">
-            <h1>[Character Name]</h1>
+            <h1>Name</h1>
             <h2>Basic Info</h2>
             <table>
                 <tr>
