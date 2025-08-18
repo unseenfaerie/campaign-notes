@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>OOTID - Session X</title>
+    <title>Name</title>
     <link rel="stylesheet" href="/campaign-notes/styles.css">
 </head>
 
@@ -11,7 +11,7 @@
     <div class="container">
         <div id="sidebar-container"></div>
         <main class="content">
-            <h1>Session X - [Session Title]</h1>
+            <h1>Name</h1>
             <h2>Player Characters Involved</h2>
             <ul>
                 <li>[Character 1]</li>

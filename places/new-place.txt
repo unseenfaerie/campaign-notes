@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>[Place Name]</title>
+    <title>Name</title>
     <link rel="stylesheet" href="/campaign-notes/styles.css">/
 </head>
 
@@ -11,27 +11,27 @@
     <div class="container">
         <div id="sidebar-container"></div>
         <main class="content">
-            <h1>[Place Name]</h1>
-            <p>[Basic Description]</p>
-            <p>[Notable feaures]</p>
+            <h1>Name</h1>
+            <p>Basic Description</p>
+            <p>Notable feaures</p>
             <h2>Government</h2>
-            <h3>[Most local government]</h3>
-            <p>[Description including names of front facing members]</p>
-            <h3>[Next most local government]</h3>
-            <p>[Description including names, etc]</p>
+            <h3>Most local government</h3>
+            <p>Description including names of front facing members</p>
+            <h3>Next most local government</h3>
+            <p>Description including names, etc</p>
             <h2>Religions</h>
-            <h3>[Religion Name]</h3>
-            <p>[Description regarding deities, behaviors, holidays, etc.]</p>
-            <h3>[Religion Name]</h3>
-            <p>[Description regarding deities, behaviors, holidays, etc.]</p>
+            <h3>Religion Name</h3>
+            <p>Description regarding deities, behaviors, holidays, etc.</p>
+            <h3>Religion Name</h3>
+            <p>Description regarding deities, behaviors, holidays, etc.</p>
             <h2>Establishments</h2>
-            <h3>[Establisment - Type]</h3>
-            <p>[Description including names]</p>
-            <h3>[Establisment - Type]</h3>
-            <p>[Description including names]</p>
+            <h3>Establisment - Type</h3>
+            <p>Description including names</p>
+            <h3>Establisment - Type</h3>
+            <p>Description including names</p>
             <h2>History</h2>
-            <h3>[Event - Date]</h3>
-            <p>[Detailed description of events. Link to sessions and people]</p>
+            <h3>Event - Date</h3>
+            <p>Detailed description of events. Link to sessions and people</p>
         </main>
     </div>
     <script src="/campaign-notes/campaign-data.js"></script>

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Item Name</title>
+    <title>Name</title>
     <link rel="stylesheet" href="/campaign-notes/styles.css">
 </head>
 
@@ -11,7 +11,7 @@
     <div class="container">
         <div id="sidebar-container"></div>
         <main class="content">
-            <h1>Item Name</h1>
+            <h1>Name</h1>
             <h2>Type</h2>
             <p>Type of Item</p>
             <h2>In Possession Of</h2>
