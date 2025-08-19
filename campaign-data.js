@@ -208,7 +208,8 @@ window.CAMPAIGN.organizations = [
         name: "The Three Sisters",
         aliases: [
             "3 Sisters",
-            "Winged Blades of Wyaris"
+            "Winged Blades of Wyaris",
+            "Three Sister Goddesses"
         ],
         href: "/campaign-notes/organizations/three-sisters.html"
     },
