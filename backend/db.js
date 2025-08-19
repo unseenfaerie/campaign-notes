@@ -14,7 +14,8 @@ db.serialize(() => {
     id TEXT PRIMARY KEY,
     type TEXT,
     name TEXT,
-    aliases TEXT,
+    class TEXT,
+    level TEXT,
     alignment TEXT,
     strength INTEGER,
     dexterity INTEGER,
@@ -22,17 +23,14 @@ db.serialize(() => {
     intelligence INTEGER,
     wisdom INTEGER,
     charisma INTEGER,
-    href TEXT,
     total_health INTEGER,
-    deceased BOOLEAN,
+    deceased INTEGER,
     description TEXT
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS deities (
     id TEXT PRIMARY KEY,
     name TEXT,
-    aliases TEXT,
-    href TEXT,
     pantheon TEXT,
     alignment TEXT,
     description TEXT
@@ -41,8 +39,6 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS organizations (
     id TEXT PRIMARY KEY,
     name TEXT,
-    aliases TEXT,
-    href TEXT,
     locations TEXT,
     type TEXT,
     description TEXT
@@ -52,8 +48,6 @@ db.serialize(() => {
     id TEXT PRIMARY KEY,
     name TEXT,
     type TEXT,
-    aliases TEXT,
-    href TEXT,
     description TEXT,
     parent_id TEXT
   )`);
@@ -61,8 +55,6 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS items (
     id TEXT PRIMARY KEY,
     name TEXT,
-    aliases TEXT,
-    href TEXT,
     description TEXT
   )`);
 
@@ -72,7 +64,6 @@ db.serialize(() => {
     real_world_date TEXT,
     in_game_time TEXT,
     description TEXT,
-    href TEXT,
     previous_event_id TEXT,
     next_event_id TEXT
   )`);
@@ -185,6 +176,15 @@ db.serialize(() => {
       left_date TEXT,
       PRIMARY KEY (character_id, organization_id)
     )`);
+
+  // Monolithic aliases table for all entity types
+  db.run(`CREATE TABLE IF NOT EXISTS aliases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_type TEXT,
+    entity_id TEXT,
+    alias TEXT,
+    UNIQUE(entity_type, entity_id, alias)
+  )`);
 
   console.log('Database tables created or verified.');
 });
