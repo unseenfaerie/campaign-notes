@@ -131,3 +131,8 @@ tr:nth-child(odd) td {
 .fullstatblock {
     width: 75%;
 }
+
+.emphasis {
+    text-decoration: underline;
+
+}

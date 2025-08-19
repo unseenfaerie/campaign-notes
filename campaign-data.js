@@ -169,6 +169,15 @@ window.CAMPAIGN.organizations = [
         name: "Wyvernfang",
         aliases: [],
         href: "/campaign-notes/organizations/wyvernfang.html"
+    },
+    {
+        id: "order-of-the-iron-duch",
+        name: "The Order of the Iron Düch",
+        aliases: [
+            "Order of the Iron Düch",
+            "Order of the Iron Dooch"
+        ]
+
     }
 
 ];
