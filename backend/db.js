@@ -10,7 +10,7 @@ const db = new sqlite3.Database(dbPath);
 // You can expand these schemas as needed
 
 db.serialize(() => {
-    db.run(`CREATE TABLE IF NOT EXISTS characters (
+  db.run(`CREATE TABLE IF NOT EXISTS characters (
     id TEXT PRIMARY KEY,
     type TEXT,
     name TEXT,
@@ -25,33 +25,30 @@ db.serialize(() => {
     href TEXT,
     total_health INTEGER,
     deceased BOOLEAN,
-    description TEXT,
-    allies TEXT,
-    enemies TEXT
+    description TEXT
   )`);
 
-    db.run(`CREATE TABLE IF NOT EXISTS deities (
+  db.run(`CREATE TABLE IF NOT EXISTS deities (
     id TEXT PRIMARY KEY,
     name TEXT,
     aliases TEXT,
     href TEXT,
     pantheon TEXT,
     alignment TEXT,
-    description TEXT,
-    spheres TEXT
+    description TEXT
   )`);
 
-    db.run(`CREATE TABLE IF NOT EXISTS organizations (
+  db.run(`CREATE TABLE IF NOT EXISTS organizations (
     id TEXT PRIMARY KEY,
     name TEXT,
     aliases TEXT,
     href TEXT,
     locations TEXT,
-    members TEXT,
-    type TEXT
+    type TEXT,
+    description TEXT
   )`);
 
-    db.run(`CREATE TABLE IF NOT EXISTS places (
+  db.run(`CREATE TABLE IF NOT EXISTS places (
     id TEXT PRIMARY KEY,
     name TEXT,
     type TEXT,
@@ -61,26 +58,32 @@ db.serialize(() => {
     parent_id TEXT
   )`);
 
-    db.run(`CREATE TABLE IF NOT EXISTS items (
+  db.run(`CREATE TABLE IF NOT EXISTS items (
     id TEXT PRIMARY KEY,
     name TEXT,
     aliases TEXT,
     href TEXT,
-    holder TEXT
+    description TEXT
   )`);
 
-    db.run(`CREATE TABLE IF NOT EXISTS events (
+  db.run(`CREATE TABLE IF NOT EXISTS events (
     id TEXT PRIMARY KEY,
     name TEXT,
     real_world_date TEXT,
     in_game_time TEXT,
-    dm_notes TEXT,
+    description TEXT,
     href TEXT,
     previous_event_id TEXT,
     next_event_id TEXT
   )`);
 
-    db.run(`CREATE TABLE IF NOT EXISTS spells (
+  db.run(`CREATE TABLE IF NOT EXISTS spheres (
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      description TEXT
+    )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS spells (
     id TEXT PRIMARY KEY,
     type TEXT,
     name TEXT,
@@ -94,8 +97,8 @@ db.serialize(() => {
     description TEXT
   )`);
 
-    // Join tables for events to other entities
-    db.run(`CREATE TABLE IF NOT EXISTS event_characters (
+  // Join tables for events to other entities
+  db.run(`CREATE TABLE IF NOT EXISTS event_characters (
       event_id TEXT,
       character_id TEXT,
       notes TEXT,
@@ -104,7 +107,7 @@ db.serialize(() => {
       FOREIGN KEY (character_id) REFERENCES characters(id)
     )`);
 
-    db.run(`CREATE TABLE IF NOT EXISTS event_organizations (
+  db.run(`CREATE TABLE IF NOT EXISTS event_organizations (
       event_id TEXT,
       organization_id TEXT,
       PRIMARY KEY (event_id, organization_id),
@@ -112,7 +115,7 @@ db.serialize(() => {
       FOREIGN KEY (organization_id) REFERENCES organizations(id)
     )`);
 
-    db.run(`CREATE TABLE IF NOT EXISTS event_places (
+  db.run(`CREATE TABLE IF NOT EXISTS event_places (
       event_id TEXT,
       place_id TEXT,
       PRIMARY KEY (event_id, place_id),
@@ -120,7 +123,7 @@ db.serialize(() => {
       FOREIGN KEY (place_id) REFERENCES places(id)
     )`);
 
-    db.run(`CREATE TABLE IF NOT EXISTS event_deities (
+  db.run(`CREATE TABLE IF NOT EXISTS event_deities (
       event_id TEXT,
       deity_id TEXT,
       PRIMARY KEY (event_id, deity_id),
@@ -128,7 +131,7 @@ db.serialize(() => {
       FOREIGN KEY (deity_id) REFERENCES deities(id)
     )`);
 
-    db.run(`CREATE TABLE IF NOT EXISTS event_items (
+  db.run(`CREATE TABLE IF NOT EXISTS event_items (
       event_id TEXT,
       item_id TEXT,
       PRIMARY KEY (event_id, item_id),
@@ -136,14 +139,8 @@ db.serialize(() => {
       FOREIGN KEY (item_id) REFERENCES items(id)
     )`);
 
-    // Spheres table (for spell/deity relationships)
-    db.run(`CREATE TABLE IF NOT EXISTS spheres (
-      id TEXT PRIMARY KEY,
-      name TEXT
-    )`);
-
-    // Join table: character_relationships (many-to-many between characters)
-    db.run(`CREATE TABLE IF NOT EXISTS character_relationships (
+  // Join table: character_relationships (many-to-many between characters)
+  db.run(`CREATE TABLE IF NOT EXISTS character_relationships (
       character_id TEXT,
       related_id TEXT,
       relationship_type TEXT,
@@ -152,8 +149,8 @@ db.serialize(() => {
       FOREIGN KEY (related_id) REFERENCES characters(id)
     )`);
 
-    // Join table: spell_spheres (many-to-many between spells and spheres)
-    db.run(`CREATE TABLE IF NOT EXISTS spell_spheres (
+  // Join table: spell_spheres (many-to-many between spells and spheres)
+  db.run(`CREATE TABLE IF NOT EXISTS spell_spheres (
       spell_id TEXT,
       sphere_id TEXT,
       PRIMARY KEY (spell_id, sphere_id),
@@ -161,8 +158,8 @@ db.serialize(() => {
       FOREIGN KEY (sphere_id) REFERENCES spheres(id)
     )`);
 
-    // Join table: deity_spheres (many-to-many between deities and spheres)
-    db.run(`CREATE TABLE IF NOT EXISTS deity_spheres (
+  // Join table: deity_spheres (many-to-many between deities and spheres)
+  db.run(`CREATE TABLE IF NOT EXISTS deity_spheres (
       deity_id TEXT,
       sphere_id TEXT,
       PRIMARY KEY (deity_id, sphere_id),
@@ -170,8 +167,8 @@ db.serialize(() => {
       FOREIGN KEY (sphere_id) REFERENCES spheres(id)
     )`);
 
-    //Join table: character_items (many-to-many between characters and items)
-    db.run(`CREATE TABLE IF NOT EXISTS character_items (
+  //Join table: character_items (many-to-many between characters and items)
+  db.run(`CREATE TABLE IF NOT EXISTS character_items (
       character_id TEXT,
       item_id TEXT,
       acquired_date TEXT,
@@ -179,8 +176,8 @@ db.serialize(() => {
       PRIMARY KEY (character_id, item_id, acquired_date)
     )`);
 
-    // Join table: character_organizations (many-to-many between characters and organizations)
-    db.run(`CREATE TABLE IF NOT EXISTS character_organizations (
+  // Join table: character_organizations (many-to-many between characters and organizations)
+  db.run(`CREATE TABLE IF NOT EXISTS character_organizations (
       character_id TEXT,
       organization_id TEXT,
       role TEXT,
@@ -189,12 +186,12 @@ db.serialize(() => {
       PRIMARY KEY (character_id, organization_id)
     )`);
 
-    console.log('Database tables created or verified.');
+  console.log('Database tables created or verified.');
 });
 
 // Close DB connection if run directly
 if (require.main === module) {
-    db.close();
+  db.close();
 }
 
 module.exports = db;
