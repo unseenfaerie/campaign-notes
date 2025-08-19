@@ -152,6 +152,30 @@ window.CAMPAIGN.deities = [
             "Ponat, God of the Fortress"
         ],
         href: "/campaign-notes/characters/deities/ponat.html"
+    },
+    {
+        id: "wyaris",
+        name: "Wyaris",
+        aliases: [
+            "Wyaris, Lady of Blades"
+        ],
+        href: "/campaign-notes/characters/deities/wyaris.html"
+    },
+    {
+        id: "danaris",
+        name: "Danaris",
+        aliases: [
+            "Danaris, Lady of Death"
+        ],
+        href: "/campaign-notes/characters/deities/danaris.html"
+    },
+    {
+        id: "vaharis",
+        name: "Vaharis",
+        aliases: [
+            "Vaharis, Lady of Judgement"
+        ],
+        href: "/campaign-notes/characters/deities/vaharis.html"
     }
 ];
 window.CAMPAIGN.organizations = [
@@ -169,6 +193,32 @@ window.CAMPAIGN.organizations = [
         name: "Wyvernfang",
         aliases: [],
         href: "/campaign-notes/organizations/wyvernfang.html"
+    },
+    {
+        id: "order-of-the-iron-duch",
+        name: "The Order of the Iron Düch",
+        aliases: [
+            "Order of the Iron Düch",
+            "Order of the Iron Dooch"
+        ],
+        href: "/campaign-notes/organizations/order-of-the-iron-duch.html"
+    },
+    {
+        id: "three-sisters",
+        name: "The Three Sisters",
+        aliases: [
+            "3 Sisters",
+            "Winged Blades of Wyaris"
+        ],
+        href: "/campaign-notes/organizations/three-sisters.html"
+    },
+    {
+        id: "adventurers-guild",
+        name: "The Adventurer's Guild",
+        aliases: [
+            "Adventurer's Guild"
+        ],
+        href: "/campaign-notes/organizations/adventurers-guild.html"
     }
 
 ];
@@ -247,6 +297,22 @@ window.CAMPAIGN.sessions = [
             "cormac"
         ],
         previous: "coup-of-wavethorn",
+        next: "emerging-webs",
+        href: "/campaign-notes/sessions/order-of-the-iron-duch/night-of-spiders.html"
+    },
+    {
+        id: "emerging-webs",
+        name: "Emerging Webs",
+        aliases: [
+            "OOTID Session 4"
+        ],
+        characters: [
+            "releas-neb",
+            "alann-barnett",
+            "durchir",
+            "cormac"
+        ],
+        previous: "night-of-spiders",
         next: "",
         href: "/campaign-notes/sessions/order-of-the-iron-duch/night-of-spiders.html"
     }

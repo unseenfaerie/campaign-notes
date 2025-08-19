@@ -131,3 +131,18 @@ tr:nth-child(odd) td {
 .fullstatblock {
     width: 75%;
 }
+
+.emphasis {
+    text-decoration: underline;
+
+}
+
+.hp {
+    color: red;
+}
+
+.quoting {
+    color: #333;
+    background-color: #bbb;
+    font-style: italic;
+}
