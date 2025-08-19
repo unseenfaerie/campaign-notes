@@ -157,7 +157,7 @@ window.CAMPAIGN.deities = [
         id: "wyaris",
         name: "Wyaris",
         aliases: [
-            "Wyaris, Lady of Blades"
+            "Wyaris, Lady of Swords"
         ],
         href: "/campaign-notes/characters/deities/wyaris.html"
     },
