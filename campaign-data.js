@@ -132,7 +132,8 @@ window.CAMPAIGN.deities = [
             "Achiel, God of Light",
             "Achiel God of Light"
         ],
-        href: "/campaign-notes/characters/deities/achiel.html"
+        href: "/campaign-notes/characters/deities/achiel.html",
+        pantheon: "Main Human"
     },
     {
         id: "idona",
@@ -142,7 +143,8 @@ window.CAMPAIGN.deities = [
             "Idona, Goddess of the Moon",
             "Idona, Mother to Humankind"
         ],
-        href: "/campaign-notes/characters/deities/idona.html"
+        href: "/campaign-notes/characters/deities/idona.html",
+        pantheon: "Main Human"
     },
     {
         id: "ponat",
@@ -151,7 +153,8 @@ window.CAMPAIGN.deities = [
             "Ponat, God of Fortress",
             "Ponat, God of the Fortress"
         ],
-        href: "/campaign-notes/characters/deities/ponat.html"
+        href: "/campaign-notes/characters/deities/ponat.html",
+        pantheon: "Main Human"
     },
     {
         id: "wyaris",
@@ -159,7 +162,8 @@ window.CAMPAIGN.deities = [
         aliases: [
             "Wyaris, Lady of Swords"
         ],
-        href: "/campaign-notes/characters/deities/wyaris.html"
+        href: "/campaign-notes/characters/deities/wyaris.html",
+        pantheon: "Three Sister Goddesses"
     },
     {
         id: "danaris",
@@ -167,7 +171,8 @@ window.CAMPAIGN.deities = [
         aliases: [
             "Danaris, Lady of Death"
         ],
-        href: "/campaign-notes/characters/deities/danaris.html"
+        href: "/campaign-notes/characters/deities/danaris.html",
+        pantheon: "Three Sister Goddesses"
     },
     {
         id: "vaharis",
@@ -175,7 +180,8 @@ window.CAMPAIGN.deities = [
         aliases: [
             "Vaharis, Lady of Judgement"
         ],
-        href: "/campaign-notes/characters/deities/vaharis.html"
+        href: "/campaign-notes/characters/deities/vaharis.html",
+        pantheon: "Three Sister Goddesses"
     }
 ];
 window.CAMPAIGN.organizations = [
@@ -186,13 +192,19 @@ window.CAMPAIGN.organizations = [
             "Church of Achiel",
             "High Church"
         ],
-        href: "/campaign-notes/organizations/church-of-achiels-light.html"
+        href: "/campaign-notes/organizations/church-of-achiels-light.html",
+        locations: [
+            "Novafell"
+        ]
     },
     {
         id: "wyvernfang",
         name: "Wyvernfang",
         aliases: [],
-        href: "/campaign-notes/organizations/wyvernfang.html"
+        href: "/campaign-notes/organizations/wyvernfang.html",
+        locations: [
+            "Wavethorn"
+        ]
     },
     {
         id: "order-of-the-iron-duch",
@@ -201,7 +213,10 @@ window.CAMPAIGN.organizations = [
             "Order of the Iron Düch",
             "Order of the Iron Dooch"
         ],
-        href: "/campaign-notes/organizations/order-of-the-iron-duch.html"
+        href: "/campaign-notes/organizations/order-of-the-iron-duch.html",
+        locations: [
+            "Wavethorn"
+        ]
     },
     {
         id: "three-sisters",
@@ -211,7 +226,8 @@ window.CAMPAIGN.organizations = [
             "Winged Blades of Wyaris",
             "Three Sister Goddesses"
         ],
-        href: "/campaign-notes/organizations/three-sisters.html"
+        href: "/campaign-notes/organizations/three-sisters.html",
+        locations: []
     },
     {
         id: "adventurers-guild",
@@ -219,7 +235,11 @@ window.CAMPAIGN.organizations = [
         aliases: [
             "Adventurer's Guild"
         ],
-        href: "/campaign-notes/organizations/adventurers-guild.html"
+        href: "/campaign-notes/organizations/adventurers-guild.html",
+        locations: [
+            "Novafell",
+            "Wavethorn"
+        ]
     }
 
 ];
@@ -255,13 +275,15 @@ window.CAMPAIGN.items = [
         id: "cormac-spellbook",
         name: "Cormac's Spellbook",
         aliases: [],
-        href: "/campaign-notes/items/tomes/cormac-spellbook.html"
+        href: "/campaign-notes/items/tomes/cormac-spellbook.html",
+        holder: "cormac"
     },
     {
         id: "polly-spellbook",
         name: "Polly's Spellbook",
         aliases: [],
-        href: "/campaign-notes/items/tomes/polly-spellbook.html"
+        href: "/campaign-notes/items/tomes/polly-spellbook.html",
+        holder: "polly"
     }
 ];
 window.CAMPAIGN.sessions = [
