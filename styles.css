@@ -136,3 +136,13 @@ tr:nth-child(odd) td {
     text-decoration: underline;
 
 }
+
+.hp {
+    color: red;
+}
+
+.quoting {
+    color: #333;
+    background-color: #bbb;
+    font-style: italic;
+}
