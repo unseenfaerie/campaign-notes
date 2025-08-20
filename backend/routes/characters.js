@@ -1,3 +1,4 @@
+
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
@@ -112,16 +113,76 @@ router.get('/:id', (req, res) => {
     });
 });
 
-// Render a character page (SSR)
+// Render a character page (SSR with all associations)
 router.get('/page/:id', (req, res) => {
-    db.get('SELECT * FROM characters WHERE id = ?', [req.params.id], (err, character) => {
-        if (err) {
-            return res.status(500).send('Database error');
-        }
-        if (!character) {
-            return res.status(404).send('Character not found');
-        }
-        res.render('character', { character });
+    const charId = req.params.id;
+    db.get('SELECT * FROM characters WHERE id = ?', [charId], (err, character) => {
+        if (err) return res.status(500).send('Database error');
+        if (!character) return res.status(404).send('Character not found');
+
+        // Prepare queries for all associations
+        const queries = {
+            relationships: new Promise((resolve, reject) => {
+                const sql = `SELECT cr.relationship_type, cr.related_id, c.name as related_name
+                            FROM character_relationships cr
+                            JOIN characters c ON cr.related_id = c.id
+                            WHERE cr.character_id = ?`;
+                db.all(sql, [charId], (err, rows) => err ? reject(err) : resolve(rows || []));
+            }),
+            events: new Promise((resolve, reject) => {
+                const sql = `SELECT e.id, e.name
+                            FROM event_characters ec
+                            JOIN events e ON ec.event_id = e.id
+                            WHERE ec.character_id = ?`;
+                db.all(sql, [charId], (err, rows) => err ? reject(err) : resolve(rows || []));
+            }),
+            items: new Promise((resolve, reject) => {
+                const sql = `SELECT i.id, i.name
+                            FROM character_items ci
+                            JOIN items i ON ci.item_id = i.id
+                            WHERE ci.character_id = ?`;
+                db.all(sql, [charId], (err, rows) => err ? reject(err) : resolve(rows || []));
+            }),
+            organizations: new Promise((resolve, reject) => {
+                const sql = `SELECT o.id, o.name
+                            FROM character_organizations co
+                            JOIN organizations o ON co.organization_id = o.id
+                            WHERE co.character_id = ?`;
+                db.all(sql, [charId], (err, rows) => err ? reject(err) : resolve(rows || []));
+            })
+        };
+
+        Promise.all([
+            queries.relationships,
+            queries.events,
+            queries.items,
+            queries.organizations
+        ]).then(([relationships, events, items, organizations]) => {
+            // Capitalize the relationship type
+            relationships = relationships.map(rel => ({
+                ...rel,
+                relationship_type: rel.relationship_type.charAt(0).toUpperCase() + rel.relationship_type.slice(1)
+            }));
+            // Prettify the character type
+            switch (character.type) {
+                case 'player-character':
+                    character.type = 'Player Character';
+                    break;
+                case 'non-player-character':
+                    character.type = 'Non-Player Character';
+                    break;
+                default:
+                    character.type = 'Unknown';
+            }
+
+            res.render('character', {
+                character,
+                relationships: relationships || [],
+                events: events || [],
+                items: items || [],
+                organizations: organizations || []
+            });
+        }).catch(() => res.status(500).send('Database error'));
     });
 });
 
