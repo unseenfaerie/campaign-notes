@@ -112,4 +112,17 @@ router.get('/:id', (req, res) => {
     });
 });
 
+// Render a character page (SSR)
+router.get('/page/:id', (req, res) => {
+    db.get('SELECT * FROM characters WHERE id = ?', [req.params.id], (err, character) => {
+        if (err) {
+            return res.status(500).send('Database error');
+        }
+        if (!character) {
+            return res.status(404).send('Character not found');
+        }
+        res.render('character', { character });
+    });
+});
+
 module.exports = router;
