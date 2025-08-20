@@ -17,4 +17,12 @@ router.get('/page/:id', (req, res) => {
   });
 });
 
+// Render index of all deities
+router.get('/index', (req, res) => {
+  db.all('SELECT * FROM deities ORDER BY name', [], (err, rows) => {
+    if (err) return res.status(500).send('Database error');
+    res.render('deities-index', { deities: rows });
+  });
+});
+
 module.exports = router;

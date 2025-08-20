@@ -17,4 +17,12 @@ router.get('/page/:id', (req, res) => {
   });
 });
 
+// Render index of all events
+router.get('/index', (req, res) => {
+  db.all('SELECT * FROM events ORDER BY name', [], (err, rows) => {
+    if (err) return res.status(500).send('Database error');
+    res.render('events-index', { events: rows });
+  });
+});
+
 module.exports = router;

@@ -17,4 +17,12 @@ router.get('/page/:id', (req, res) => {
   });
 });
 
+// Render index of all items
+router.get('/index', (req, res) => {
+  db.all('SELECT * FROM items ORDER BY name', [], (err, rows) => {
+    if (err) return res.status(500).send('Database error');
+    res.render('items-index', { items: rows });
+  });
+});
+
 module.exports = router;

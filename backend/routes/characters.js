@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
@@ -25,6 +24,14 @@ function validateCharacter(c, isUpdate = false) {
     }
     return null;
 }
+
+// Render index of all characters
+router.get('/index', (req, res) => {
+    db.all('SELECT * FROM characters ORDER BY name', [], (err, rows) => {
+        if (err) return res.status(500).send('Database error');
+        res.render('characters-index', { characters: rows });
+    });
+});
 
 // Create a new character (with uniqueness check for id)
 router.post('/', (req, res) => {
