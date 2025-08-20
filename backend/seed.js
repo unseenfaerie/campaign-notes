@@ -9,20 +9,33 @@ db.serialize(() => {
   console.log('Inserting characters...');
   db.run(`INSERT OR IGNORE INTO characters (id, type, name, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, description) VALUES
     ('alann-barnett', 'player-character', 'Alann Barnett', 'Cleric', '4', 'Neutral Good', 13, 8, 11, 10, 14, 11, 20, 0, 'A thoughtful and strong-willed adventurer.'),
-    ('releas-neb', 'player-character', 'Releas Neb', 'Magic User', '7', 'Chaotic Good', 5, 14, 10, 18, 13, 9,  16, 0, 'A clever and resourceful wizard.'),
-    ('bert-verinwort', 'non-player-character', 'Bert Verinwort', NULL, NULL, 'Lawful Neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A local notable in Wavethorn.');
+    ('releas-neb', 'player-character', 'Releas Neb', 'Magic User', '7', 'Chaotic Good', 5, 14, 10, 18, 13, 9, 16, 0, 'A clever and resourceful wizard.'),
+    ('appolonia-palleday', 'player-character', 'Appolonia Palleday', 'Magic User', '5', 'Neutral Good', 13, 8, 11, 18, 14, 11, 18, 0, 'A bright and curious spellcaster.'),
+    ('durchir', 'player-character', 'Durchir', 'Fighter/Enchanter', '2/Enchanter', 'Lawful Evil', 18, 10, 12, 15, 10, 11, 22, 1, 'Durchir of the Angry Orchard, fallen hero.'),
+    ('cormac', 'player-character', 'Cormac', 'Thief/Illusionist', '5/4', 'Chaotic Good', 9, 16, 7, 15, 14, 7, 15, 0, 'A clever and nimble adventurer.'),
+    ('bert-verinwort', 'non-player-character', 'Bert Verinwort', NULL, NULL, 'Lawful Neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A local notable in Wavethorn.'),
+    ('sieg-ordoss', 'non-player-character', 'Sieg Ordoss', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A mysterious figure.'),
+    ('gereg', 'non-player-character', 'Gereg', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A resident of Wavethorn.'),
+    ('leo', 'non-player-character', 'Leo', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A resident of Wavethorn.')
   `);
 
   console.log('Inserting deities...');
   db.run(`INSERT OR IGNORE INTO deities (id, name, pantheon, alignment, description) VALUES
     ('achiel', 'Achiel', 'Main Human', 'Lawful Good', 'God of Light.'),
-    ('wyaris', 'Wyaris', 'Three Sister Goddesses', 'Chaotic Good', 'Lady of Swords.');
+    ('idona', 'Idona', 'Main Human', 'Chaotic Good', 'Goddess of Humanity, the Moon, and devotion.'),
+    ('ponat', 'Ponat', 'Main Human', 'Lawful Good', 'God of Fortress and protection.'),
+    ('wyaris', 'Wyaris', 'Three Sister Goddesses', 'Chaotic Good', 'Lady of Swords.'),
+    ('danaris', 'Danaris', 'Three Sister Goddesses', 'Chaotic Neutral', 'Lady of Death.'),
+    ('vaharis', 'Vaharis', 'Three Sister Goddesses', 'Lawful Neutral', 'Lady of Judgement.')
   `);
 
   console.log('Inserting organizations...');
   db.run(`INSERT OR IGNORE INTO organizations (id, name, type, description) VALUES
     ('church-of-achiels-light', 'Church of Achiel''s Light', 'religion', 'The main church of Achiel.'),
-    ('order-of-the-iron-duch', 'The Order of the Iron Düch', 'adventuring party', 'A party of heroes.');
+    ('order-of-the-iron-duch', 'The Order of the Iron Düch', 'adventuring party', 'A party of heroes.'),
+    ('wyvernfang', 'Wyvernfang', 'adventuring party', 'A group based in Wavethorn.'),
+    ('three-sisters', 'The Three Sisters', 'pantheon', 'The Three Sister Goddesses.'),
+    ('adventurers-guild', 'The Adventurer''s Guild', 'guild', 'A guild for adventurers in Novafell and Wavethorn.')
   `);
 
   console.log('Inserting places...');
@@ -75,7 +88,12 @@ db.serialize(() => {
 
   console.log('Inserting character_relationships...');
   db.run(`INSERT OR IGNORE INTO character_relationships (character_id, related_id, relationship_type) VALUES
-    ('alann-barnett', 'releas-neb', 'ally');
+    ('alann-barnett', 'releas-neb', 'ally'),
+    ('alann-barnett', 'durchir', 'ally'),
+    ('alann-barnett', 'cormac', 'ally'),
+    ('releas-neb', 'durchir', 'ally'),
+    ('releas-neb', 'cormac', 'ally'),
+    ('durchir', 'cormac', 'ally');
   `);
 
   console.log('Inserting spell_spheres...');
@@ -89,6 +107,15 @@ db.serialize(() => {
     ('achiel', 'war'),
     ('wyaris', 'war'),
     ('achiel', 'death');
+  `);
+
+  console.log('Inserting character_deities (patron relationships)...');
+  db.run(`INSERT OR IGNORE INTO character_deities (character_id, deity_id) VALUES
+    ('alann-barnett', 'achiel'),
+    ('releas-neb', 'wyaris'),
+    ('appolonia-palleday', 'idona'),
+    ('durchir', 'ponat'),
+    ('cormac', 'idona') -- Cormac is a trickster/illusionist, fits with moon/devotion themes
   `);
 
   console.log('Example data inserted.');

@@ -177,6 +177,15 @@ db.serialize(() => {
       PRIMARY KEY (character_id, organization_id)
     )`);
 
+  // Join table: character_deities (many-to-many between characters and deities)
+  db.run(`CREATE TABLE IF NOT EXISTS character_deities (
+      character_id TEXT,
+      deity_id TEXT,
+      PRIMARY KEY (character_id, deity_id),
+      FOREIGN KEY (character_id) REFERENCES characters(id),
+      FOREIGN KEY (deity_id) REFERENCES deities(id)
+    )`);
+
   // Monolithic aliases table for all entity types
   db.run(`CREATE TABLE IF NOT EXISTS aliases (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

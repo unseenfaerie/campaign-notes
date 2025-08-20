@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Places Index</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body>
+  <div class="container">
+    <%- include('partials/sidenav') %>
+      <main class="content">
+        <h1>Places</h1>
+        <ul>
+          <% places.forEach(function(place) { %>
+            <li><a href="/api/places/page/<%= place.id %>">
+                <%= place.name %>
+              </a></li>
+            <% }); %>
+        </ul>
+      </main>
+  </div>
+</body>
+
+</html>

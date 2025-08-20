@@ -8,6 +8,19 @@ app.use(express.json());
 
 const charactersRouter = require('./routes/characters');
 app.use('/api/characters', charactersRouter);
+const itemsRouter = require('./routes/items');
+app.use('/api/items', itemsRouter);
+const organizationsRouter = require('./routes/organizations');
+app.use('/api/organizations', organizationsRouter);
+const deitiesRouter = require('./routes/deities');
+app.use('/api/deities', deitiesRouter);
+const eventsRouter = require('./routes/events');
+app.use('/api/events', eventsRouter);
+
+//main index route
+app.get('/', (req, res) => {
+    res.render('index', { title: 'Campaign Notes' });
+});
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));

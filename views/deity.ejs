@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>
+    <%= deity.name %> | Campaign Notes
+  </title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body>
+  <div class="container">
+    <%- include('partials/sidenav') %>
+      <main class="content">
+        <h1>
+          <%= deity.name %>
+        </h1>
+        <p>
+          <%= deity.description %>
+        </p>
+        <p><strong>Pantheon:</strong>
+          <%= deity.pantheon %>
+        </p>
+        <p><strong>Alignment:</strong>
+          <%= deity.alignment %>
+        </p>
+        <% if (spheres && spheres.length> 0) { %>
+          <h2>Spheres</h2>
+          <ul>
+            <% spheres.forEach(function(sphere) { %>
+              <li>
+                <%= sphere.name %>
+              </li>
+              <% }); %>
+          </ul>
+          <% } %>
+      </main>
+  </div>
+</body>
+
+</html>

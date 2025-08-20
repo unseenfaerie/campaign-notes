@@ -149,6 +149,13 @@ router.get('/page/:id', (req, res) => {
                             JOIN organizations o ON co.organization_id = o.id
                             WHERE co.character_id = ?`;
                 db.all(sql, [charId], (err, rows) => err ? reject(err) : resolve(rows || []));
+            }),
+            patron_deities: new Promise((resolve, reject) => {
+                const sql = `SELECT d.id, d.name
+                            FROM character_deities cd
+                            JOIN deities d ON cd.deity_id = d.id
+                            WHERE cd.character_id = ?`;
+                db.all(sql, [charId], (err, rows) => err ? reject(err) : resolve(rows || []));
             })
         };
 
@@ -156,8 +163,9 @@ router.get('/page/:id', (req, res) => {
             queries.relationships,
             queries.events,
             queries.items,
-            queries.organizations
-        ]).then(([relationships, events, items, organizations]) => {
+            queries.organizations,
+            queries.patron_deities
+        ]).then(([relationships, events, items, organizations, patron_deities]) => {
             // Capitalize the relationship type
             relationships = relationships.map(rel => ({
                 ...rel,
@@ -180,7 +188,8 @@ router.get('/page/:id', (req, res) => {
                 relationships: relationships || [],
                 events: events || [],
                 items: items || [],
-                organizations: organizations || []
+                organizations: organizations || [],
+                patron_deities: patron_deities || []
             });
         }).catch(() => res.status(500).send('Database error'));
     });
