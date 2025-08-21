@@ -25,7 +25,9 @@ db.serialize(() => {
     charisma INTEGER,
     total_health INTEGER,
     deceased INTEGER,
-    description TEXT
+    description TEXT,
+    short_description TEXT,
+    long_explanation TEXT
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS deities (
@@ -33,7 +35,9 @@ db.serialize(() => {
     name TEXT,
     pantheon TEXT,
     alignment TEXT,
-    description TEXT
+    description TEXT,
+    short_description TEXT,
+    long_explanation TEXT
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS organizations (
@@ -41,7 +45,9 @@ db.serialize(() => {
     name TEXT,
     locations TEXT,
     type TEXT,
-    description TEXT
+    description TEXT,
+    short_description TEXT,
+    long_explanation TEXT
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS places (
@@ -49,13 +55,17 @@ db.serialize(() => {
     name TEXT,
     type TEXT,
     description TEXT,
-    parent_id TEXT
+    parent_id TEXT,
+    short_description TEXT,
+    long_explanation TEXT
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS items (
     id TEXT PRIMARY KEY,
     name TEXT,
-    description TEXT
+    description TEXT,
+    short_description TEXT,
+    long_explanation TEXT
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS events (
@@ -65,13 +75,17 @@ db.serialize(() => {
     in_game_time TEXT,
     description TEXT,
     previous_event_id TEXT,
-    next_event_id TEXT
+    next_event_id TEXT,
+    short_description TEXT,
+    long_explanation TEXT
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS spheres (
       id TEXT PRIMARY KEY,
       name TEXT,
-      description TEXT
+      description TEXT,
+      short_description TEXT,
+      long_explanation TEXT
     )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS spells (
@@ -92,7 +106,8 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS event_characters (
       event_id TEXT,
       character_id TEXT,
-      notes TEXT,
+      short_description TEXT,
+      long_explanation TEXT,
       PRIMARY KEY (event_id, character_id),
       FOREIGN KEY (event_id) REFERENCES events(id),
       FOREIGN KEY (character_id) REFERENCES characters(id)
@@ -101,6 +116,8 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS event_organizations (
       event_id TEXT,
       organization_id TEXT,
+      short_description TEXT,
+      long_explanation TEXT,
       PRIMARY KEY (event_id, organization_id),
       FOREIGN KEY (event_id) REFERENCES events(id),
       FOREIGN KEY (organization_id) REFERENCES organizations(id)
@@ -109,6 +126,8 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS event_places (
       event_id TEXT,
       place_id TEXT,
+      short_description TEXT,
+      long_explanation TEXT,
       PRIMARY KEY (event_id, place_id),
       FOREIGN KEY (event_id) REFERENCES events(id),
       FOREIGN KEY (place_id) REFERENCES places(id)
@@ -117,6 +136,8 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS event_deities (
       event_id TEXT,
       deity_id TEXT,
+      short_description TEXT,
+      long_explanation TEXT,
       PRIMARY KEY (event_id, deity_id),
       FOREIGN KEY (event_id) REFERENCES events(id),
       FOREIGN KEY (deity_id) REFERENCES deities(id)
@@ -125,6 +146,8 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS event_items (
       event_id TEXT,
       item_id TEXT,
+      short_description TEXT,
+      long_explanation TEXT,
       PRIMARY KEY (event_id, item_id),
       FOREIGN KEY (event_id) REFERENCES events(id),
       FOREIGN KEY (item_id) REFERENCES items(id)
@@ -135,6 +158,8 @@ db.serialize(() => {
       character_id TEXT,
       related_id TEXT,
       relationship_type TEXT,
+      short_description TEXT,
+      long_explanation TEXT,
       PRIMARY KEY (character_id, related_id),
       FOREIGN KEY (character_id) REFERENCES characters(id),
       FOREIGN KEY (related_id) REFERENCES characters(id)
@@ -174,6 +199,8 @@ db.serialize(() => {
       role TEXT,
       joined_date TEXT,
       left_date TEXT,
+      short_description TEXT,
+      long_explanation TEXT,
       PRIMARY KEY (character_id, organization_id)
     )`);
 
@@ -181,6 +208,8 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS character_deities (
       character_id TEXT,
       deity_id TEXT,
+      short_description TEXT,
+      long_explanation TEXT,
       PRIMARY KEY (character_id, deity_id),
       FOREIGN KEY (character_id) REFERENCES characters(id),
       FOREIGN KEY (deity_id) REFERENCES deities(id)
