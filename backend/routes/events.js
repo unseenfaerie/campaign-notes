@@ -46,10 +46,10 @@ router.post('/', (req, res) => {
     if (row) {
       return res.status(409).json({ error: 'An event with this id already exists.' });
     }
-    const sql = `INSERT INTO events (id, name, real_world_date, in_game_time, description, previous_event_id, next_event_id)
-          VALUES (?, ?, ?, ?, ?, ?, ?)`;
+    const sql = `INSERT INTO events (id, name, real_world_date, in_game_time, previous_event_id, next_event_id, short_description, long_explanation)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
     const params = [
-      e.id, e.name, e.real_world_date, e.in_game_time, e.description, e.previous_event_id, e.next_event_id
+      e.id, e.name, e.real_world_date, e.in_game_time, e.previous_event_id, e.next_event_id, e.short_description, e.long_explanation
     ];
     db.run(sql, params, function (err) {
       if (err) {
@@ -67,9 +67,9 @@ router.put('/:id', (req, res) => {
   if (validationError) {
     return res.status(400).json({ error: validationError });
   }
-  const sql = `UPDATE events SET name=?, real_world_date=?, in_game_time=?, description=?, previous_event_id=?, next_event_id=? WHERE id=?`;
+  const sql = `UPDATE events SET name=?, real_world_date=?, in_game_time=?, previous_event_id=?, next_event_id=?, short_description=?, long_explanation=? WHERE id=?`;
   const params = [
-    e.name, e.real_world_date, e.in_game_time, e.description, e.previous_event_id, e.next_event_id, req.params.id
+    e.name, e.real_world_date, e.in_game_time, e.previous_event_id, e.next_event_id, e.short_description, e.long_explanation, req.params.id
   ];
   db.run(sql, params, function (err) {
     if (err) {

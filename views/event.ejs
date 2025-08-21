@@ -18,7 +18,7 @@
           <%= event.name %>
         </h1>
         <p>
-          <%= event.description %>
+          <%= event.short_description %>
         </p>
         <p><strong>Date:</strong>
           <%= event.real_world_date %>
@@ -27,7 +27,7 @@
           <%= event.in_game_time %>
         </p>
         <% if (characters && characters.length> 0) { %>
-          <h2>Characters</h2>
+          <h2>Characters Involved</h2>
           <ul>
             <% characters.forEach(function(character) { %>
               <li><a href="/api/characters/page/<%= character.id %>">
@@ -36,6 +36,11 @@
               <% }); %>
           </ul>
           <% } %>
+            <h2>Event Details</h2>
+            <p><strong>DM Summary:</strong></p>
+            <p>
+              <%= event.long_explanation %>
+            </p>
       </main>
   </div>
 </body>

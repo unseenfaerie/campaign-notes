@@ -73,7 +73,6 @@ db.serialize(() => {
     name TEXT,
     real_world_date TEXT,
     in_game_time TEXT,
-    description TEXT,
     previous_event_id TEXT,
     next_event_id TEXT,
     short_description TEXT,
