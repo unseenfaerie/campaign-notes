@@ -134,8 +134,8 @@ router.delete('/:id', (req, res) => {
 
 router.use('/:id/organizations', require('./organizations'));
 router.use('/:id/events', require('./events'));
-//router.use('/:id/items', require('./items'));
-//router.use('/:id/deities', require('./deities'));
+router.use('/:id/items', require('./items'));
+router.use('/:id/deities', require('./deities'));
 router.use('/:id/relationships', require('./relationships'));
 
 module.exports = router;
