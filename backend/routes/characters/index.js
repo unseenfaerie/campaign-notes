@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../../db');
+const characterService = require('../../services/character');
 
 // Helper: Validate character data
 function validateCharacter(c, isUpdate = false) {
@@ -32,104 +32,48 @@ router.post('/', (req, res) => {
     if (validationError) {
         return res.status(400).json({ error: validationError });
     }
-    // Check if id already exists
-    db.get('SELECT id FROM characters WHERE id = ?', [c.id], (err, row) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
-        if (row) {
-            return res.status(409).json({ error: 'A character with this id already exists.' });
-        }
-        const sql = `INSERT INTO characters (id, type, name, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, short_description, long_explanation)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-        const params = [
-            c.id, c.type, c.name, c.class, c.level, c.alignment, c.strength, c.dexterity, c.constitution, c.intelligence, c.wisdom, c.charisma, c.total_health, c.deceased, c.short_description, c.long_explanation
-        ];
-        db.run(sql, params, function (err) {
-            if (err) {
-                return res.status(500).json({ error: err.message });
+    characterService.createCharacter(c)
+        .then(result => res.status(201).json(result))
+        .catch(err => {
+            if (err.message && err.message.includes('UNIQUE constraint failed')) {
+                return res.status(409).json({ error: 'A character with this id already exists.' });
             }
-            res.status(201).json({ id: c.id });
+            res.status(500).json({ error: err.message });
         });
-    });
 });
 
 // Read all characters
 router.get('/', (req, res) => {
-    db.all('SELECT * FROM characters', [], (err, rows) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
-        res.json(rows);
-    });
+    characterService.getAllCharacters()
+        .then(rows => res.json(rows))
+        .catch(err => res.status(500).json({ error: err.message }));
 });
 
 // Read a particular character by ID
 router.get('/:id', (req, res) => {
-    db.get('SELECT * FROM characters WHERE id = ?', [req.params.id], (err, row) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
-        if (!row) {
-            return res.status(404).json({ error: 'Character not found' });
-        }
-        // Also fetch relationships with descriptions
-        db.all(`SELECT cr.relationship_type, cr.related_id, c.name as related_name, cr.short_description, cr.long_explanation
-                FROM character_relationships cr
-                JOIN characters c ON cr.related_id = c.id
-                WHERE cr.character_id = ?`, [req.params.id], (err2, rels) => {
-            if (err2) {
-                return res.status(500).json({ error: err2.message });
+    characterService.getCharacterById(req.params.id)
+        .then(row => {
+            if (!row) {
+                return res.status(404).json({ error: 'Character not found' });
             }
-            row.relationships = rels || [];
             res.json(row);
-        });
-    });
+        })
+        .catch(err => res.status(500).json({ error: err.message }));
 });
 
 // Update an existing character
 router.patch('/:id', (req, res) => {
     const c = req.body;
-    // Only allow fields that exist in the schema
-    const allowed = ['type', 'name', 'class', 'level', 'alignment', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma', 'total_health', 'deceased', 'short_description', 'long_explanation'];
-    const fields = Object.keys(c).filter(key => allowed.includes(key));
-    if (fields.length === 0) {
-        return res.status(400).json({ error: 'No valid fields to update.' });
-    }
-    const setClause = fields.map(f => `${f} = ?`).join(', ');
-    const params = fields.map(f => c[f]);
-    params.push(req.params.id);
-    const sql = `UPDATE characters SET ${setClause} WHERE id = ?`;
-    db.run(sql, params, function (err) {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
-        if (this.changes === 0) {
-            return res.status(404).json({ error: 'Character not found' });
-        }
-        res.json({ updated: req.params.id });
-    });
+    characterService.patchCharacter(req.params.id, c)
+        .then(result => res.json(result))
+        .catch(err => res.status(500).json({ error: err.message }));
 });
 
 // Delete a character
 router.delete('/:id', (req, res) => {
-    const charId = req.params.id;
-    // First, remove all event-character relationships for this character
-    db.run('DELETE FROM event_characters WHERE character_id = ?', [charId], function (err) {
-        if (err) {
-            return res.status(500).json({ error: 'Failed to remove event-character relationships: ' + err.message });
-        }
-        // Now delete the character itself
-        db.run('DELETE FROM characters WHERE id = ?', [charId], function (err2) {
-            if (err2) {
-                return res.status(500).json({ error: err2.message });
-            }
-            if (this.changes === 0) {
-                return res.status(404).json({ error: 'Character not found' });
-            }
-            res.json({ deleted: charId });
-        });
-    });
+    characterService.deleteCharacter(req.params.id)
+        .then(result => res.json(result))
+        .catch(err => res.status(500).json({ error: err.message }));
 });
 
 router.use('/:id/organizations', require('./organizations'));
