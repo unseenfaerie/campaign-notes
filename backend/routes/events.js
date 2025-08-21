@@ -24,11 +24,26 @@ function validateEvent(e, isUpdate = false) {
   return null;
 }
 
-// Render index of all events
-router.get('/index', (req, res) => {
-  db.all('SELECT * FROM events ORDER BY name', [], (err, rows) => {
-    if (err) return res.status(500).send('Database error');
-    res.render('events-index', { events: rows });
+// Get all events
+router.get('/', (req, res) => {
+  db.all('SELECT * FROM events', [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+// Get a single event by id
+router.get('/:id', (req, res) => {
+  db.get('SELECT * FROM events WHERE id = ?', [req.params.id], (err, row) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (!row) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    res.json(row);
   });
 });
 
@@ -96,28 +111,7 @@ router.delete('/:id', (req, res) => {
   });
 });
 
-// Get all events (JSON)
-router.get('/', (req, res) => {
-  db.all('SELECT * FROM events', [], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json(rows);
-  });
-});
-
-// Get a single event by id (JSON)
-router.get('/:id', (req, res) => {
-  db.get('SELECT * FROM events WHERE id = ?', [req.params.id], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (!row) {
-      return res.status(404).json({ error: 'Event not found' });
-    }
-    res.json(row);
-  });
-});
+// EVENT - CHARACTER ASSOCIATIONS
 
 // Add a character to an event
 router.post('/:id/characters', (req, res) => {
@@ -145,29 +139,6 @@ router.delete('/:id/characters/:characterId', (req, res) => {
   eventCharacters.removeEventCharacter(event_id, character_id)
     .then(result => res.json(result))
     .catch(err => res.status(500).json({ error: err.message }));
-});
-
-// Render a event page (SSR with associations)
-router.get('/page/:id', (req, res) => {
-  const eventId = req.params.id;
-  db.get('SELECT * FROM events WHERE id = ?', [eventId], (err, event) => {
-    if (err) return res.status(500).send('Database error');
-    if (!event) return res.status(404).send('event not found');
-    // Find characters in this event
-    const charSql = `SELECT c.id, c.name FROM event_characters ec JOIN characters c ON ec.character_id = c.id WHERE ec.event_id = ?`;
-    db.all(charSql, [eventId], (err2, characters) => {
-      if (err2) return res.status(500).send('Database error');
-      res.render('event', { event, characters: characters || [] });
-    });
-  });
-});
-
-// Render index of all events
-router.get('/index', (req, res) => {
-  db.all('SELECT * FROM events ORDER BY name', [], (err, rows) => {
-    if (err) return res.status(500).send('Database error');
-    res.render('events-index', { events: rows });
-  });
 });
 
 module.exports = router;

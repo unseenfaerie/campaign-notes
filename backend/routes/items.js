@@ -15,14 +15,6 @@ function validateItem(i, isUpdate = false) {
   return null;
 }
 
-// Render index of all items
-router.get('/index', (req, res) => {
-  db.all('SELECT * FROM items ORDER BY name', [], (err, rows) => {
-    if (err) return res.status(500).send('Database error');
-    res.render('items-index', { items: rows });
-  });
-});
-
 // Create a new item
 router.post('/', (req, res) => {
   const i = req.body;
@@ -104,29 +96,6 @@ router.get('/:id', (req, res) => {
       return res.status(404).json({ error: 'Item not found' });
     }
     res.json(row);
-  });
-});
-
-// Render an item page (SSR with associations)
-router.get('/page/:id', (req, res) => {
-  const itemId = req.params.id;
-  db.get('SELECT * FROM items WHERE id = ?', [itemId], (err, item) => {
-    if (err) return res.status(500).send('Database error');
-    if (!item) return res.status(404).send('Item not found');
-    // Find characters who have held this item
-    const charSql = `SELECT c.id, c.name FROM character_items ci JOIN characters c ON ci.character_id = c.id WHERE ci.item_id = ?`;
-    db.all(charSql, [itemId], (err2, characters) => {
-      if (err2) return res.status(500).send('Database error');
-      res.render('item', { item, characters: characters || [] });
-    });
-  });
-});
-
-// Render index of all items
-router.get('/index', (req, res) => {
-  db.all('SELECT * FROM items ORDER BY name', [], (err, rows) => {
-    if (err) return res.status(500).send('Database error');
-    res.render('items-index', { items: rows });
   });
 });
 
