@@ -99,8 +99,8 @@ router.post('/', (req, res) => {
     if (row) {
       return res.status(409).json({ error: 'A place with this id already exists.' });
     }
-    const sql = `INSERT INTO places (id, name, type, description, parent_id) VALUES (?, ?, ?, ?, ?)`;
-    const params = [p.id, p.name, p.type, p.description, p.parent_id];
+    const sql = `INSERT INTO places (id, name, type, parent_id, short_description) VALUES (?, ?, ?, ?, ?)`;
+    const params = [p.id, p.name, p.type, p.parent_id, p.short_description];
     db.run(sql, params, function (err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -117,8 +117,8 @@ router.put('/:id', (req, res) => {
   if (validationError) {
     return res.status(400).json({ error: validationError });
   }
-  const sql = `UPDATE places SET name=?, type=?, description=?, parent_id=? WHERE id=?`;
-  const params = [p.name, p.type, p.description, p.parent_id, req.params.id];
+  const sql = `UPDATE places SET name=?, type=?, short_description=?, parent_id=? WHERE id=?`;
+  const params = [p.name, p.type, p.short_description, p.parent_id, req.params.id];
   db.run(sql, params, function (err) {
     if (err) {
       return res.status(500).json({ error: err.message });

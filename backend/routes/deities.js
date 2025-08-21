@@ -12,15 +12,15 @@ function validateDeity(d, isUpdate = false) {
       }
     }
   }
-  // pantheon, alignment, description can be null or string
+  // pantheon, alignment, short_description can be null or string
   if (d.pantheon && typeof d.pantheon !== 'string') {
     return 'Field pantheon must be a string or null';
   }
   if (d.alignment && typeof d.alignment !== 'string') {
     return 'Field alignment must be a string or null';
   }
-  if (d.description && typeof d.description !== 'string') {
-    return 'Field description must be a string or null';
+  if (d.short_description && typeof d.short_description !== 'string') {
+    return 'Field short_description must be a string or null';
   }
   return null;
 }
@@ -47,8 +47,8 @@ router.post('/', (req, res) => {
     if (row) {
       return res.status(409).json({ error: 'A deity with this id already exists.' });
     }
-    const sql = `INSERT INTO deities (id, name, pantheon, alignment, description) VALUES (?, ?, ?, ?, ?)`;
-    const params = [d.id, d.name, d.pantheon, d.alignment, d.description];
+    const sql = `INSERT INTO deities (id, name, pantheon, alignment, short_description) VALUES (?, ?, ?, ?, ?)`;
+    const params = [d.id, d.name, d.pantheon, d.alignment, d.short_description];
     db.run(sql, params, function (err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -65,8 +65,8 @@ router.put('/:id', (req, res) => {
   if (validationError) {
     return res.status(400).json({ error: validationError });
   }
-  const sql = `UPDATE deities SET name=?, pantheon=?, alignment=?, description=? WHERE id=?`;
-  const params = [d.name, d.pantheon, d.alignment, d.description, req.params.id];
+  const sql = `UPDATE deities SET name=?, pantheon=?, alignment=?, short_description=? WHERE id=?`;
+  const params = [d.name, d.pantheon, d.alignment, d.short_description, req.params.id];
   db.run(sql, params, function (err) {
     if (err) {
       return res.status(500).json({ error: err.message });

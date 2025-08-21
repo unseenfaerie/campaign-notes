@@ -25,7 +25,6 @@ db.serialize(() => {
     charisma INTEGER,
     total_health INTEGER,
     deceased INTEGER,
-    description TEXT,
     short_description TEXT,
     long_explanation TEXT
   )`);
@@ -35,7 +34,6 @@ db.serialize(() => {
     name TEXT,
     pantheon TEXT,
     alignment TEXT,
-    description TEXT,
     short_description TEXT,
     long_explanation TEXT
   )`);
@@ -45,7 +43,6 @@ db.serialize(() => {
     name TEXT,
     locations TEXT,
     type TEXT,
-    description TEXT,
     short_description TEXT,
     long_explanation TEXT
   )`);
@@ -54,7 +51,6 @@ db.serialize(() => {
     id TEXT PRIMARY KEY,
     name TEXT,
     type TEXT,
-    description TEXT,
     parent_id TEXT,
     short_description TEXT,
     long_explanation TEXT
@@ -63,7 +59,6 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS items (
     id TEXT PRIMARY KEY,
     name TEXT,
-    description TEXT,
     short_description TEXT,
     long_explanation TEXT
   )`);

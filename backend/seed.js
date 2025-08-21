@@ -7,51 +7,51 @@ const db = new sqlite3.Database(dbPath);
 
 db.serialize(() => {
   console.log('Inserting characters...');
-  db.run(`INSERT OR IGNORE INTO characters (id, type, name, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, description, short_description, long_explanation) VALUES
-    ('alann-barnett', 'player-character', 'Alann Barnett', 'Cleric', '4', 'Neutral Good', 13, 8, 11, 10, 14, 11, 20, 0, 'A thoughtful and strong-willed adventurer.', 'Short description.', 'Long Explanation.'),
-    ('releas-neb', 'player-character', 'Releas Neb', 'Magic User', '7', 'Chaotic Good', 5, 14, 10, 18, 13, 9, 16, 0, 'A clever and resourceful wizard.', 'Short description.', 'Long Explanation.'),
-    ('appolonia-palleday', 'player-character', 'Appolonia Palleday', 'Magic User', '5', 'Neutral Good', 13, 8, 11, 18, 14, 11, 18, 0, 'A bright and curious spellcaster.', 'Short description.', 'Long Explanation.'),
-    ('durchir', 'player-character', 'Durchir', 'Fighter/Enchanter', '2/Enchanter', 'Lawful Evil', 18, 10, 12, 15, 10, 11, 22, 1, 'Durchir of the Angry Orchard, fallen hero.', 'Short description.', 'Long Explanation.'),
-    ('cormac', 'player-character', 'Cormac', 'Thief/Illusionist', '5/4', 'Chaotic Good', 9, 16, 7, 15, 14, 7, 15, 0, 'A clever and nimble adventurer.', 'Short description.', 'Long Explanation.'),
-    ('bert-verinwort', 'non-player-character', 'Bert Verinwort', NULL, NULL, 'Lawful Neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A local notable in Wavethorn.', 'Short description.', 'Long Explanation.'),
-    ('sieg-ordoss', 'non-player-character', 'Sieg Ordoss', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A mysterious figure.', 'Short description.', 'Long Explanation.'),
-    ('gereg', 'non-player-character', 'Gereg', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A resident of Wavethorn.', 'Short description.', 'Long Explanation.'),
-    ('leo', 'non-player-character', 'Leo', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A resident of Wavethorn.', 'Short description.', 'Long Explanation.');
+  db.run(`INSERT OR IGNORE INTO characters (id, type, name, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, short_description, long_explanation) VALUES
+    ('alann-barnett', 'player-character', 'Alann Barnett', 'Cleric', '4', 'Neutral Good', 13, 8, 11, 10, 14, 11, 20, 0, 'A thoughtful and strong-willed adventurer.', 'Long Explanation.'),
+    ('releas-neb', 'player-character', 'Releas Neb', 'Magic User', '7', 'Chaotic Good', 5, 14, 10, 18, 13, 9, 16, 0, 'A clever and resourceful wizard.', 'Long Explanation.'),
+    ('appolonia-palleday', 'player-character', 'Appolonia Palleday', 'Magic User', '5', 'Neutral Good', 13, 8, 11, 18, 14, 11, 18, 0, 'A bright and curious spellcaster.', 'Long Explanation.'),
+    ('durchir', 'player-character', 'Durchir', 'Fighter/Enchanter', '2/Enchanter', 'Lawful Evil', 18, 10, 12, 15, 10, 11, 22, 1, 'Durchir of the Angry Orchard, fallen hero.', 'Long Explanation.'),
+    ('cormac', 'player-character', 'Cormac', 'Thief/Illusionist', '5/4', 'Chaotic Good', 9, 16, 7, 15, 14, 7, 15, 0, 'A clever and nimble adventurer.', 'Long Explanation.'),
+    ('bert-verinwort', 'non-player-character', 'Bert Verinwort', NULL, NULL, 'Lawful Neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A local notable in Wavethorn.', 'Long Explanation.'),
+    ('sieg-ordoss', 'non-player-character', 'Sieg Ordoss', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A mysterious figure.', 'Long Explanation.'),
+    ('gereg', 'non-player-character', 'Gereg', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A resident of Wavethorn.', 'Long Explanation.'),
+    ('leo', 'non-player-character', 'Leo', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A resident of Wavethorn.', 'Long Explanation.');
   `);
 
   console.log('Inserting deities...');
-  db.run(`INSERT OR IGNORE INTO deities (id, name, pantheon, alignment, description, short_description, long_explanation) VALUES
-    ('achiel', 'Achiel', 'Main Human', 'Lawful Good', 'God of Light.', 'Short description.', 'Long Explanation.'),
-    ('idona', 'Idona', 'Main Human', 'Chaotic Good', 'Goddess of Humanity, the Moon, and devotion.', 'Short description.', 'Long Explanation.'),
-    ('ponat', 'Ponat', 'Main Human', 'Lawful Good', 'God of Fortress and protection.', 'Short description.', 'Long Explanation.'),
-    ('wyaris', 'Wyaris', 'Three Sister Goddesses', 'Chaotic Good', 'Lady of Swords.', 'Short description.', 'Long Explanation.'),
-    ('danaris', 'Danaris', 'Three Sister Goddesses', 'Chaotic Neutral', 'Lady of Death.', 'Short description.', 'Long Explanation.'),
-    ('vaharis', 'Vaharis', 'Three Sister Goddesses', 'Lawful Neutral', 'Lady of Judgement.', 'Short description.', 'Long Explanation.'),
-    ('doh', 'Doh', 'Main Human', 'Lawful Neutral', 'God of Law.', 'Short description.', 'Long Explanation.');
+  db.run(`INSERT OR IGNORE INTO deities (id, name, pantheon, alignment, short_description, long_explanation) VALUES
+    ('achiel', 'Achiel', 'Main Human', 'Lawful Good', 'God of Light.', 'Long Explanation.'),
+    ('idona', 'Idona', 'Main Human', 'Chaotic Good', 'Goddess of Humanity, the Moon, and devotion.', 'Long Explanation.'),
+    ('ponat', 'Ponat', 'Main Human', 'Lawful Good', 'God of Fortress and protection.', 'Long Explanation.'),
+    ('wyaris', 'Wyaris', 'Three Sister Goddesses', 'Chaotic Good', 'Lady of Swords.', 'Long Explanation.'),
+    ('danaris', 'Danaris', 'Three Sister Goddesses', 'Chaotic Neutral', 'Lady of Death.', 'Long Explanation.'),
+    ('vaharis', 'Vaharis', 'Three Sister Goddesses', 'Lawful Neutral', 'Lady of Judgement.', 'Long Explanation.'),
+    ('doh', 'Doh', 'Main Human', 'Lawful Neutral', 'God of Law.', 'Long Explanation.');
   `);
 
   console.log('Inserting organizations...');
-  db.run(`INSERT OR IGNORE INTO organizations (id, name, type, description, short_description, long_explanation) VALUES
-    ('church-of-achiels-light', 'Church of Achiel''s Light', 'religion', 'The main church of Achiel.', 'Short description.', 'Long Explanation.'),
-    ('order-of-the-iron-duch', 'The Order of the Iron Düch', 'adventuring party', 'A party of heroes.', 'Short description.', 'Long Explanation.'),
-    ('wyvernfang', 'Wyvernfang', 'adventuring party', 'A group based in Wavethorn.', 'Short description.', 'Long Explanation.'),
-    ('three-sisters', 'The Three Sisters', 'pantheon', 'The Three Sister Goddesses.', 'Short description.', 'Long Explanation.'),
-    ('adventurers-guild', 'The Adventurer''s Guild', 'guild', 'A guild for adventurers in Novafell and Wavethorn.', 'Short description.', 'Long Explanation.');
+  db.run(`INSERT OR IGNORE INTO organizations (id, name, type, short_description, long_explanation) VALUES
+    ('church-of-achiels-light', 'Church of Achiel''s Light', 'religion', 'The main church of Achiel.', 'Long Explanation.'),
+    ('order-of-the-iron-duch', 'The Order of the Iron Düch', 'adventuring party', 'A party of heroes.', 'Long Explanation.'),
+    ('wyvernfang', 'Wyvernfang', 'adventuring party', 'A group based in Wavethorn.', 'Long Explanation.'),
+    ('three-sisters', 'The Three Sisters', 'pantheon', 'The Three Sister Goddesses.', 'Long Explanation.'),
+    ('adventurers-guild', 'The Adventurer''s Guild', 'guild', 'A guild for adventurers in Novafell and Wavethorn.', 'Long Explanation.')
   `);
 
   console.log('Inserting places...');
-  db.run(`INSERT OR IGNORE INTO places (id, name, type, description, parent_id, short_description, long_explanation) VALUES
-    ('the-world', 'The World', 'planet', 'The world of mists.', NULL, 'Short description.', 'Long Explanation.'),
-    ('otlorin', 'Othlorin', 'continent', 'The old land of the elves, now a rapidly burgeoning human territory.', 'the-world', 'Short description.', 'Long Explanation.'),
-    ('wavethorn', 'Wavethorn', 'city-state', 'A city-state on the coast.', 'othlorin', 'Short description.', 'Long Explanation.'),
-    ('itholis', 'Itholis', 'country', 'The largest country in Othlorin, composed of 6 Counties.', 'othlorin', 'Short description.', 'Long Explanation.'),
-    ('weinmere', 'Weinmere', 'region', 'A county in Itholis. Ruled over by Count Jirakby', 'itholis', 'Short description.', 'Long Explanation.'),
-    ('anash', 'Anash', 'city', 'A city in the Weinmere.', 'weinmere', 'Short description.', 'Long Explanation.');
+  db.run(`INSERT OR IGNORE INTO places (id, name, type, parent_id, short_description, long_explanation) VALUES
+    ('the-world', 'The World', 'planet', NULL, 'The world of mists.', 'Long Explanation.'),
+    ('otlorin', 'Othlorin', 'continent', 'the-world', 'The old land of the elves, now a rapidly burgeoning human territory.', 'Long Explanation.'),
+    ('wavethorn', 'Wavethorn', 'city-state', 'othlorin', 'A city-state on the coast.', 'Long Explanation.'),
+    ('itholis', 'Itholis', 'country', 'othlorin', 'The largest country in Othlorin, composed of 6 Counties.', 'Long Explanation.'),
+    ('weinmere', 'Weinmere', 'region', 'itholis', 'A county in Itholis. Ruled over by Count Jirakby', 'Long Explanation.'),
+    ('anash', 'Anash', 'city', 'weinmere', 'A city in the Weinmere.', 'Long Explanation.')
   `);
 
   console.log('Inserting items...');
-  db.run(`INSERT OR IGNORE INTO items (id, name, description, short_description, long_explanation) VALUES
-    ('cormac-spellbook', 'Cormac''s Spellbook', 'A spellbook belonging to Cormac.', 'Short description.', 'Long Explanation.');
+  db.run(`INSERT OR IGNORE INTO items (id, name, short_description, long_explanation) VALUES
+    ('cormac-spellbook', 'Cormac''s Spellbook', 'A spellbook belonging to Cormac.', 'Long Explanation.');
   `);
 
   console.log('Inserting events...');

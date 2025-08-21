@@ -37,8 +37,8 @@ router.post('/', (req, res) => {
     if (row) {
       return res.status(409).json({ error: 'An item with this id already exists.' });
     }
-    const sql = `INSERT INTO items (id, name, description) VALUES (?, ?, ?)`;
-    const params = [i.id, i.name, i.description];
+    const sql = `INSERT INTO items (id, name, short_description) VALUES (?, ?, ?)`;
+    const params = [i.id, i.name, i.short_description];
     db.run(sql, params, function (err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -55,8 +55,8 @@ router.put('/:id', (req, res) => {
   if (validationError) {
     return res.status(400).json({ error: validationError });
   }
-  const sql = `UPDATE items SET name=?, description=? WHERE id=?`;
-  const params = [i.name, i.description, req.params.id];
+  const sql = `UPDATE items SET name=?, short_description=? WHERE id=?`;
+  const params = [i.name, i.short_description, req.params.id];
   db.run(sql, params, function (err) {
     if (err) {
       return res.status(500).json({ error: err.message });
