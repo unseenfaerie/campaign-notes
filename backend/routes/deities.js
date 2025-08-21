@@ -59,14 +59,17 @@ router.post('/', (req, res) => {
 });
 
 // Update an existing deity
-router.put('/:id', (req, res) => {
+router.patch('/:id', (req, res) => {
   const d = req.body;
-  const validationError = validateDeity(d, true);
-  if (validationError) {
-    return res.status(400).json({ error: validationError });
+  const allowed = ['name', 'pantheon', 'alignment', 'short_description', 'long_explanation'];
+  const fields = Object.keys(d).filter(key => allowed.includes(key));
+  if (fields.length === 0) {
+    return res.status(400).json({ error: 'No valid fields to update.' });
   }
-  const sql = `UPDATE deities SET name=?, pantheon=?, alignment=?, short_description=? WHERE id=?`;
-  const params = [d.name, d.pantheon, d.alignment, d.short_description, req.params.id];
+  const setClause = fields.map(f => `${f} = ?`).join(', ');
+  const params = fields.map(f => d[f]);
+  params.push(req.params.id);
+  const sql = `UPDATE deities SET ${setClause} WHERE id = ?`;
   db.run(sql, params, function (err) {
     if (err) {
       return res.status(500).json({ error: err.message });

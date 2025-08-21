@@ -49,14 +49,17 @@ router.post('/', (req, res) => {
 });
 
 // Update an existing item
-router.put('/:id', (req, res) => {
+router.patch('/:id', (req, res) => {
   const i = req.body;
-  const validationError = validateItem(i, true);
-  if (validationError) {
-    return res.status(400).json({ error: validationError });
+  const allowed = ['name', 'short_description', 'long_explanation'];
+  const fields = Object.keys(i).filter(key => allowed.includes(key));
+  if (fields.length === 0) {
+    return res.status(400).json({ error: 'No valid fields to update.' });
   }
-  const sql = `UPDATE items SET name=?, short_description=? WHERE id=?`;
-  const params = [i.name, i.short_description, req.params.id];
+  const setClause = fields.map(f => `${f} = ?`).join(', ');
+  const params = fields.map(f => i[f]);
+  params.push(req.params.id);
+  const sql = `UPDATE items SET ${setClause} WHERE id = ?`;
   db.run(sql, params, function (err) {
     if (err) {
       return res.status(500).json({ error: err.message });

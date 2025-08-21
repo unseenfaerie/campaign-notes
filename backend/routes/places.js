@@ -111,14 +111,17 @@ router.post('/', (req, res) => {
 });
 
 // Update an existing place
-router.put('/:id', (req, res) => {
+router.patch('/:id', (req, res) => {
   const p = req.body;
-  const validationError = validatePlace(p, true);
-  if (validationError) {
-    return res.status(400).json({ error: validationError });
+  const allowed = ['name', 'type', 'parent_id', 'short_description', 'long_explanation'];
+  const fields = Object.keys(p).filter(key => allowed.includes(key));
+  if (fields.length === 0) {
+    return res.status(400).json({ error: 'No valid fields to update.' });
   }
-  const sql = `UPDATE places SET name=?, type=?, short_description=?, parent_id=? WHERE id=?`;
-  const params = [p.name, p.type, p.short_description, p.parent_id, req.params.id];
+  const setClause = fields.map(f => `${f} = ?`).join(', ');
+  const params = fields.map(f => p[f]);
+  params.push(req.params.id);
+  const sql = `UPDATE places SET ${setClause} WHERE id = ?`;
   db.run(sql, params, function (err) {
     if (err) {
       return res.status(500).json({ error: err.message });

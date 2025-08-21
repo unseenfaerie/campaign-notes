@@ -88,16 +88,18 @@ router.post('/', (req, res) => {
 });
 
 // Update an existing character
-router.put('/:id', (req, res) => {
+router.patch('/:id', (req, res) => {
     const c = req.body;
-    const validationError = validateCharacter(c, true);
-    if (validationError) {
-        return res.status(400).json({ error: validationError });
+    // Only allow fields that exist in the schema
+    const allowed = ['type', 'name', 'class', 'level', 'alignment', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma', 'total_health', 'deceased', 'short_description', 'long_explanation'];
+    const fields = Object.keys(c).filter(key => allowed.includes(key));
+    if (fields.length === 0) {
+        return res.status(400).json({ error: 'No valid fields to update.' });
     }
-    const sql = `UPDATE characters SET type=?, name=?, alignment=?, strength=?, dexterity=?, constitution=?, intelligence=?, wisdom=?, charisma=?, total_health=?, deceased=?, description=? WHERE id=?`;
-    const params = [
-        c.type, c.name, c.alignment, c.strength, c.dexterity, c.constitution, c.intelligence, c.wisdom, c.charisma, c.total_health, c.deceased, c.description, req.params.id
-    ];
+    const setClause = fields.map(f => `${f} = ?`).join(', ');
+    const params = fields.map(f => c[f]);
+    params.push(req.params.id);
+    const sql = `UPDATE characters SET ${setClause} WHERE id = ?`;
     db.run(sql, params, function (err) {
         if (err) {
             return res.status(500).json({ error: err.message });
