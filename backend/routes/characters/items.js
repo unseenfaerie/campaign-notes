@@ -21,14 +21,6 @@ router.get('/', (req, res) => {
     .catch(err => res.status(500).json({ error: err.message }));
 });
 
-// Get all items for a character
-router.get('/:characterId/items', (req, res) => {
-  const character_id = req.params.characterId;
-  characterItems.getItemsForCharacter(character_id)
-    .then(items => res.json(items))
-    .catch(err => res.status(500).json({ error: err.message }));
-});
-
 // Get a specific item-character relationship
 router.get('/:itemId', (req, res) => {
   const character_id = req.params.id;

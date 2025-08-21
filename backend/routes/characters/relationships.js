@@ -13,12 +13,20 @@ router.post('/', (req, res) => {
     .catch(err => res.status(500).json({ error: err.message }));
 });
 
-// Remove a relationship to another character
-router.delete('/:targetId', (req, res) => {
+// Get all relationships that involve the character
+router.get('/', (req, res) => {
+  const character_id = req.params.id;
+  characterRelationships.getRelationshipsForCharacter(character_id)
+    .then(relationships => res.json(relationships))
+    .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Get a relationship with another character
+router.get('/:targetId', (req, res) => {
   const character_id = req.params.id;
   const target_character_id = req.params.targetId;
-  characterRelationships.removeCharacterRelationship(character_id, target_character_id)
-    .then(result => res.json(result))
+  characterRelationships.getCharacterRelationship(character_id, target_character_id)
+    .then(relationship => res.json(relationship))
     .catch(err => res.status(500).json({ error: err.message }));
 });
 
@@ -32,20 +40,12 @@ router.patch('/:targetId', (req, res) => {
     .catch(err => res.status(500).json({ error: err.message }));
 });
 
-// Get a relationship with another character
-router.get('/:targetId', (req, res) => {
+// Remove a relationship to another character
+router.delete('/:targetId', (req, res) => {
   const character_id = req.params.id;
   const target_character_id = req.params.targetId;
-  characterRelationships.getCharacterRelationship(character_id, target_character_id)
-    .then(relationship => res.json(relationship))
-    .catch(err => res.status(500).json({ error: err.message }));
-});
-
-// Get all relationships that involve the character
-router.get('/', (req, res) => {
-  const character_id = req.params.id;
-  characterRelationships.getRelationshipsForCharacter(character_id)
-    .then(relationships => res.json(relationships))
+  characterRelationships.removeCharacterRelationship(character_id, target_character_id)
+    .then(result => res.json(result))
     .catch(err => res.status(500).json({ error: err.message }));
 });
 

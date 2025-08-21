@@ -3,19 +3,22 @@ const router = express.Router({ mergeParams: true });
 const characterOrganizations = require('../../services/characterOrganizations');
 
 // ORGANIZATION - CHARACTER ASSOCIATIONS
+
+// Add a character to an organization
+router.post('/', (req, res) => {
+  const character_id = req.params.id;
+  const { org_id, role } = req.body;
+  if (!org_id) return res.status(400).json({ error: 'org_id is required' });
+  characterOrganizations.addCharacterOrganization(character_id, org_id, role || '')
+    .then(result => res.status(201).json(result))
+    .catch(err => res.status(500).json({ error: err.message }));
+});
+
 // Get all organizations for a character
 router.get('/', (req, res) => {
   const character_id = req.params.id;
   characterOrganizations.getOrganizationsForCharacter(character_id)
     .then(organizations => res.json(organizations))
-    .catch(err => res.status(500).json({ error: err.message }));
-});
-
-// Get all characters for an organization
-router.get('/:orgId/characters', (req, res) => {
-  const org_id = req.params.orgId;
-  characterOrganizations.getCharactersForOrganization(org_id)
-    .then(characters => res.json(characters))
     .catch(err => res.status(500).json({ error: err.message }));
 });
 
@@ -25,16 +28,6 @@ router.get('/:orgId', (req, res) => {
   const org_id = req.params.orgId;
   characterOrganizations.getCharacterOrganization(character_id, org_id)
     .then(relationship => res.json(relationship))
-    .catch(err => res.status(500).json({ error: err.message }));
-});
-
-// Add a character to an organization
-router.post('/', (req, res) => {
-  const character_id = req.params.id;
-  const { org_id, role } = req.body;
-  if (!org_id) return res.status(400).json({ error: 'org_id is required' });
-  characterOrganizations.addCharacterOrganization(character_id, org_id, role || '')
-    .then(result => res.status(201).json(result))
     .catch(err => res.status(500).json({ error: err.message }));
 });
 
