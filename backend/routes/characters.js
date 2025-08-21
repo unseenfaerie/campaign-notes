@@ -1,5 +1,5 @@
-// --- Event-Character Association Endpoints ---
 const eventCharacters = require('../services/eventCharacters');
+const characterOrganizations = require('../services/characterOrganizations');
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
@@ -134,8 +134,56 @@ router.delete('/:id', (req, res) => {
     });
 });
 
-// EVENT - CHARACTER ASSOCIATIONS
+// CHARACTER - CHARACTER ASSOCIATIONS
+// Add a relationship to another character
+router.post('/:id/relationships', (req, res) => {
+    const character_id = req.params.id;
+    const { target_character_id, short_description, long_explanation } = req.body;
+    if (!target_character_id) return res.status(400).json({ error: 'target_character_id is required' });
+    characterRelationships.addCharacterRelationship(character_id, target_character_id, short_description || '', long_explanation || '')
+        .then(result => res.status(201).json(result))
+        .catch(err => res.status(500).json({ error: err.message }));
+});
 
+// Remove a relationship to another character
+router.delete('/:id/relationships/:targetId', (req, res) => {
+    const character_id = req.params.id;
+    const target_character_id = req.params.targetId;
+    characterRelationships.removeCharacterRelationship(character_id, target_character_id)
+        .then(result => res.json(result))
+        .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Update a relationship to another character
+router.patch('/:id/relationships/:targetId', (req, res) => {
+    const character_id = req.params.id;
+    const target_character_id = req.params.targetId;
+    const updates = req.body;
+    characterRelationships.updateCharacterRelationship(character_id, target_character_id, updates)
+        .then(result => res.json(result))
+        .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Get a relationship with another character
+router.get('/:id/relationships/:targetId', (req, res) => {
+    const character_id = req.params.id;
+    const target_character_id = req.params.targetId;
+    characterRelationships.getCharacterRelationship(character_id, target_character_id)
+        .then(relationship => res.json(relationship))
+        .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Get all relationships that involve the character
+router.get('/:id/relationships', (req, res) => {
+    const character_id = req.params.id;
+    characterRelationships.getRelationshipsForCharacter(character_id)
+        .then(relationships => res.json(relationships))
+        .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// DEITY - CHARACTER ASSOCIATIONS
+
+// EVENT - CHARACTER ASSOCIATIONS
 // Add a character to an event
 router.post('/:id/events', (req, res) => {
     const character_id = req.params.id;
@@ -150,7 +198,8 @@ router.post('/:id/events', (req, res) => {
 router.patch('/:id/events/:eventId', (req, res) => {
     const character_id = req.params.id;
     const event_id = req.params.eventId;
-    eventCharacters.updateEventCharacter(event_id, character_id, req.body)
+    const updates = req.body;
+    eventCharacters.updateEventCharacter(event_id, character_id, updates)
         .then(result => res.json(result))
         .catch(err => res.status(500).json({ error: err.message }));
 });
@@ -163,5 +212,89 @@ router.delete('/:id/events/:eventId', (req, res) => {
         .then(result => res.json(result))
         .catch(err => res.status(500).json({ error: err.message }));
 });
+
+// Get all events for a character
+router.get('/:id/events', (req, res) => {
+    const character_id = req.params.id;
+    eventCharacters.getEventsForCharacter(character_id)
+        .then(events => res.json(events))
+        .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Get all characters for an event
+router.get('/:id/events/:eventId/characters', (req, res) => {
+    const event_id = req.params.eventId;
+    eventCharacters.getCharactersForEvent(event_id)
+        .then(characters => res.json(characters))
+        .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Get a specific event-character relationship
+router.get('/:id/events/:eventId', (req, res) => {
+    const character_id = req.params.id;
+    const event_id = req.params.eventId;
+    eventCharacters.getEventCharacter(event_id, character_id)
+        .then(relationship => res.json(relationship))
+        .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// ITEM - CHARACTER ASSOCIATIONS
+
+// ORGANIZATION - CHARACTER ASSOCIATIONS
+// Get all organizations for a character
+router.get('/:id/organizations', (req, res) => {
+    const character_id = req.params.id;
+    characterOrganizations.getOrganizationsForCharacter(character_id)
+        .then(organizations => res.json(organizations))
+        .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Get all characters for an organization
+router.get('/:id/organizations/:orgId/characters', (req, res) => {
+    const org_id = req.params.orgId;
+    characterOrganizations.getCharactersForOrganization(org_id)
+        .then(characters => res.json(characters))
+        .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Get a specific character-organization relationship
+router.get('/:id/organizations/:orgId', (req, res) => {
+    const character_id = req.params.id;
+    const org_id = req.params.orgId;
+    characterOrganizations.getCharacterOrganization(character_id, org_id)
+        .then(relationship => res.json(relationship))
+        .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Add a character to an organization
+router.post('/:id/organizations', (req, res) => {
+    const character_id = req.params.id;
+    const { org_id, role } = req.body;
+    if (!org_id) return res.status(400).json({ error: 'org_id is required' });
+    characterOrganizations.addCharacterOrganization(character_id, org_id, role || '')
+        .then(result => res.status(201).json(result))
+        .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Update a character's relationship with an organization
+router.patch('/:id/organizations/:orgId', (req, res) => {
+    const character_id = req.params.id;
+    const org_id = req.params.orgId;
+    const { role, short_description, long_explanation } = req.body;
+    characterOrganizations.updateCharacterOrganization(character_id, org_id, { role, short_description, long_explanation })
+        .then(result => res.json(result))
+        .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Delete a character from an organization
+router.delete('/:id/organizations/:orgId', (req, res) => {
+    const character_id = req.params.id;
+    const org_id = req.params.orgId;
+    characterOrganizations.removeCharacterOrganization(character_id, org_id)
+        .then(result => res.json(result))
+        .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// PLACE - CHARACTER ASSOCIATIONS
 
 module.exports = router;

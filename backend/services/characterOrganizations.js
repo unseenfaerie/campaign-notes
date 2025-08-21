@@ -45,8 +45,50 @@ function removeCharacterOrganization(character_id, organization_id) {
   });
 }
 
+// Get all organizations for a character (with join table metadata)
+function getOrganizationsForCharacter(character_id) {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT o.*, co.short_description, co.long_explanation
+                 FROM character_organizations co
+                 JOIN organizations o ON co.organization_id = o.id
+                 WHERE co.character_id = ?`;
+    db.all(sql, [character_id], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+}
+
+// Get all characters for an organization (with join table metadata)
+function getCharactersForOrganization(organization_id) {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT c.*, co.short_description, co.long_explanation
+                 FROM character_organizations co
+                 JOIN characters c ON co.character_id = c.id
+                 WHERE co.organization_id = ?`;
+    db.all(sql, [organization_id], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+}
+
+// Get a specific character-organization relationship (with join table metadata)
+function getCharacterOrganization(character_id, organization_id) {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT * FROM character_organizations WHERE character_id = ? AND organization_id = ?`;
+    db.get(sql, [character_id, organization_id], (err, row) => {
+      if (err) return reject(err);
+      resolve(row || null);
+    });
+  });
+}
+
 module.exports = {
   addCharacterOrganization,
   updateCharacterOrganization,
-  removeCharacterOrganization
+  removeCharacterOrganization,
+  getOrganizationsForCharacter,
+  getCharactersForOrganization,
+  getCharacterOrganization
 };

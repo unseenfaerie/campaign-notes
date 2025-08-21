@@ -45,8 +45,50 @@ function removeEventCharacter(event_id, character_id) {
   });
 }
 
+// Get all events for a character (with join table metadata)
+function getEventsForCharacter(character_id) {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT e.*, ec.short_description, ec.long_explanation
+                 FROM event_characters ec
+                 JOIN events e ON ec.event_id = e.id
+                 WHERE ec.character_id = ?`;
+    db.all(sql, [character_id], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+}
+
+// Get all characters for an event (with join table metadata)
+function getCharactersForEvent(event_id) {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT c.*, ec.short_description, ec.long_explanation
+                 FROM event_characters ec
+                 JOIN characters c ON ec.character_id = c.id
+                 WHERE ec.event_id = ?`;
+    db.all(sql, [event_id], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+}
+
+// Get a specific event-character relationship (with join table metadata)
+function getEventCharacter(event_id, character_id) {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT * FROM event_characters WHERE event_id = ? AND character_id = ?`;
+    db.get(sql, [event_id, character_id], (err, row) => {
+      if (err) return reject(err);
+      resolve(row || null);
+    });
+  });
+}
+
 module.exports = {
   addEventCharacter,
   updateEventCharacter,
-  removeEventCharacter
+  removeEventCharacter,
+  getCharactersForEvent,
+  getEventsForCharacter,
+  getEventCharacter
 };
