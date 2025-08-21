@@ -2,11 +2,11 @@
 // Centralized logic for managing character-organization relationships
 const db = require('../db');
 
-function addCharacterOrganization(character_id, organization_id, short_description = '', long_explanation = '') {
+function addCharacterOrganization(character_id, organization_id, role = '', joined_date = '', left_date = '', short_description = '', long_explanation = '') {
   return new Promise((resolve, reject) => {
-    const sql = `INSERT OR IGNORE INTO character_organizations (character_id, organization_id, short_description, long_explanation)
-                 VALUES (?, ?, ?, ?)`;
-    db.run(sql, [character_id, organization_id, short_description, long_explanation], function (err) {
+    const sql = `INSERT OR IGNORE INTO character_organizations (character_id, organization_id, role, joined_date, left_date, short_description, long_explanation)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`;
+    db.run(sql, [character_id, organization_id, role, joined_date, left_date, short_description, long_explanation], function (err) {
       if (err) return reject(err);
       resolve({ character_id, organization_id });
     });
@@ -16,6 +16,18 @@ function addCharacterOrganization(character_id, organization_id, short_descripti
 function updateCharacterOrganization(character_id, organization_id, updates) {
   const fields = [];
   const values = [];
+  if (updates.role !== undefined) {
+    fields.push('role = ?');
+    values.push(updates.role);
+  }
+  if (updates.joined_date !== undefined) {
+    fields.push('joined_date = ?');
+    values.push(updates.joined_date);
+  }
+  if (updates.left_date !== undefined) {
+    fields.push('left_date = ?');
+    values.push(updates.left_date);
+  }
   if (updates.short_description !== undefined) {
     fields.push('short_description = ?');
     values.push(updates.short_description);

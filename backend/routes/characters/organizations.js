@@ -7,9 +7,9 @@ const characterOrganizations = require('../../services/characterOrganizations');
 // Add a character to an organization
 router.post('/', (req, res) => {
   const character_id = req.params.id;
-  const { org_id, role } = req.body;
+  const { org_id, role, joined_date, left_date, short_description, long_explanation } = req.body;
   if (!org_id) return res.status(400).json({ error: 'org_id is required' });
-  characterOrganizations.addCharacterOrganization(character_id, org_id, role || '')
+  characterOrganizations.addCharacterOrganization(character_id, org_id, role || '', joined_date || '', left_date || '', short_description || '', long_explanation || '')
     .then(result => res.status(201).json(result))
     .catch(err => res.status(500).json({ error: err.message }));
 });
@@ -35,8 +35,8 @@ router.get('/:orgId', (req, res) => {
 router.patch('/:orgId', (req, res) => {
   const character_id = req.params.id;
   const org_id = req.params.orgId;
-  const { role, short_description, long_explanation } = req.body;
-  characterOrganizations.updateCharacterOrganization(character_id, org_id, { role, short_description, long_explanation })
+  const { role, short_description, long_explanation, joined_date, left_date } = req.body;
+  characterOrganizations.updateCharacterOrganization(character_id, org_id, { role, short_description, long_explanation, joined_date, left_date })
     .then(result => res.json(result))
     .catch(err => res.status(500).json({ error: err.message }));
 });
