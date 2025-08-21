@@ -77,52 +77,54 @@
 
                         <% if (events && events.length> 0) { %>
                             <h2>Events</h2>
-                            <ul>
-                                <% events.forEach(function(event) { %>
-                                    <li><a href="/api/events/page/<%= event.id %>">
-                                            <%= event.name %>
-                                        </a></li>
-                                    <% }); %>
-                            </ul>
-                            <% } %>
-
-                                <% if (items && items.length> 0) { %>
-                                    <h2>Items</h2>
-                                    <ul>
-                                        <% items.forEach(function(item) { %>
-                                            <li><a href="/api/items/page/<%= item.id %>">
-                                                    <%= item.name %>
-                                                </a></li>
-                                            <% }); %>
-                                    </ul>
+                            <% events.forEach(function(event) { %>
+                                <strong><a href="/api/events/page/<%= event.id %>">
+                                        <%= event.name %>
+                                    </a></strong>
+                                <p>
+                                    <%= event.notes %>
+                                </p>
+                                <% }); %>
                                     <% } %>
 
-                                        <% if (organizations && organizations.length> 0) { %>
-                                            <h2>Organizations</h2>
+                                        <% if (items && items.length> 0) { %>
+                                            <h2>Items</h2>
                                             <ul>
-                                                <% organizations.forEach(function(org) { %>
-                                                    <li><a href="/api/organizations/page/<%= org.id %>">
-                                                            <%= org.name %>
+                                                <% items.forEach(function(item) { %>
+                                                    <li><a href="/api/items/page/<%= item.id %>">
+                                                            <%= item.name %>
                                                         </a></li>
                                                     <% }); %>
                                             </ul>
                                             <% } %>
 
-                                                <% if (relationships && relationships.length> 0) { %>
-                                                    <h2>Relationships</h2>
+                                                <% if (organizations && organizations.length> 0) { %>
+                                                    <h2>Organizations</h2>
                                                     <ul>
-                                                        <% relationships.forEach(function(rel) { %>
-                                                            <li>
-                                                                <a href="/api/characters/page/<%= rel.related_id %>">
-                                                                    <%= rel.related_name %>
-                                                                </a>
-                                                                <strong>
-                                                                    - <%= rel.relationship_type %>
-                                                                </strong>
-                                                            </li>
+                                                        <% organizations.forEach(function(org) { %>
+                                                            <li><a href="/api/organizations/page/<%= org.id %>">
+                                                                    <%= org.name %>
+                                                                </a></li>
                                                             <% }); %>
                                                     </ul>
                                                     <% } %>
+
+                                                        <% if (relationships && relationships.length> 0) { %>
+                                                            <h2>Relationships</h2>
+                                                            <ul>
+                                                                <% relationships.forEach(function(rel) { %>
+                                                                    <li>
+                                                                        <a
+                                                                            href="/api/characters/page/<%= rel.related_id %>">
+                                                                            <%= rel.related_name %>
+                                                                        </a>
+                                                                        <p>
+                                                                            - <%= rel.relationship_type %>
+                                                                        </p>
+                                                                    </li>
+                                                                    <% }); %>
+                                                            </ul>
+                                                            <% } %>
             </main>
     </div>
 </body>

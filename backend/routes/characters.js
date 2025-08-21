@@ -25,6 +25,30 @@ function validateCharacter(c, isUpdate = false) {
     return null;
 }
 
+// Helper: generic association query
+// Helper: generic association query (now supports joinFields for join table columns)
+function getAssociations({
+    db, // Database instance
+    joinTable, // The table to join on 'event_characters'
+    joinKey, // The key in the join table 'event_id'
+    targetTable, // The target table to select from 'events'
+    targetKey = 'id', // The key in the target table 
+    targetFields = ['id', 'name'], // The fields to select from the target table
+    joinFields = [], // The fields to select from the join table (e.g. ['notes'])
+    whereKey, // The key to filter the join table 'character_id'
+    whereValue // The value to filter the join table (actual charId)
+}) {
+    return new Promise((resolve, reject) => {
+        const targetSelect = targetFields.map(f => `${targetTable}.${f}`).join(', ');
+        const joinSelect = joinFields.map(f => `${joinTable}.${f} as ${f}`).join(', ');
+        const fields = [targetSelect, joinSelect].filter(Boolean).join(', ');
+        const sql = `SELECT ${fields} FROM ${joinTable}
+            JOIN ${targetTable} ON ${joinTable}.${joinKey} = ${targetTable}.${targetKey}
+            WHERE ${joinTable}.${whereKey} = ?`;
+        db.all(sql, [whereValue], (err, rows) => err ? reject(err) : resolve(rows || []));
+    });
+}
+
 // Render index of all characters
 router.get('/index', (req, res) => {
     db.all('SELECT * FROM characters ORDER BY name', [], (err, rows) => {
@@ -128,6 +152,7 @@ router.get('/page/:id', (req, res) => {
         if (!character) return res.status(404).send('Character not found');
 
         // Prepare queries for all associations
+
         const queries = {
             relationships: new Promise((resolve, reject) => {
                 const sql = `SELECT cr.relationship_type, cr.related_id, c.name as related_name
@@ -136,33 +161,40 @@ router.get('/page/:id', (req, res) => {
                             WHERE cr.character_id = ?`;
                 db.all(sql, [charId], (err, rows) => err ? reject(err) : resolve(rows || []));
             }),
-            events: new Promise((resolve, reject) => {
-                const sql = `SELECT e.id, e.name
-                            FROM event_characters ec
-                            JOIN events e ON ec.event_id = e.id
-                            WHERE ec.character_id = ?`;
-                db.all(sql, [charId], (err, rows) => err ? reject(err) : resolve(rows || []));
+            events: getAssociations({
+                db,
+                joinTable: 'event_characters',
+                joinKey: 'event_id',
+                targetTable: 'events',
+                targetFields: ['id', 'name'],
+                joinFields: ['notes'],
+                whereKey: 'character_id',
+                whereValue: charId
             }),
-            items: new Promise((resolve, reject) => {
-                const sql = `SELECT i.id, i.name
-                            FROM character_items ci
-                            JOIN items i ON ci.item_id = i.id
-                            WHERE ci.character_id = ?`;
-                db.all(sql, [charId], (err, rows) => err ? reject(err) : resolve(rows || []));
+            items: getAssociations({
+                db,
+                joinTable: 'character_items',
+                joinKey: 'item_id',
+                targetTable: 'items',
+                whereKey: 'character_id',
+                whereValue: charId
             }),
-            organizations: new Promise((resolve, reject) => {
-                const sql = `SELECT o.id, o.name
-                            FROM character_organizations co
-                            JOIN organizations o ON co.organization_id = o.id
-                            WHERE co.character_id = ?`;
-                db.all(sql, [charId], (err, rows) => err ? reject(err) : resolve(rows || []));
+            organizations: getAssociations({
+                db,
+                joinTable: 'character_organizations',
+                joinKey: 'organization_id',
+                targetTable: 'organizations',
+                whereKey: 'character_id',
+                whereValue: charId
             }),
-            patron_deities: new Promise((resolve, reject) => {
-                const sql = `SELECT d.id, d.name
-                            FROM character_deities cd
-                            JOIN deities d ON cd.deity_id = d.id
-                            WHERE cd.character_id = ?`;
-                db.all(sql, [charId], (err, rows) => err ? reject(err) : resolve(rows || []));
+            patron_deities: getAssociations({
+                db,
+                joinTable: 'character_deities',
+                joinKey: 'deity_id',
+                targetTable: 'deities',
+                whereValue: 'id, name, notes',
+                whereKey: 'character_id',
+                whereValue: charId
             })
         };
 
