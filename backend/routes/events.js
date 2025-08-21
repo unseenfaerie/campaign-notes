@@ -1,3 +1,5 @@
+// --- Event-Character Association Endpoints ---
+const eventCharacters = require('../../services/eventCharacters');
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
@@ -114,6 +116,34 @@ router.get('/:id', (req, res) => {
     }
     res.json(row);
   });
+});
+
+// Add a character to an event
+router.post('/:id/characters', (req, res) => {
+  const event_id = req.params.id;
+  const { character_id, short_description, long_explanation } = req.body;
+  if (!character_id) return res.status(400).json({ error: 'character_id is required' });
+  eventCharacters.addEventCharacter(event_id, character_id, short_description || '', long_explanation || '')
+    .then(result => res.status(201).json(result))
+    .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Update event-character association
+router.patch('/:id/characters/:characterId', (req, res) => {
+  const event_id = req.params.id;
+  const character_id = req.params.characterId;
+  eventCharacters.updateEventCharacter(event_id, character_id, req.body)
+    .then(result => res.json(result))
+    .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Remove a character from an event
+router.delete('/:id/characters/:characterId', (req, res) => {
+  const event_id = req.params.id;
+  const character_id = req.params.characterId;
+  eventCharacters.removeEventCharacter(event_id, character_id)
+    .then(result => res.json(result))
+    .catch(err => res.status(500).json({ error: err.message }));
 });
 
 // Render a event page (SSR with associations)

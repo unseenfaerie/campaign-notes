@@ -1,3 +1,5 @@
+// --- Event-Character Association Endpoints ---
+const eventCharacters = require('../../services/eventCharacters');
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
@@ -25,7 +27,6 @@ function validateCharacter(c, isUpdate = false) {
     return null;
 }
 
-// Helper: generic association query
 // Helper: generic association query (now supports joinFields for join table columns)
 function getAssociations({
     db, // Database instance
@@ -140,8 +141,46 @@ router.get('/:id', (req, res) => {
         if (!row) {
             return res.status(404).json({ error: 'Character not found' });
         }
-        res.json(row);
+        // Also fetch relationships with descriptions
+        db.all(`SELECT cr.relationship_type, cr.related_id, c.name as related_name, cr.short_description, cr.long_explanation
+                FROM character_relationships cr
+                JOIN characters c ON cr.related_id = c.id
+                WHERE cr.character_id = ?`, [req.params.id], (err2, rels) => {
+            if (err2) {
+                return res.status(500).json({ error: err2.message });
+            }
+            row.relationships = rels || [];
+            res.json(row);
+        });
     });
+});
+
+// Add a character to an event
+router.post('/:id/events', (req, res) => {
+    const character_id = req.params.id;
+    const { event_id, short_description, long_explanation } = req.body;
+    if (!event_id) return res.status(400).json({ error: 'event_id is required' });
+    eventCharacters.addEventCharacter(event_id, character_id, short_description || '', long_explanation || '')
+        .then(result => res.status(201).json(result))
+        .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Update event-character association
+router.patch('/:id/events/:eventId', (req, res) => {
+    const character_id = req.params.id;
+    const event_id = req.params.eventId;
+    eventCharacters.updateEventCharacter(event_id, character_id, req.body)
+        .then(result => res.json(result))
+        .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Remove a character from an event
+router.delete('/:id/events/:eventId', (req, res) => {
+    const character_id = req.params.id;
+    const event_id = req.params.eventId;
+    eventCharacters.removeEventCharacter(event_id, character_id)
+        .then(result => res.json(result))
+        .catch(err => res.status(500).json({ error: err.message }));
 });
 
 // Render a character page (SSR with all associations)
@@ -152,14 +191,17 @@ router.get('/page/:id', (req, res) => {
         if (!character) return res.status(404).send('Character not found');
 
         // Prepare queries for all associations
-
+        console.log('Fetching associations for character:', charId);
         const queries = {
-            relationships: new Promise((resolve, reject) => {
-                const sql = `SELECT cr.relationship_type, cr.related_id, c.name as related_name
-                            FROM character_relationships cr
-                            JOIN characters c ON cr.related_id = c.id
-                            WHERE cr.character_id = ?`;
-                db.all(sql, [charId], (err, rows) => err ? reject(err) : resolve(rows || []));
+            relationships: getAssociations({
+                db,
+                joinTable: 'character_relationships',
+                joinKey: 'related_id',
+                targetTable: 'characters',
+                targetFields: ['id', 'name as related_name'],
+                joinFields: ['relationship_type', 'short_description', 'long_explanation'],
+                whereKey: 'character_id',
+                whereValue: charId
             }),
             events: getAssociations({
                 db,
@@ -192,7 +234,8 @@ router.get('/page/:id', (req, res) => {
                 joinTable: 'character_deities',
                 joinKey: 'deity_id',
                 targetTable: 'deities',
-                whereValue: 'id, name, notes',
+                targetFields: ['id', 'name', 'notes'],
+                joinFields: ['short_description', 'long_explanation'],
                 whereKey: 'character_id',
                 whereValue: charId
             })
@@ -221,6 +264,8 @@ router.get('/page/:id', (req, res) => {
                 default:
                     character.type = 'Unknown';
             }
+
+            console.log(relationships);
 
             res.render('character', {
                 character,
