@@ -6,7 +6,7 @@ const db = require('./db');
 const app = express();
 app.use(express.json());
 
-const charactersRouter = require('./routes/characters');
+const charactersRouter = require('./routes/characters/index');
 app.use('/api/characters', charactersRouter);
 const itemsRouter = require('./routes/items');
 app.use('/api/items', itemsRouter);
