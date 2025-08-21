@@ -26,7 +26,8 @@ db.serialize(() => {
     ('ponat', 'Ponat', 'Main Human', 'Lawful Good', 'God of Fortress and protection.'),
     ('wyaris', 'Wyaris', 'Three Sister Goddesses', 'Chaotic Good', 'Lady of Swords.'),
     ('danaris', 'Danaris', 'Three Sister Goddesses', 'Chaotic Neutral', 'Lady of Death.'),
-    ('vaharis', 'Vaharis', 'Three Sister Goddesses', 'Lawful Neutral', 'Lady of Judgement.')
+    ('vaharis', 'Vaharis', 'Three Sister Goddesses', 'Lawful Neutral', 'Lady of Judgement.'),
+    ('doh', 'Doh', 'Main Human', 'Lawful Neutral', 'God of Law.')
   `);
 
   console.log('Inserting organizations...');
@@ -112,6 +113,7 @@ db.serialize(() => {
   console.log('Inserting character_deities (patron relationships)...');
   db.run(`INSERT OR IGNORE INTO character_deities (character_id, deity_id) VALUES
     ('alann-barnett', 'achiel'),
+    ('alann-barnett', 'doh'),
     ('releas-neb', 'wyaris'),
     ('appolonia-palleday', 'idona'),
     ('durchir', 'ponat'),
