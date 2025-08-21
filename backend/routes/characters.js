@@ -113,14 +113,22 @@ router.patch('/:id', (req, res) => {
 
 // Delete a character
 router.delete('/:id', (req, res) => {
-    db.run('DELETE FROM characters WHERE id = ?', [req.params.id], function (err) {
+    const charId = req.params.id;
+    // First, remove all event-character relationships for this character
+    db.run('DELETE FROM event_characters WHERE character_id = ?', [charId], function (err) {
         if (err) {
-            return res.status(500).json({ error: err.message });
+            return res.status(500).json({ error: 'Failed to remove event-character relationships: ' + err.message });
         }
-        if (this.changes === 0) {
-            return res.status(404).json({ error: 'Character not found' });
-        }
-        res.json({ deleted: req.params.id });
+        // Now delete the character itself
+        db.run('DELETE FROM characters WHERE id = ?', [charId], function (err2) {
+            if (err2) {
+                return res.status(500).json({ error: err2.message });
+            }
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Character not found' });
+            }
+            res.json({ deleted: charId });
+        });
     });
 });
 
