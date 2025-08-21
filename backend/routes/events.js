@@ -60,17 +60,18 @@ router.post('/', (req, res) => {
   });
 });
 
-// Update an existing event
-router.put('/:id', (req, res) => {
+// Partially update an existing event
+router.patch('/:id', (req, res) => {
   const e = req.body;
-  const validationError = validateEvent(e, true);
-  if (validationError) {
-    return res.status(400).json({ error: validationError });
+  const allowed = ['name', 'real_world_date', 'in_game_time', 'previous_event_id', 'next_event_id', 'short_description', 'long_explanation'];
+  const fields = Object.keys(e).filter(key => allowed.includes(key));
+  if (fields.length === 0) {
+    return res.status(400).json({ error: 'No valid fields to update.' });
   }
-  const sql = `UPDATE events SET name=?, real_world_date=?, in_game_time=?, previous_event_id=?, next_event_id=?, short_description=?, long_explanation=? WHERE id=?`;
-  const params = [
-    e.name, e.real_world_date, e.in_game_time, e.previous_event_id, e.next_event_id, e.short_description, e.long_explanation, req.params.id
-  ];
+  const setClause = fields.map(f => `${f} = ?`).join(', ');
+  const params = fields.map(f => e[f]);
+  params.push(req.params.id);
+  const sql = `UPDATE events SET ${setClause} WHERE id = ?`;
   db.run(sql, params, function (err) {
     if (err) {
       return res.status(500).json({ error: err.message });

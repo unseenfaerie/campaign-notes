@@ -52,15 +52,18 @@ router.post('/', (req, res) => {
   });
 });
 
-// Update an existing organization
-router.put('/:id', (req, res) => {
+// Partially update an existing organization
+router.patch('/:id', (req, res) => {
   const o = req.body;
-  const validationError = validateOrganization(o, true);
-  if (validationError) {
-    return res.status(400).json({ error: validationError });
+  const allowed = ['name', 'type', 'locations', 'description'];
+  const fields = Object.keys(o).filter(key => allowed.includes(key));
+  if (fields.length === 0) {
+    return res.status(400).json({ error: 'No valid fields to update.' });
   }
-  const sql = `UPDATE organizations SET name=?, locations=?, type=?, description=? WHERE id=?`;
-  const params = [o.name, o.locations, o.type, o.description, req.params.id];
+  const setClause = fields.map(f => `${f} = ?`).join(', ');
+  const params = fields.map(f => o[f]);
+  params.push(req.params.id);
+  const sql = `UPDATE organizations SET ${setClause} WHERE id = ?`;
   db.run(sql, params, function (err) {
     if (err) {
       return res.status(500).json({ error: err.message });
