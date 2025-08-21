@@ -40,9 +40,13 @@ db.serialize(() => {
   `);
 
   console.log('Inserting places...');
-  db.run(`INSERT OR IGNORE INTO places (id, name, type, description) VALUES
-    ('anash', 'Anash', 'city', 'A city in Weinmere.'),
-    ('wavethorn', 'Wavethorn', 'city', 'A city on the coast.');
+  db.run(`INSERT OR IGNORE INTO places (id, name, type, description, parent_id) VALUES
+    ('the-world', 'The World', 'planet', 'The world of mists.', NULL),
+    ('otlorin', 'Othlorin', 'continent', 'The old land of the elves, now a rapidly burgeoning human territory.', 'the-world'),
+    ('wavethorn', 'Wavethorn', 'city-state', 'A city-state on the coast.', 'othlorin'),
+    ('itholis', 'Itholis', 'country', 'The largest country in Othlorin, composed of 6 Counties.', 'othlorin'),
+    ('weinmere', 'Weinmere', 'region', 'A county in Itholis. Ruled over by Count Jirakby', 'itholis'),
+    ('anash', 'Anash', 'city', 'A city in the Weinmere.', 'weinmere')
   `);
 
   console.log('Inserting items...');

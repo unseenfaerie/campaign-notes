@@ -16,6 +16,8 @@ const deitiesRouter = require('./routes/deities');
 app.use('/api/deities', deitiesRouter);
 const eventsRouter = require('./routes/events');
 app.use('/api/events', eventsRouter);
+const placesRouter = require('./routes/places');
+app.use('/api/places', placesRouter)
 
 //main index route
 app.get('/', (req, res) => {

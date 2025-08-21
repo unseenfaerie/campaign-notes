@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>
+    <%= place.name %> | Campaign Notes
+  </title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body>
+  <div class="container">
+    <%- include('partials/sidenav') %>
+      <main class="content">
+        <h1>
+          <%= place.name %>
+        </h1>
+        <p><strong>Type:</strong>
+          <%= place.type %>
+        </p>
+        <% if (place.parent_id) { %>
+          <p><strong>Parent Place:</strong> <a href="/api/places/page/<%= place.parent_id %>">
+              <%= place.parent_id %>
+            </a></p>
+          <% } %>
+            <p>
+              <%= place.description %>
+            </p>
+
+            <% if (events && events.length> 0) { %>
+              <h2>Events</h2>
+              <ul>
+                <% events.forEach(function(event) { %>
+                  <li><a href="/api/events/page/<%= event.id %>">
+                      <%= event.name %>
+                    </a></li>
+                  <% }); %>
+              </ul>
+              <% } %>
+
+                <% if (organizations && organizations.length> 0) { %>
+                  <h2>Organizations</h2>
+                  <ul>
+                    <% organizations.forEach(function(org) { %>
+                      <li><a href="/api/organizations/page/<%= org.id %>">
+                          <%= org.name %>
+                        </a></li>
+                      <% }); %>
+                  </ul>
+                  <% } %>
+      </main>
+  </div>
+</body>
+
+</html>
