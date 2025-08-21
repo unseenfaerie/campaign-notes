@@ -52,7 +52,21 @@ db.serialize(() => {
 
   console.log('Inserting events...');
   db.run(`INSERT OR IGNORE INTO events (id, name, real_world_date, in_game_time, description) VALUES
-    ('coup-of-wavethorn', 'The Coup of Wavethorn', '2025-08-01', 'OMAR 1', 'A pivotal event in Wavethorn.');
+    ('coup-of-wavethorn', 'The Coup of Wavethorn', '2025-08-01', 'OMAR 1', 'Approximately 200 years after the fall of Vokdjinn...
+
+A new adventuring party takes shape. Rel, Durchir, Alann, and Cormac come to Othlorin from Gatûn. Some seek the riches that lie in the ruins of the old elven homeland. They settle into Wavethorn, a merchant''s city on the edge of the sea. Before long, they are suspected of murder. Their confidant Bert Verinwort is later framed for a demonic ritual murder of several prominent figures in town, including his uncle Phil Verinwort. After being kidnapped by Wyvernfang bandits, the party understands the conspiracy to remove political threats to those that the Wyvernfang have installed on the council. Brae Novan and Daniel Hillstop are connected to the gang. After gathering evidence against these parties, the party clears a nearby dungeon of Wyvernfang and uses a massive amount of money they found to bankroll a coup of the government. The coup succeeds and a new, more balanced, three-council-oligarchy is implemented by Bert. This endeavor was made possible by an underground crime lord named Gereg. Due to his involvement, the party was obliged to put him into power on the Mercantile council. Brae and Daniel escaped execution by fleeing the town before the new regime was enacted.'),
+    ('night-of-spiders', 'The Night of Spiders', '2025-08-02', 'OMAR 2', 'Rel, Cormac, Alann, and Durchir join the Adventurer''s Guild! Their first quest is to bring three purported outlaws to justice.
+                These women have been seen impersonating Winged Blades of Wyaris and harassing Ponat worshippers. The
+                party tracks down the individuals and brings them to jail in Wavethorn. After doing this, they hear word
+                that other adventurers from the guild is in trouble in the ruins of Aranil. Naturally they investigate.
+                Upon entering, the party is subjected to a horrifying spider illusion dungeon. Walls of spiders with a
+                horrifying human form flowing through them chase the party down endless halls. After finding and slaying
+                a witch in a crimson robe, they save the weakened other party. They return to Wavethorn to find out that
+                the trial of the three that they had captured was an absolute bloodbath. Every single person in the
+                courtroom was killed. Seeking these three once again the party heads to some coastal caves. They find a
+                strange and magical experimentation lab set up. The place is abandoned, save for a man composed of
+                spiders. As Durchir strikes this man with his sword, he disintegrates part by part into tiny spiders and
+                crawls apart.');
   `);
 
   console.log('Inserting spheres...');
