@@ -1,5 +1,5 @@
 // --- Event-Character Association Endpoints ---
-const eventCharacters = require('../../services/eventCharacters');
+const eventCharacters = require('../services/eventCharacters');
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
