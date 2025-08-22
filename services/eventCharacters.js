@@ -1,0 +1,52 @@
+// services/eventCharacters.js
+// Centralized logic for managing event-character relationships
+const db = require('../db');
+
+function addEventCharacter(event_id, character_id, short_description, long_explanation) {
+  return new Promise((resolve, reject) => {
+    const sql = `INSERT OR IGNORE INTO event_characters (event_id, character_id, short_description, long_explanation)
+                     VALUES (?, ?, ?, ?)`;
+    db.run(sql, [event_id, character_id, short_description, long_explanation], function (err) {
+      if (err) return reject(err);
+      resolve({ event_id, character_id });
+    });
+  });
+}
+
+function updateEventCharacter(event_id, character_id, updates) {
+  const fields = [];
+  const values = [];
+  if (updates.short_description !== undefined) {
+    fields.push('short_description = ?');
+    values.push(updates.short_description);
+  }
+  if (updates.long_explanation !== undefined) {
+    fields.push('long_explanation = ?');
+    values.push(updates.long_explanation);
+  }
+  if (fields.length === 0) return Promise.resolve({ event_id, character_id });
+  values.push(event_id, character_id);
+  const sql = `UPDATE event_characters SET ${fields.join(', ')} WHERE event_id = ? AND character_id = ?`;
+  return new Promise((resolve, reject) => {
+    db.run(sql, values, function (err) {
+      if (err) return reject(err);
+      resolve({ event_id, character_id });
+    });
+  });
+}
+
+function removeEventCharacter(event_id, character_id) {
+  return new Promise((resolve, reject) => {
+    const sql = `DELETE FROM event_characters WHERE event_id = ? AND character_id = ?`;
+    db.run(sql, [event_id, character_id], function (err) {
+      if (err) return reject(err);
+      resolve({ event_id, character_id });
+    });
+  });
+}
+
+module.exports = {
+  addEventCharacter,
+  updateEventCharacter,
+  removeEventCharacter
+};
