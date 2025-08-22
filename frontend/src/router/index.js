@@ -2,12 +2,16 @@ import { createRouter, createWebHistory } from 'vue-router';
 import HomePage from '../components/HomePage.vue';
 import CharacterIndex from '../components/CharacterIndex.vue';
 import CharacterDetail from '../components/CharacterDetail.vue';
+import EventIndex from '../components/EventIndex.vue';
+import EventDetail from '../components/EventDetail.vue';
 // import other pages as needed
 
 const routes = [
   { path: '/', component: HomePage },
   { path: '/characters', component: CharacterIndex },
   { path: '/characters/:id', component: CharacterDetail },
+  { path: '/events', component: EventIndex },
+  { path: '/events/:id', component: EventDetail }
   // { path: '/characters', component: CharactersPage }, etc.
 ];
 
