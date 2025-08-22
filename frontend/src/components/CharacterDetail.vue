@@ -21,8 +21,9 @@ export default {
     };
   },
   mounted() {
+    const api = require('../utils/api');
     const id = this.$route.params.id;
-    fetch(`http://10.0.0.215:3000/api/characters/${id}`)
+    fetch(`${api.API_BASE_URL}/characters/${id}`)
       .then(res => res.json())
       .then(data => {
         this.character = data;

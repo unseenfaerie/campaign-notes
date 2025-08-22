@@ -21,7 +21,8 @@ export default {
     };
   },
   mounted() {
-    fetch('http://10.0.0.215:3000/api/characters')
+    const api = require('../utils/api');
+    fetch(`${api.API_BASE_URL}/characters`)
       .then(res => res.json())
       .then(data => {
         this.characters = data;
