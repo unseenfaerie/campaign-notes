@@ -47,7 +47,7 @@
         <textarea v-model="editCharacter.short_description" rows="2" />
       </p>
       <p><strong>Long Explanation:</strong><br />
-        <textarea v-model="editCharacter.long_explanation" rows="4" />
+        <textarea v-model="editCharacter.long_explanation" rows="12" style="width:100%; min-width:350px; min-height:200px;" />
       </p>
       <button type="submit">Save</button>
       <button type="button" @click="cancelEdit">Cancel</button>
