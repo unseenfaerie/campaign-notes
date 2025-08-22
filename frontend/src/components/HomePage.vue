@@ -3,6 +3,7 @@
     <h1>Campaign Notes</h1>
     <ul>
       <li><router-link to="/characters">Characters</router-link></li>
+      <li><router-link to="/deities">Deities</router-link></li>
       <li><router-link to="/items">Items</router-link></li>
       <li><router-link to="/organizations">Organizations</router-link></li>
       <li><router-link to="/places">Places</router-link></li>

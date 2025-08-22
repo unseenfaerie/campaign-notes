@@ -1,8 +1,7 @@
 <template>
   <div class="main-content" v-if="item">
     <h1>{{ item.name }}</h1>
-    <p><strong>ID:</strong> {{ item.id }}</p>
-    <p><strong>Description:</strong> {{ item.description }}</p>
+    <p><strong>Description:</strong> {{ item.short_description }}</p>
     <!-- Add more fields as needed -->
   </div>
   <div v-else>Loading item...</div>
