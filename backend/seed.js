@@ -8,15 +8,15 @@ const db = new sqlite3.Database(dbPath);
 db.serialize(() => {
   console.log('Inserting characters...');
   db.run(`INSERT OR IGNORE INTO characters (id, type, name, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, short_description, long_explanation) VALUES
-    ('alann-barnett', 'player-character', 'Alann Barnett', 'Cleric', '4', 'Neutral Good', 13, 8, 11, 10, 14, 11, 20, 0, 'A thoughtful and strong-willed adventurer.', 'Long Explanation.'),
-    ('releas-neb', 'player-character', 'Releas Neb', 'Magic User', '7', 'Chaotic Good', 5, 14, 10, 18, 13, 9, 16, 0, 'A clever and resourceful wizard.', 'Long Explanation.'),
-    ('appolonia-palleday', 'player-character', 'Appolonia Palleday', 'Magic User', '5', 'Neutral Good', 13, 8, 11, 18, 14, 11, 18, 0, 'A bright and curious spellcaster.', 'Long Explanation.'),
-    ('durchir', 'player-character', 'Durchir', 'Fighter/Enchanter', '2/Enchanter', 'Lawful Evil', 18, 10, 12, 15, 10, 11, 22, 1, 'Durchir of the Angry Orchard, fallen hero.', 'Long Explanation.'),
-    ('cormac', 'player-character', 'Cormac', 'Thief/Illusionist', '5/4', 'Chaotic Good', 9, 16, 7, 15, 14, 7, 15, 0, 'A clever and nimble adventurer.', 'Long Explanation.'),
-    ('bert-verinwort', 'non-player-character', 'Bert Verinwort', NULL, NULL, 'Lawful Neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A local notable in Wavethorn.', 'Long Explanation.'),
-    ('sieg-ordoss', 'non-player-character', 'Sieg Ordoss', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A mysterious figure.', 'Long Explanation.'),
-    ('gereg', 'non-player-character', 'Gereg', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A resident of Wavethorn.', 'Long Explanation.'),
-    ('leo', 'non-player-character', 'Leo', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A resident of Wavethorn.', 'Long Explanation.');
+    ('alann-barnett', 'pc', 'Alann Barnett', 'Cleric', '4', 'Neutral Good', 13, 8, 11, 10, 14, 11, 20, 0, 'A thoughtful and strong-willed adventurer.', 'Long Explanation.'),
+    ('releas-neb', 'pc', 'Releas Neb', 'Magic User', '7', 'Chaotic Good', 5, 14, 10, 18, 13, 9, 16, 0, 'A clever and resourceful wizard.', 'Long Explanation.'),
+    ('appolonia-palleday', 'pc', 'Appolonia Palleday', 'Magic User', '5', 'Neutral Good', 13, 8, 11, 18, 14, 11, 18, 0, 'A bright and curious spellcaster.', 'Long Explanation.'),
+    ('durchir', 'pc', 'Durchir', 'Fighter/Enchanter', '2/Enchanter', 'Lawful Evil', 18, 10, 12, 15, 10, 11, 22, 1, 'Durchir of the Angry Orchard, fallen hero.', 'Long Explanation.'),
+    ('cormac', 'pc', 'Cormac', 'Thief/Illusionist', '5/4', 'Chaotic Good', 9, 16, 7, 15, 14, 7, 15, 0, 'A clever and nimble adventurer.', 'Long Explanation.'),
+    ('bert-verinwort', 'npc', 'Bert Verinwort', NULL, NULL, 'Lawful Neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A local notable in Wavethorn.', 'Long Explanation.'),
+    ('sieg-ordoss', 'npc', 'Sieg Ordoss', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A mysterious figure.', 'Long Explanation.'),
+    ('gereg', 'npc', 'Gereg', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A resident of Wavethorn.', 'Long Explanation.'),
+    ('leo', 'npc', 'Leo', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A resident of Wavethorn.', 'Long Explanation.');
   `);
 
   console.log('Inserting deities...');
@@ -51,7 +51,7 @@ db.serialize(() => {
 
   console.log('Inserting items...');
   db.run(`INSERT OR IGNORE INTO items (id, name, short_description, long_explanation) VALUES
-    ('cormac-spellbook', 'Cormac''s Spellbook', 'A spellbook belonging to Cormac.', 'Long Explanation.');
+    ('cormac-s-spellbook', 'Cormac''s Spellbook', 'A spellbook belonging to Cormac.', 'Long Explanation.');
   `);
 
   console.log('Inserting events...');
@@ -62,14 +62,34 @@ db.serialize(() => {
 
   console.log('Inserting spheres...');
   db.run(`INSERT OR IGNORE INTO spheres (id, name, description) VALUES
-    ('war', 'War', 'Sphere of War.'),
-    ('death', 'Death', 'Sphere of Death.');
+    ('all', 'All', 'Sphere of All.'),
+    ('animal', 'Animal', 'Sphere of Animal.'),
+    ('astral', 'Astral', 'Sphere of Astral.'),
+    ('charm', 'Charm', 'Sphere of Charm.'),
+    ('combat', 'Combat', 'Sphere of Combat.'),
+    ('creation', 'Creation', 'Sphere of Creation.'),
+    ('divination', 'Divination', 'Sphere of Divination.'),
+    ('elemental', 'Elemental', 'Sphere of Elemental.'),
+    ('guardian', 'Guardian', 'Sphere of Guardian.'),
+    ('healing', 'Healing', 'Sphere of Healing.'),
+    ('necromantic', 'Necromantic', 'Sphere of Necromantic.'),
+    ('plant', 'Plant', 'Sphere of Plant.'),
+    ('protection', 'Protection', 'Sphere of Protection.'),
+    ('summoning', 'Summoning', 'Sphere of Summoning.'),
+    ('sun', 'Sun', 'Sphere of Sun.'),
+    ('weather', 'Weather', 'Sphere of Weather.');
   `);
 
   console.log('Inserting spells...');
   db.run(`INSERT OR IGNORE INTO spells (id, type, name, level, school, sphere, casting_time, range, components, duration, description) VALUES
-    ('fireball', 'arcane', 'Fireball', 3, 'Evocation', 'war', '1 action', '150 feet', 'V,S,M', 'Instantaneous', 'A bright streak flashes to a point you choose.'),
-    ('raise-dead', 'divine', 'Raise Dead', 5, NULL, 'death', '1 hour', 'Touch', NULL, 'Instantaneous', 'Return a dead creature to life.');
+    ('fireball', 'arcane', 'Fireball', 3, 'Evocation', 'elemental', '1 action', '150 feet', 'V,S,M', 'Instantaneous', 'A bright streak flashes to a point you choose.'),
+    ('raise-dead', 'divine', 'Raise Dead', 5, NULL, 'necromantic', '1 hour', 'Touch', NULL, 'Instantaneous', 'Return a dead creature to life.'),
+    ('lightning-bolt', 'arcane', 'Lightning Bolt', 3, 'Evocation', 'elemental', '1 action', '100 feet', 'V,S,M', 'Instantaneous', 'A stroke of lightning forming a line 100 feet long and 5 feet wide blasts out from you.'),
+    ('healing-word', 'divine', 'Healing Word', 1, NULL, 'healing', '1 bonus action', '60 feet', NULL, 'Instantaneous', 'A creature of your choice that you can see within range regains hit points.'),
+    ('mage-hand', 'arcane', 'Mage Hand', 0, 'Conjuration', '', '1 action', '30 feet', 'V,S', '1 minute', 'A spectral hand appears and can manipulate objects.'),
+    ('audible-glamer', 'arcane', 'Audible Glamer', 1, 'Illusion', '', '1 action', '30 feet', 'V,S', '1 minute', 'Creates a sound that can be heard up to 100 feet away.'),
+    ('change-self', 'arcane', 'Change Self', 1, 'Illusion', '', '1 action', 'Self', 'V,S', '1 hour', 'You assume a different form.'),
+    ('magic-missile', 'arcane', 'Magic Missile', 1, 'Evocation', '', '1 action', '120 feet', 'V,S', 'Instantaneous', 'Creates three glowing darts of magical force. 1d4+1 damage per bolt.');
   `);
 
   console.log('Inserting aliases...');
@@ -92,6 +112,12 @@ db.serialize(() => {
     ('coup-of-wavethorn', 'wavethorn', 'Short description.', 'Long Explanation.');
   `);
 
+  console.log('Inserting character_items...');
+  db.run(`INSERT OR IGNORE INTO character_items (character_id, item_id, short_description) VALUES
+    ('releas-neb', 'rel-s-spellbook', 'Recieved from his mentor in Gatun.'),
+    ('cormac', 'cormac-s-spellbook', 'Recieved from his master.');
+  `);
+
   console.log('Inserting character_relationships...');
   db.run(`INSERT OR IGNORE INTO character_relationships (character_id, related_id, relationship_type, short_description, long_explanation) VALUES
     ('alann-barnett', 'releas-neb', 'ally', 'Short description.', 'Long Explanation.'),
@@ -108,14 +134,23 @@ db.serialize(() => {
     ('raise-dead', 'death');
   `);
 
-  console.log('Inserting deity_spheres...');
-  db.run(`INSERT OR IGNORE INTO deity_spheres (deity_id, sphere_id) VALUES
-    ('achiel', 'war'),
-    ('wyaris', 'war'),
-    ('achiel', 'death');
+  console.log('Inserting item_spells...');
+  db.run(`INSERT OR IGNORE INTO item_spells (item_id, spell_id) VALUES
+    ('rel-s-spellbook', 'fireball'),
+    ('rel-s-spellbook', 'magic-missile'),
+    ('cormac-s-spellbook', 'change-self'),
+    ('cormac-s-spellbook', 'audible-glamer');
   `);
 
-  console.log('Inserting character_deities (patron relationships)...');
+  console.log('Inserting deity_spheres...');
+  db.run(`INSERT OR IGNORE INTO deity_spheres (deity_id, sphere_id) VALUES
+    ('achiel', 'healing'),
+    ('achiel', 'creation'),
+    ('wyaris', 'combat'),
+    ('danaris', 'death');
+  `);
+
+  console.log('Inserting character_deities...');
   db.run(`INSERT OR IGNORE INTO character_deities (character_id, deity_id, short_description, long_explanation) VALUES
     ('alann-barnett', 'achiel', 'Short description.', 'Long Explanation.'),
     ('alann-barnett', 'doh', 'Short description.', 'Long Explanation.'),

@@ -6,8 +6,7 @@ const path = require('path');
 const dbPath = path.join(__dirname, '../campaign.db');
 const db = new sqlite3.Database(dbPath);
 
-// Create tables for campaign data
-// You can expand these schemas as needed
+// Base entity tables (characters, deities, organizations, places, items, events, spheres, spells)
 
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS characters (
@@ -96,7 +95,8 @@ db.serialize(() => {
     description TEXT
   )`);
 
-  // Join tables for events to other entities
+  // Join tables
+
   db.run(`CREATE TABLE IF NOT EXISTS event_characters (
       event_id TEXT,
       character_id TEXT,
@@ -147,7 +147,6 @@ db.serialize(() => {
       FOREIGN KEY (item_id) REFERENCES items(id)
     )`);
 
-  // Join table: character_relationships (many-to-many between characters)
   db.run(`CREATE TABLE IF NOT EXISTS character_relationships (
       character_id TEXT,
       related_id TEXT,
@@ -159,34 +158,15 @@ db.serialize(() => {
       FOREIGN KEY (related_id) REFERENCES characters(id)
     )`);
 
-  // Join table: spell_spheres (many-to-many between spells and spheres)
-  db.run(`CREATE TABLE IF NOT EXISTS spell_spheres (
-      spell_id TEXT,
-      sphere_id TEXT,
-      PRIMARY KEY (spell_id, sphere_id),
-      FOREIGN KEY (spell_id) REFERENCES spells(id),
-      FOREIGN KEY (sphere_id) REFERENCES spheres(id)
-    )`);
-
-  // Join table: deity_spheres (many-to-many between deities and spheres)
-  db.run(`CREATE TABLE IF NOT EXISTS deity_spheres (
-      deity_id TEXT,
-      sphere_id TEXT,
-      PRIMARY KEY (deity_id, sphere_id),
-      FOREIGN KEY (deity_id) REFERENCES deities(id),
-      FOREIGN KEY (sphere_id) REFERENCES spheres(id)
-    )`);
-
-  //Join table: character_items (many-to-many between characters and items)
   db.run(`CREATE TABLE IF NOT EXISTS character_items (
       character_id TEXT,
       item_id TEXT,
       acquired_date TEXT,
       relinquished_date TEXT,
+      short_description TEXT,
       PRIMARY KEY (character_id, item_id, acquired_date)
     )`);
 
-  // Join table: character_organizations (many-to-many between characters and organizations)
   db.run(`CREATE TABLE IF NOT EXISTS character_organizations (
       character_id TEXT,
       organization_id TEXT,
@@ -198,7 +178,6 @@ db.serialize(() => {
       PRIMARY KEY (character_id, organization_id)
     )`);
 
-  // Join table: character_deities (many-to-many between characters and deities)
   db.run(`CREATE TABLE IF NOT EXISTS character_deities (
       character_id TEXT,
       deity_id TEXT,
@@ -207,6 +186,30 @@ db.serialize(() => {
       PRIMARY KEY (character_id, deity_id),
       FOREIGN KEY (character_id) REFERENCES characters(id),
       FOREIGN KEY (deity_id) REFERENCES deities(id)
+    )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS spell_spheres (
+      spell_id TEXT,
+      sphere_id TEXT,
+      PRIMARY KEY (spell_id, sphere_id),
+      FOREIGN KEY (spell_id) REFERENCES spells(id),
+      FOREIGN KEY (sphere_id) REFERENCES spheres(id)
+    )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS deity_spheres (
+      deity_id TEXT,
+      sphere_id TEXT,
+      PRIMARY KEY (deity_id, sphere_id),
+      FOREIGN KEY (deity_id) REFERENCES deities(id),
+      FOREIGN KEY (sphere_id) REFERENCES spheres(id)
+    )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS item_spells (
+      item_id TEXT,
+      spell_id TEXT,
+      PRIMARY KEY (item_id, spell_id),
+      FOREIGN KEY (item_id) REFERENCES items(id),
+      FOREIGN KEY (spell_id) REFERENCES spells(id)
     )`);
 
   // Monolithic aliases table for all entity types
