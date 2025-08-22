@@ -16,4 +16,16 @@ export function updateEvent(id, data) {
   }).then(res => res.json());
 }
 
-// Add more event-related API functions as needed
+export function createEvent(data) {
+  return fetch(`${API_BASE_URL}/events`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  }).then(res => res.json());
+}
+
+export function deleteEvent(id) {
+  return fetch(`${API_BASE_URL}/events/${id}`, {
+    method: 'DELETE'
+  }).then(res => res.json());
+}

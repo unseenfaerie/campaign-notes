@@ -16,4 +16,16 @@ export function updateCharacter(id, data) {
   }).then(res => res.json());
 }
 
-// Add more character-related API functions as needed
+export function createCharacter(data) {
+  return fetch(`${API_BASE_URL}/characters`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  }).then(res => res.json());
+}
+
+export function deleteCharacter(id) {
+  return fetch(`${API_BASE_URL}/characters/${id}`, {
+    method: 'DELETE'
+  }).then(res => res.json());
+}
