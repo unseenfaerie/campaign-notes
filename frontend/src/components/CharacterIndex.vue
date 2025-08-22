@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="main-content">
     <h1>Characters</h1>
     <ul v-if="characters.length">
       <li v-for="char in characters" :key="char.id">

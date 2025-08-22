@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="main-content">
     <h1>Events</h1>
     <div v-if="loading">Loading events...</div>
     <div v-else>

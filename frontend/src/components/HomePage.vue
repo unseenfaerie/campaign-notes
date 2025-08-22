@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="main-content">
     <h1>Campaign Notes</h1>
     <ul>
       <li><router-link to="/characters">Characters</router-link></li>
