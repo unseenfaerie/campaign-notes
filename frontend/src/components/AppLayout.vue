@@ -9,8 +9,3 @@
 import NavigationSidebar from './NavigationSidebar.vue';
 </script>
 
-<style>
-#app {
-  display: flex;
-}
-</style>
