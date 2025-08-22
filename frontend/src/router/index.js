@@ -1,9 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import HomePage from '../components/HomePage.vue';
 import CharacterIndex from '../components/CharacterIndex.vue';
-import CharacterDetail from '../components/CharacterDetail.vue';
+import CharacterDetail from '../views/CharacterDetail.vue';
 import EventIndex from '../components/EventIndex.vue';
-import EventDetail from '../components/EventDetail.vue';
+import EventDetail from '../views/EventDetail.vue';
 // import other pages as needed
 
 const routes = [
