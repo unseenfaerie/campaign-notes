@@ -61,7 +61,7 @@
 </template>
 
 <script>
-import { API_BASE_URL } from '../utils/api';
+import { getCharacter, updateCharacter } from '../api/characters';
 
 export default {
 	name: 'CharacterDetail',
@@ -77,46 +77,37 @@ export default {
 		this.fetchCharacter();
 	},
 	methods: {
-		fetchCharacter() {
-			const id = this.$route.params.id;
-			fetch(`${API_BASE_URL}/characters/${id}`)
-				.then(res => res.json())
-				.then(data => {
-					this.character = data;
-					this.editCharacter = { ...data };
-				})
-				.catch(err => {
-					console.error('Error fetching character:', err);
-				});
-		},
+			fetchCharacter() {
+				const id = this.$route.params.id;
+				getCharacter(id)
+					.then(data => {
+						this.character = data;
+						this.editCharacter = { ...data };
+					})
+					.catch(err => {
+						console.error('Error fetching character:', err);
+					});
+			},
 		startEdit() {
 			this.editCharacter = { ...this.character };
 			this.isEditing = true;
 			this.saveStatus = null;
 		},
-		saveEdit() {
-			const id = this.$route.params.id;
-			const patchData = { ...this.editCharacter };
-			fetch(`${API_BASE_URL}/characters/${id}`, {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(patchData)
-			})
-				.then(res => {
-					if (!res.ok) throw new Error('Failed to save');
-					return res.json();
-				})
-				.then(() => {
-					this.saveStatus = 'success';
-					this.fetchCharacter();
-					this.isEditing = false;
-					setTimeout(() => { this.saveStatus = null; }, 2000);
-				})
-				.catch(() => {
-					this.saveStatus = 'error';
-					setTimeout(() => { this.saveStatus = null; }, 2000);
-				});
-		},
+			saveEdit() {
+				const id = this.$route.params.id;
+				const patchData = { ...this.editCharacter };
+				updateCharacter(id, patchData)
+					.then(() => {
+						this.saveStatus = 'success';
+						this.fetchCharacter();
+						this.isEditing = false;
+						setTimeout(() => { this.saveStatus = null; }, 2000);
+					})
+					.catch(() => {
+						this.saveStatus = 'error';
+						setTimeout(() => { this.saveStatus = null; }, 2000);
+					});
+			},
 		cancelEdit() {
 			this.editCharacter = { ...this.character };
 			this.isEditing = false;

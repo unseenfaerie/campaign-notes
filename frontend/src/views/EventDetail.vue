@@ -32,7 +32,7 @@
 </template>
 
 <script>
-import { API_BASE_URL } from '../utils/api';
+import { getEvent, updateEvent } from '../api/events';
 
 export default {
 	name: 'EventDetail',
@@ -48,46 +48,37 @@ export default {
 		this.fetchEvent();
 	},
 	methods: {
-		fetchEvent() {
-			const id = this.$route.params.id;
-			fetch(`${API_BASE_URL}/events/${id}`)
-				.then(res => res.json())
-				.then(data => {
-					this.event = data;
-					this.editEvent = { ...data };
-				})
-				.catch(err => {
-					console.error('Error fetching event:', err);
-				});
-		},
+			fetchEvent() {
+				const id = this.$route.params.id;
+				getEvent(id)
+					.then(data => {
+						this.event = data;
+						this.editEvent = { ...data };
+					})
+					.catch(err => {
+						console.error('Error fetching event:', err);
+					});
+			},
 		startEdit() {
 			this.editEvent = { ...this.event };
 			this.isEditing = true;
 			this.saveStatus = null;
 		},
-		saveEdit() {
-			const id = this.$route.params.id;
-			const patchData = { ...this.editEvent };
-			fetch(`${API_BASE_URL}/events/${id}`, {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(patchData)
-			})
-				.then(res => {
-					if (!res.ok) throw new Error('Failed to save');
-					return res.json();
-				})
-				.then(() => {
-					this.saveStatus = 'success';
-					this.fetchEvent();
-					this.isEditing = false;
-					setTimeout(() => { this.saveStatus = null; }, 2000);
-				})
-				.catch(() => {
-					this.saveStatus = 'error';
-					setTimeout(() => { this.saveStatus = null; }, 2000);
-				});
-		},
+			saveEdit() {
+				const id = this.$route.params.id;
+				const patchData = { ...this.editEvent };
+				updateEvent(id, patchData)
+					.then(() => {
+						this.saveStatus = 'success';
+						this.fetchEvent();
+						this.isEditing = false;
+						setTimeout(() => { this.saveStatus = null; }, 2000);
+					})
+					.catch(() => {
+						this.saveStatus = 'error';
+						setTimeout(() => { this.saveStatus = null; }, 2000);
+					});
+			},
 		cancelEdit() {
 			this.editEvent = { ...this.event };
 			this.isEditing = false;
