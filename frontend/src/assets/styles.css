@@ -1,0 +1,186 @@
+/* Sidebar styles from NavigationSidebar.vue */
+.sidebar {
+  width: 220px;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #232526 0%, #414345 100%);
+  color: #fff;
+  padding: 0 0 2rem 0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.sidebar-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+  padding: 1.5rem 1rem 1rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 1rem;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar li {
+  margin: 0.5rem 0;
+}
+
+.sidebar a {
+  color: #fff;
+  text-decoration: none;
+  padding: 0.75rem 1.5rem;
+  display: block;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.sidebar a.router-link-exact-active {
+  background: #4e54c8;
+  color: #fff;
+  font-weight: bold;
+}
+
+.sidebar a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #03cfd6;
+}
+
+/* EntityHeader styles from EntityHeader.vue */
+.entity-header {
+  margin-bottom: 1.5rem;
+  background-color: powderblue;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.entity-short-desc {
+  color: #666;
+  font-size: 1.1em;
+  margin-top: 0.2em;
+}
+
+/* AppLayout styles from AppLayout.vue */
+#app {
+  display: flex;
+}
+
+/* App.vue font and color (already present, but ensure not duplicated) */
+/* src/assets/styles.css - Global styles for campaign-notes */
+
+
+body {
+  font-family: 'Inter', Avenir, Helvetica, Arial, sans-serif;
+  color: #232526;
+  background: #f8f9fb;
+  margin: 0;
+  padding: 0;
+  font-size: 17px;
+  letter-spacing: 0.01em;
+}
+
+/* Utility class for left-aligned main content */
+.main-content {
+  width: 66.666vw;
+  max-width: 1200px;
+  min-width: 320px;
+  margin-left: 2rem;
+  /* Add space from sidebar */
+  margin-right: auto;
+  margin-top: 2.5rem;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 16px rgba(60, 60, 90, 0.06);
+  padding: 2.5rem 2.5rem 2.5rem 2.5rem;
+  border: 1px solid #ececf0;
+  text-align: left;
+}
+
+@media (max-width: 600px) {
+  .main-content {
+    padding: 1.2rem 0.7rem;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+  }
+}
+
+
+.card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  padding: 1.5rem 2rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #f0f0f5;
+}
+
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-family: inherit;
+  font-weight: 600;
+  color: #3a3a5a;
+  margin-top: 0;
+}
+
+h1 {
+  font-size: 2.1rem;
+  color: #4e54c8;
+  letter-spacing: 0.01em;
+}
+
+p,
+label,
+li {
+  color: #444;
+}
+
+
+p {
+  margin: 0.5rem 0 1.1rem 0;
+}
+
+
+label {
+  font-weight: 500;
+}
+
+ul {
+  padding-left: 1.2em;
+}
+
+a {
+  color: #4e54c8;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+a:hover {
+  color: #232526;
+  text-decoration: underline;
+}
+
+button {
+  background: #4e54c8;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 0.5em 1.2em;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+button:hover {
+  background: #232526;
+}
+
+
+/* Add more shared styles as needed */
