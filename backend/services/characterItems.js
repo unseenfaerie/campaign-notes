@@ -3,11 +3,11 @@
 const db = require('../db');
 
 // Add a character-item relationship
-function addCharacterItem(character_id, item_id, short_description = '', long_explanation = '') {
+function addCharacterItem(character_id, item_id, acquired_date, relinquished_date, short_description = '') {
   return new Promise((resolve, reject) => {
-    const sql = `INSERT OR IGNORE INTO character_items (character_id, item_id, short_description, long_explanation)
-                 VALUES (?, ?, ?, ?)`;
-    db.run(sql, [character_id, item_id, short_description, long_explanation], function (err) {
+    const sql = `INSERT OR IGNORE INTO character_items (character_id, item_id, acquired_date, relinquished_date, short_description)
+                 VALUES (?, ?, ?, ?, ?)`;
+    db.run(sql, [character_id, item_id, acquired_date, relinquished_date, short_description], function (err) {
       if (err) return reject(err);
       resolve({ character_id, item_id });
     });
@@ -16,17 +16,15 @@ function addCharacterItem(character_id, item_id, short_description = '', long_ex
 
 // Update a character-item relationship
 function updateCharacterItem(character_id, item_id, updates) {
-  const fields = [];
   const values = [];
-  if (updates.short_description !== undefined) {
-    fields.push('short_description = ?');
-    values.push(updates.short_description);
-  }
-  if (updates.long_explanation !== undefined) {
-    fields.push('long_explanation = ?');
-    values.push(updates.long_explanation);
-  }
-  if (fields.length === 0) return Promise.resolve({ character_id, item_id });
+      // character_id TEXT,
+      // item_id TEXT,
+      // acquired_date TEXT,
+      // relinquished_date TEXT,
+      // short_description TEXT,
+  const allowed = ['acquired_date', 'relinquished_date', 'short_description'];
+  const fields = Object.keys(updates).filter(key => allowed.includes(key));
+  if (fields.length === 0) return Promise.resolve({ character_id, item_id, message: "no updates made"});
   values.push(character_id, item_id);
   const sql = `UPDATE character_items SET ${fields.join(', ')} WHERE character_id = ? AND item_id = ?`;
   return new Promise((resolve, reject) => {
@@ -51,7 +49,7 @@ function removeCharacterItem(character_id, item_id) {
 // Get all items for a character (with join table metadata)
 function getItemsForCharacter(character_id) {
   return new Promise((resolve, reject) => {
-    const sql = `SELECT i.*, ci.short_description, ci.long_explanation
+    const sql = `SELECT i.*, ci.acquired_date, ci.relinquished_date, ci.short_description
                  FROM character_items ci
                  JOIN items i ON ci.item_id = i.id
                  WHERE ci.character_id = ?`;
@@ -65,7 +63,7 @@ function getItemsForCharacter(character_id) {
 // Get all characters for an item (with join table metadata)
 function getCharactersForItem(item_id) {
   return new Promise((resolve, reject) => {
-    const sql = `SELECT c.*, ci.short_description, ci.long_explanation
+    const sql = `SELECT c.*, ci.acquired_date, ci.relinquished_date, ci.short_description
                  FROM character_items ci
                  JOIN characters c ON ci.character_id = c.id
                  WHERE ci.item_id = ?`;

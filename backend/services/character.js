@@ -60,7 +60,7 @@ function patchCharacter(id, updates) {
   return new Promise((resolve, reject) => {
     const allowed = ['type', 'name', 'class', 'level', 'alignment', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma', 'total_health', 'deceased', 'short_description', 'long_explanation'];
     const fields = Object.keys(updates).filter(key => allowed.includes(key));
-    if (fields.length === 0) return resolve({ updated: id });
+    if (fields.length === 0) return resolve({ no_changes: id });
     const setClause = fields.map(f => `${f} = ?`).join(', ');
     const params = fields.map(f => updates[f]);
     params.push(id);
