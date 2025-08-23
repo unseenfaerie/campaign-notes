@@ -13,38 +13,6 @@ function addEventCharacter(event_id, character_id, short_description, long_expla
   });
 }
 
-function updateEventCharacter(event_id, character_id, updates) {
-  const fields = [];
-  const values = [];
-  if (updates.short_description !== undefined) {
-    fields.push('short_description = ?');
-    values.push(updates.short_description);
-  }
-  if (updates.long_explanation !== undefined) {
-    fields.push('long_explanation = ?');
-    values.push(updates.long_explanation);
-  }
-  if (fields.length === 0) return Promise.resolve({ event_id, character_id });
-  values.push(event_id, character_id);
-  const sql = `UPDATE event_characters SET ${fields.join(', ')} WHERE event_id = ? AND character_id = ?`;
-  return new Promise((resolve, reject) => {
-    db.run(sql, values, function (err) {
-      if (err) return reject(err);
-      resolve({ event_id, character_id });
-    });
-  });
-}
-
-function removeEventCharacter(event_id, character_id) {
-  return new Promise((resolve, reject) => {
-    const sql = `DELETE FROM event_characters WHERE event_id = ? AND character_id = ?`;
-    db.run(sql, [event_id, character_id], function (err) {
-      if (err) return reject(err);
-      resolve({ event_id, character_id });
-    });
-  });
-}
-
 // Get all events for a character (with join table metadata)
 function getEventsForCharacter(character_id) {
   return new Promise((resolve, reject) => {
@@ -80,6 +48,31 @@ function getEventCharacter(event_id, character_id) {
     db.get(sql, [event_id, character_id], (err, row) => {
       if (err) return reject(err);
       resolve(row || null);
+    });
+  });
+}
+
+function updateEventCharacter(event_id, character_id, updates) {
+  const values = [];
+  const allowed = ['short_description', 'long_explanation'];
+  const fields = Object.keys(updates).filter(key => allowed.includes(key));
+  if (fields.length === 0) return Promise.resolve({ event_id, character_id });
+  values.push(event_id, character_id);
+  const sql = `UPDATE event_characters SET ${fields.join(', ')} WHERE event_id = ? AND character_id = ?`;
+  return new Promise((resolve, reject) => {
+    db.run(sql, values, function (err) {
+      if (err) return reject(err);
+      resolve({ event_id, character_id });
+    });
+  });
+}
+
+function removeEventCharacter(event_id, character_id) {
+  return new Promise((resolve, reject) => {
+    const sql = `DELETE FROM event_characters WHERE event_id = ? AND character_id = ?`;
+    db.run(sql, [event_id, character_id], function (err) {
+      if (err) return reject(err);
+      resolve({ event_id, character_id });
     });
   });
 }

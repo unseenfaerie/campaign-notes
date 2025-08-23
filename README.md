@@ -6,7 +6,7 @@ Front-End Vue project - consume node api and serve pages
 next database update, tag the brach with a release
 
 have a comprehensive character endpoint:
-- Character - Item
+- Character - Item [DONE]
 - Character - Event
 - Character - Organizations
 - Character - Deity
