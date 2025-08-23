@@ -1,11 +1,7 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
 const characterItems = require('../../services/characterItems');
-
-
-function isValidDateFormat(date) {
-  return typeof date === 'string' && /^[a-z]{3}-\d{2}-\d{3}$/i.test(date);
-}
+const { isValidDateFormat } = require('../../utils/dateUtils');
 
 // ITEM - CHARACTER ASSOCIATIONS
 // Add an item to a character
@@ -36,13 +32,30 @@ router.get('/', (req, res) => {
     .catch(err => res.status(500).json({ error: err.message }));
 });
 
-// Get a specific item-character relationship
-router.get('/:itemId', (req, res) => {
+// Get the most recent item-character relationship (by acquired_date)
+router.get('/:itemId', async (req, res) => {
   const character_id = req.params.id;
   const item_id = req.params.itemId;
-  characterItems.getCharacterItem(character_id, item_id)
-    .then(relationship => res.json(relationship))
-    .catch(err => res.status(500).json({ error: err.message }));
+  try {
+    // Get all records for this character-item pair
+    const records = await characterItems.getAllCharacterItemRecords(character_id, item_id);
+    if (!records || records.length === 0) {
+      return res.status(404).json({ error: 'No records found for this character-item pair' });
+    }
+    // Sort by acquired_date descending (assuming mmm-dd-yyy format, e.g., jan-01-177)
+    const sorted = records.sort((a, b) => {
+      // Convert mmm-dd-yyy to a comparable string: yyy-mmm-dd
+      const toSortable = (date) => {
+        if (!date) return '';
+        const [mmm, dd, yyy] = date.split('-');
+        return `${yyy}-${mmm.toLowerCase()}-${dd}`;
+      };
+      return toSortable(b.acquired_date).localeCompare(toSortable(a.acquired_date));
+    });
+    return res.json(sorted[0]);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 // Get all records for a character-item pair (all acquisitions)
@@ -55,6 +68,19 @@ router.get('/:itemId/all', (req, res) => {
     .catch(err => res.status(500).json({ error: err.message }));
 });
 
+
+// Get an item for a character at a specific acquired_date
+router.get('/:itemId/:acquiredDate', (req, res) => {
+  const character_id = req.params.id;
+  const item_id = req.params.itemId;
+  const acquired_date = req.params.acquiredDate;
+  characterItems.getCharacterItem(character_id, item_id, acquired_date)
+    .then(item => {
+      if (!item) return res.status(404).json({ error: 'Item not found' });
+      res.json(item);
+    })
+    .catch(err => res.status(500).json({ error: err.message }));
+});
 
 // Update item-character association
 router.patch('/:itemId/:acquiredDate', (req, res) => {

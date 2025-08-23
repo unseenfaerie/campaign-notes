@@ -1,6 +1,6 @@
 // services/characterItems.js
 // Centralized logic for managing character-item relationships
-const { isValidDateFormat, loreDateToSortable } = require('../utils/dateFormat');
+const { isValidDateFormat, loreDateToSortable } = require('../utils/dateUtils');
 const db = require('../db');
 
 // Add a character-item relationship
@@ -41,10 +41,10 @@ function getItemsForCharacter(character_id) {
 }
 
 // Get a specific character-item relationship (with join table metadata)
-function getCharacterItem(character_id, item_id) {
+function getCharacterItem(character_id, item_id, acquired_date) {
   return new Promise((resolve, reject) => {
-    const sql = `SELECT * FROM character_items WHERE character_id = ? AND item_id = ?`;
-    db.get(sql, [character_id, item_id], (err, row) => {
+    const sql = `SELECT * FROM character_items WHERE character_id = ? AND item_id = ? AND acquired_date = ?`;
+    db.get(sql, [character_id, item_id, acquired_date], (err, row) => {
       if (err) return reject(err);
       resolve(row || null);
     });
@@ -78,17 +78,17 @@ function getCharactersForItem(item_id) {
 
 // Update a character-item relationship
 function updateCharacterItem(character_id, item_id, acquired_date, updates) {
-      // character_id TEXT,
-      // item_id TEXT,
-      // acquired_date TEXT,
-      // relinquished_date TEXT,
-      // short_description TEXT,
+  // character_id TEXT,
+  // item_id TEXT,
+  // acquired_date TEXT,
+  // relinquished_date TEXT,
+  // short_description TEXT,
   const allowed = ['relinquished_date', 'short_description'];
   const fields = Object.keys(updates).filter(key => allowed.includes(key));
-  if (fields.length === 0) return Promise.resolve({ character_id, item_id, acquired_date, message: 'no updates made'});
-  if (fields.includes('acquired_date')) return Promise.resolve({ character_id, item_id, acquired_date, message: 'cannot update acquired date; make a new object'});
+  if (fields.length === 0) return Promise.resolve({ character_id, item_id, acquired_date, message: 'no updates made' });
+  if (fields.includes('acquired_date')) return Promise.resolve({ character_id, item_id, acquired_date, message: 'cannot update acquired date; make a new object' });
   if (fields.includes('relinquished_date') && !isValidDateFormat(updates.relinquished_date)) {
-    return Promise.resolve({ character_id, item_id, acquired_date, message: 'invalid date format, use mmm-dd-yyy (eg mar-19-002 or jun-01-999)'});
+    return Promise.resolve({ character_id, item_id, acquired_date, message: 'invalid date format, use mmm-dd-yyy (eg mar-19-002 or jun-01-999)' });
   }
   const setClause = fields.map(field => `${field} = ?`).join(', ');
   const values = fields.map(field => updates[field]);
@@ -101,7 +101,7 @@ function updateCharacterItem(character_id, item_id, acquired_date, updates) {
       if (err) {
         return reject(err);
       }
-      resolve({ character_id, item_id, acquired_date});
+      resolve({ character_id, item_id, acquired_date });
     });
   });
 }
