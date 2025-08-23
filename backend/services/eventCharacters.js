@@ -2,6 +2,7 @@
 // Centralized logic for managing event-character relationships
 const db = require('../db');
 
+// Create a new event-character association
 function addEventCharacter(event_id, character_id, short_description, long_explanation) {
   return new Promise((resolve, reject) => {
     const sql = `INSERT OR IGNORE INTO event_characters (event_id, character_id, short_description, long_explanation)
@@ -13,13 +14,10 @@ function addEventCharacter(event_id, character_id, short_description, long_expla
   });
 }
 
-// Get all events for a character (with join table metadata)
+// Get all events for a character (join table only)
 function getEventsForCharacter(character_id) {
   return new Promise((resolve, reject) => {
-    const sql = `SELECT e.*, ec.short_description, ec.long_explanation
-                 FROM event_characters ec
-                 JOIN events e ON ec.event_id = e.id
-                 WHERE ec.character_id = ?`;
+    const sql = `SELECT * FROM event_characters WHERE character_id = ?`;
     db.all(sql, [character_id], (err, rows) => {
       if (err) return reject(err);
       resolve(rows || []);
@@ -27,13 +25,10 @@ function getEventsForCharacter(character_id) {
   });
 }
 
-// Get all characters for an event (with join table metadata)
+// Get all characters for an event (join table only)
 function getCharactersForEvent(event_id) {
   return new Promise((resolve, reject) => {
-    const sql = `SELECT c.*, ec.short_description, ec.long_explanation
-                 FROM event_characters ec
-                 JOIN characters c ON ec.character_id = c.id
-                 WHERE ec.event_id = ?`;
+    const sql = `SELECT * FROM event_characters WHERE event_id = ?`;
     db.all(sql, [event_id], (err, rows) => {
       if (err) return reject(err);
       resolve(rows || []);
@@ -53,12 +48,15 @@ function getEventCharacter(event_id, character_id) {
 }
 
 function updateEventCharacter(event_id, character_id, updates) {
-  const values = [];
   const allowed = ['short_description', 'long_explanation'];
   const fields = Object.keys(updates).filter(key => allowed.includes(key));
   if (fields.length === 0) return Promise.resolve({ event_id, character_id });
+
+  const setClause = fields.map(field => `${field} = ?`).join(', ');
+  const values = fields.map(field => updates[field]);
   values.push(event_id, character_id);
-  const sql = `UPDATE event_characters SET ${fields.join(', ')} WHERE event_id = ? AND character_id = ?`;
+
+  const sql = `UPDATE event_characters SET ${setClause} WHERE event_id = ? AND character_id = ?`;
   return new Promise((resolve, reject) => {
     db.run(sql, values, function (err) {
       if (err) return reject(err);
