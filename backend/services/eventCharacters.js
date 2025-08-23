@@ -47,6 +47,7 @@ function getEventCharacter(event_id, character_id) {
   });
 }
 
+// update a specific event-character relationship
 function updateEventCharacter(event_id, character_id, updates) {
   const allowed = ['short_description', 'long_explanation'];
   const fields = Object.keys(updates).filter(key => allowed.includes(key));
@@ -65,6 +66,7 @@ function updateEventCharacter(event_id, character_id, updates) {
   });
 }
 
+// delete a specific event-character relationship
 function removeEventCharacter(event_id, character_id) {
   return new Promise((resolve, reject) => {
     const sql = `DELETE FROM event_characters WHERE event_id = ? AND character_id = ?`;

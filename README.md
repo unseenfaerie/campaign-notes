@@ -7,6 +7,6 @@ next database update, tag the brach with a release
 
 have a comprehensive character endpoint:
 - Character - Item [DONE]
-- Character - Event
-- Character - Organizations
-- Character - Deity
+- Character - Event [DONE]
+- Character - Organizations 
+- Character - Deity [DONE]
