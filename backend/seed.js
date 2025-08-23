@@ -16,13 +16,13 @@ db.serialize(() => {
     ('bert-verinwort', 'npc', 'Bert Verinwort', NULL, NULL, 'Lawful Neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A local notable in Wavethorn.', 'Long Explanation.'),
     ('sieg-ordoss', 'npc', 'Sieg Ordoss', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A mysterious figure.', 'Long Explanation.'),
     ('gereg', 'npc', 'Gereg', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A resident of Wavethorn.', 'Long Explanation.'),
-    ('leo', 'npc', 'Leo', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A resident of Wavethorn.', 'Long Explanation.');
+    ('kev', 'npc', 'Kev Woodshire', 'Cleric', 3, 'Chaotic Good', 12, 10, 16, 8, 16, 10, 20, 0, 'A fanatic of Idona and/or Chasya.', 'Kev is a cleric of Idona and is a fierce individualist. He has accompanied the party through many a debacle.');
   `);
 
   console.log('Inserting deities...');
   db.run(`INSERT OR IGNORE INTO deities (id, name, pantheon, alignment, short_description, long_explanation) VALUES
     ('achiel', 'Achiel', 'Main Human', 'Lawful Good', 'God of Light.', 'Long Explanation.'),
-    ('idona', 'Idona', 'Main Human', 'Chaotic Good', 'Goddess of Humanity, the Moon, and devotion.', 'Long Explanation.'),
+    ('idona', 'Idona', 'Main Human', 'Chaotic Good', 'Goddess of Humanity.', 'The patron goddess of and mother to Humankind. Her nurturing guidance shows us what we need to know to thrive. Those that worship Idona are numerous within the Othlorin. She is primarily worshipped as Achiels Wife, deserving of respect and credence. There are some women who have dedicated their lives to interpreting the messages of the moon as those are what Idona intends.'),
     ('ponat', 'Ponat', 'Main Human', 'Lawful Good', 'God of Fortress and protection.', 'Long Explanation.'),
     ('wyaris', 'Wyaris', 'Three Sister Goddesses', 'Chaotic Good', 'Lady of Swords.', 'Long Explanation.'),
     ('danaris', 'Danaris', 'Three Sister Goddesses', 'Chaotic Neutral', 'Lady of Death.', 'Long Explanation.'),
