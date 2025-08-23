@@ -50,7 +50,7 @@ function getEventCharacter(event_id, character_id) {
 function updateEventCharacter(event_id, character_id, updates) {
   const allowed = ['short_description', 'long_explanation'];
   const fields = Object.keys(updates).filter(key => allowed.includes(key));
-  if (fields.length === 0) return Promise.resolve({ event_id, character_id });
+  if (fields.length === 0) return Promise.resolve({ event_id, character_id, message: "no updates made" });
 
   const setClause = fields.map(field => `${field} = ?`).join(', ');
   const values = fields.map(field => updates[field]);
