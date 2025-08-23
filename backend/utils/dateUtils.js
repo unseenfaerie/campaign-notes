@@ -1,3 +1,22 @@
+/**
+ * Sorts an array of objects by a specified date field using loreDateToSortable.
+ * @param {Array} arr - Array of objects to sort.
+ * @param {string} dateField - The field name containing the date string.
+ * @param {boolean} [descending=false] - If true, sorts most recent first; otherwise, least recent first.
+ * @returns {Array} Sorted array.
+ */
+function sortObjectsByLoreDate(arr, dateField, descending = false) {
+  return arr.slice().sort((a, b) => {
+    const aKey = loreDateToSortable(a[dateField]);
+    const bKey = loreDateToSortable(b[dateField]);
+    if (!aKey && !bKey) return 0;
+    if (!aKey) return 1;
+    if (!bKey) return -1;
+    const cmp = aKey.localeCompare(bKey);
+    return descending ? -cmp : cmp;
+  });
+}
+
 function isValidDateFormat(date) {
   const isValid = typeof date === 'string' && /^[a-z]{3}-\d{2}-\d{3}$/i.test(date);
   return isValid;
@@ -40,4 +59,4 @@ function sortLoreDates(dates) {
     });
 }
 
-module.exports = { isValidDateFormat, parseLoreDate, loreDateToSortable, sortLoreDates };
+module.exports = { isValidDateFormat, parseLoreDate, loreDateToSortable, sortLoreDates, sortObjectsByLoreDate };

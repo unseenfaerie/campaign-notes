@@ -1,4 +1,3 @@
-// services/characterItems.js
 // Centralized logic for managing character-item relationships
 const { isValidDateFormat, loreDateToSortable } = require('../utils/dateUtils');
 const db = require('../db');
@@ -11,6 +10,16 @@ function addCharacterItem(character_id, item_id, acquired_date, relinquished_dat
     db.run(sql, [character_id, item_id, acquired_date, relinquished_date, short_description], function (err) {
       if (err) return reject(err);
       resolve({ character_id, item_id });
+    });
+  });
+}
+
+// Get all item IDs for a character
+function getItemIdsForCharacter(character_id) {
+  return new Promise((resolve, reject) => {
+    db.all('SELECT DISTINCT item_id FROM character_items WHERE character_id = ?', [character_id], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows.map(r => r.item_id));
     });
   });
 }
@@ -128,6 +137,17 @@ function removeCharacterItem(character_id, item_id) {
   });
 }
 
+// Remove ALL item relationships for this character
+function removeAllCharacterItemRecords(character_id) {
+  return new Promise((resolve, reject) => {
+    const sql = `DELETE FROM character_items WHERE character_id = ?`;
+    db.run(sql, [character_id], function (err) {
+      if (err) return reject(err);
+      resolve({ character_id });
+    });
+  });
+}
+
 module.exports = {
   addCharacterItem,
   updateCharacterItem,
@@ -136,5 +156,6 @@ module.exports = {
   getItemsForCharacter,
   getCharactersForItem,
   getCharacterItem,
-  getAllCharacterItemRecords
+  getAllCharacterItemRecords,
+  getItemIdsForCharacter
 };
