@@ -97,6 +97,10 @@ db.serialize(() => {
 
   // Join tables
 
+  // foreign keys are to enforce that the character_id referenced 
+  // ~actually~ 
+  // exists in the characters table.
+
   db.run(`CREATE TABLE IF NOT EXISTS event_characters (
       event_id TEXT,
       character_id TEXT,
@@ -158,6 +162,7 @@ db.serialize(() => {
       FOREIGN KEY (related_id) REFERENCES characters(id)
     )`);
 
+    /* not unique (no foreign keys) */
   db.run(`CREATE TABLE IF NOT EXISTS character_items (
       character_id TEXT,
       item_id TEXT,
@@ -167,6 +172,7 @@ db.serialize(() => {
       PRIMARY KEY (character_id, item_id, acquired_date)
     )`);
 
+    /* not unique (no foreign keys) */
   db.run(`CREATE TABLE IF NOT EXISTS character_organizations (
       character_id TEXT,
       organization_id TEXT,
