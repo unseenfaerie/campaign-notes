@@ -52,7 +52,7 @@ db.serialize(() => {
   console.log('Inserting items...');
   db.run(`INSERT OR IGNORE INTO items (id, name, short_description, long_explanation) VALUES
     ('cormac-s-spellbook', 'Cormac''s Spellbook', 'The first spellbook belonging to Cormac.', 'Long Explanation.'),
-    ('rel-s-spellbook', 'Rel''s Spellbook', 'The first spellbook belonging to Releas.', 'Gained through training under his mentor. He gave Rel the best spells he could afford to show him, as Rel was his most promising (and most morally evolved) of his students.'),
+    ('rel-s-spellbook', 'Rel''s Spellbook', 'The first spellbook belonging to Releas.', 'Rel was afforded the best spells his mentor could afford to show him, as Rel was his most promising (and most morally evolved) of his students.'),
     ('polly-s-spellbook', 'Polly''s Spellbook', 'The first spellbook belonging to Polly.', 'This spellbook is a relic of a mysterious order of mages.');
   `);
 
@@ -116,8 +116,10 @@ db.serialize(() => {
 
   console.log('Inserting character_items...');
   db.run(`INSERT OR IGNORE INTO character_items (character_id, item_id, acquired_date, relinquished_date, short_description) VALUES
-    ('releas-neb', 'rel-s-spellbook', 'feb-6-195', '', 'Gained from his reclusive master in GatUn.'),
-    ('cormac', 'cormac-s-spellbook', 'jun-12-195', '', 'Recieved from his master.');
+    ('releas-neb', 'rel-s-spellbook', 'feb-06-195', 'mar-06-200', 'Gained from his reclusive master in GatUn, then stolen by ruffians in Wavethorn.'),
+    ('releas-neb', 'rel-s-spellbook', 'may-10-200', '', 'Recovered from street ruffians.'),
+    ('apollonia-palleday', 'polly-s-spellbook', 'jul-21-200', '', 'Received from her betrothed, Alaric Evermoon.'),
+    ('cormac', 'cormac-s-spellbook', 'jun-12-195', '', 'Received from his master.');
   `);
 
   console.log('Inserting character_relationships...');
