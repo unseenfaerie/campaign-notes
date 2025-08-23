@@ -16,17 +16,9 @@ function addCharacterDeity(character_id, deity_id, short_description = '', long_
 
 // Update a character-deity relationship
 function updateCharacterDeity(character_id, deity_id, updates) {
-  const fields = [];
-  const values = [];
-  if (updates.short_description !== undefined) {
-    fields.push('short_description = ?');
-    values.push(updates.short_description);
-  }
-  if (updates.long_explanation !== undefined) {
-    fields.push('long_explanation = ?');
-    values.push(updates.long_explanation);
-  }
-  if (fields.length === 0) return Promise.resolve({ character_id, deity_id });
+  const allowed = ['short_description', 'long_explanation'];
+  const fields = Object.keys(updates).filter(key => allowed.includes(key));
+  if (fields.length === 0) return Promise.resolve({ character_id, item_id, message: "no updates made"});
   values.push(character_id, deity_id);
   const sql = `UPDATE character_deities SET ${fields.join(', ')} WHERE character_id = ? AND deity_id = ?`;
   return new Promise((resolve, reject) => {

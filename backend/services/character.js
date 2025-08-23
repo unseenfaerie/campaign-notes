@@ -5,12 +5,12 @@ const db = require('../db');
 // Create a new character
 function createCharacter(character) {
   return new Promise((resolve, reject) => {
-    const sql = `INSERT INTO characters (id, type, name, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, description)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const sql = `INSERT INTO characters (id, type, name, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, short_description, long_explanation)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     const params = [
       character.id, character.type, character.name, character.class, character.level, character.alignment,
       character.strength, character.dexterity, character.constitution, character.intelligence, character.wisdom,
-      character.charisma, character.total_health, character.deceased, character.description
+      character.charisma, character.total_health, character.deceased, character.short_description, character.long_explanation
     ];
     db.run(sql, params, function (err) {
       if (err) return reject(err);
@@ -58,9 +58,9 @@ function updateCharacter(id, character) {
 // Patch (partial update) a character
 function patchCharacter(id, updates) {
   return new Promise((resolve, reject) => {
-    const allowed = ['type', 'name', 'class', 'level', 'alignment', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma', 'total_health', 'deceased', 'description'];
+    const allowed = ['type', 'name', 'class', 'level', 'alignment', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma', 'total_health', 'deceased', 'short_description', 'long_explanation'];
     const fields = Object.keys(updates).filter(key => allowed.includes(key));
-    if (fields.length === 0) return resolve({ updated: id });
+    if (fields.length === 0) return resolve({ no_changes: id });
     const setClause = fields.map(f => `${f} = ?`).join(', ');
     const params = fields.map(f => updates[f]);
     params.push(id);
