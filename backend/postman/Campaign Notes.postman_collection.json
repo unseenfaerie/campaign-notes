@@ -1,0 +1,701 @@
+{
+  "info": {
+    "_postman_id": "37c57a8c-f38f-44c9-bcc4-92a275fdbe71",
+    "name": "Campaign Notes",
+    "description": "### Welcome to Postman! This is your first collection. \n\nCollections are your starting point for building and testing APIs. You can use this one to:\n\n• Group related requests\n• Test your API in real-world scenarios\n• Document and share your requests\n\nUpdate the name and overview whenever you’re ready to make it yours.\n\n[Learn more about Postman Collections.](https://learning.postman.com/docs/collections/collections-overview/)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+    "_exporter_id": "47729733",
+    "_collection_link": "https://unseenfaerie-6972785.postman.co/workspace/Faerie-Squad-of-One's-Workspace~a64be078-f295-44e1-8efb-5e7c13caa87e/collection/47729733-37c57a8c-f38f-44c9-bcc4-92a275fdbe71?action=share&source=collection_link&creator=47729733"
+  },
+  "item": [
+    {
+      "name": "characters",
+      "item": [
+        {
+          "name": "character-items",
+          "item": [
+            {
+              "name": "create character item",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "    {\n        \"item_id\": \"rel-s-spellbook\",\n        \"name\": \"Rel's Spellbook\",\n        \"short_description\": \"Gained back from street ruffians.\",\n        \"long_explanation\": \"Rel fought tooth and nail to retrieve his spellbook.\",\n        \"acquired_date\": \"apr-06-200\",\n        \"relinquished_date\": \"\"\n    }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base url}}/characters/releas-neb/items"
+              },
+              "response": []
+            },
+            {
+              "name": "get all items for character",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{base url}}/characters/releas-neb/items",
+                "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+              },
+              "response": []
+            },
+            {
+              "name": "get item for character",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{base url}}/characters/releas-neb/items/rel-s-spellbook",
+                "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+              },
+              "response": []
+            },
+            {
+              "name": "get specific tenure of character item",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "GET",
+                "header": [],
+                "url": "{{base url}}/characters/releas-neb/items/rel-s-spellbook/feb-06-195"
+              },
+              "response": []
+            },
+            {
+              "name": "update character item (specific tenure)",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"short_description\": \"Stolen by street ruffians.\",\n    \"relinquished_date\": \"mar-09-200\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base url}}/characters/releas-neb/items/rel-s-spellbook/feb-20-200"
+              },
+              "response": []
+            },
+            {
+              "name": "delete item specific tenure with character",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": "{{base url}}/characters/releas-neb/items/rel-s-spellbook/feb-10-195"
+              },
+              "response": []
+            },
+            {
+              "name": "delete item history with character",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{base url}}/characters/releas-neb/items/rel-s-spellbook",
+                "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+              },
+              "response": []
+            },
+            {
+              "name": "delete all item associations with character",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{base url}}/characters/releas-neb/items",
+                "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "character-organizations",
+          "item": [
+            {
+              "name": "create character organization",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "    {\n        \"org_id\": \"wyvernfang\",\n        \"short_description\": \"Rel was coerced into joining the Wyvernfang.\",\n        \"long_explanation\": \"Rel fought tooth and nail but Cosmo forced him to join.\",\n        \"joined_date\": \"apr-06-200\",\n        \"left_date\": \"\"\n    }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base url}}/characters/releas-neb/organizations"
+              },
+              "response": []
+            },
+            {
+              "name": "get all organizations for character",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{base url}}/characters/alann-barnett/organizations",
+                "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+              },
+              "response": []
+            },
+            {
+              "name": "get history for a specific org character relationship",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{base url}}/characters/releas-neb/organizations/wyvernfang",
+                "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+              },
+              "response": []
+            },
+            {
+              "name": "get specific tenure of character in org",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "GET",
+                "header": [],
+                "url": "{{base url}}/characters/releas-neb/organizations/wyvernfang/apr-06-200"
+              },
+              "response": []
+            },
+            {
+              "name": "update character org relationship (specific tenure)",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"left_date\": \"mar-09-200\",\n    \"short_description\": \"Quit after nearly dying.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base url}}/characters/releas-neb/organizations/wyvernfang/apr-06-200"
+              },
+              "response": []
+            },
+            {
+              "name": "delete specific org character tenure",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": "{{base url}}/characters/releas-neb/organizations/wyvernfang/apr-06-200"
+              },
+              "response": []
+            },
+            {
+              "name": "delete org history with character",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{base url}}/characters/alann-barnett/organizations/adventurers-guild",
+                "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+              },
+              "response": []
+            },
+            {
+              "name": "delete all org history for character",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{base url}}/characters/releas-neb/organizations",
+                "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "character-events",
+          "item": [
+            {
+              "name": "create character-event",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"event_id\": \"\",\n    \"short_description\": \"\",\n    \"long_explanation\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base url}}/api/characters/{character_id}/events"
+              },
+              "response": []
+            },
+            {
+              "name": "read all events for character",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{base url}}/characters/alann-barnett/events"
+              },
+              "response": []
+            },
+            {
+              "name": "read specific event for character",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{base url}}/characters/alann-barnett/events/coup-of-wavethorn"
+              },
+              "response": []
+            },
+            {
+              "name": "update character-event",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"short_description\": \"Rel protected the interests of the common Wavethorn citizen.\",\n    \"long_explanation\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base url}}/characters/releas-neb/events/coup-of-wavethorn"
+              },
+              "response": []
+            },
+            {
+              "name": "delete character-event",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{base url}}/characters/releas-neb/events/coup-of-wavethorn"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "character-deities",
+          "item": [
+            {
+              "name": "create character deity relationship",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"deity_id\": \"wyaris\",\n    \"short_description\": \"Alann is seduced by the power of the blade.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base url}}/characters/alann-barnett/deities"
+              },
+              "response": []
+            },
+            {
+              "name": "read all deity relationships for character",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{base url}}/characters/alann-barnett/deities"
+              },
+              "response": []
+            },
+            {
+              "name": "read specific deity relationship for character",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{base url}}/characters/alann-barnett/deities/achiel"
+              },
+              "response": []
+            },
+            {
+              "name": "update character deity relationship",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"short_description\": \"Achiel is Dohs boss, so Alann tangentially worships Achiel.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base url}}/characters/alann-barnett/deities/achiel"
+              },
+              "response": []
+            },
+            {
+              "name": "delete a character deity relationship",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{base url}}/characters/alann-barnett/deities/wyaris"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "create character",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Successful POST request\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": \"\",\n    \"type\": \"\", //player-character, non-player-character\n    \"name\": \"\",\n    \"class\": \"\",\n    \"level\": \"\",\n    \"alignment\": \"\",\n    \"strength\": 0,\n    \"dexterity\": 0,\n    \"constitution\": 0,\n    \"intelligence\": 0,\n    \"wisdom\": 0,\n    \"charisma\": 0,\n    \"total_health\": 0,\n    \"deceased\": 0,\n    \"description\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base url}}/api/characters",
+            "description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
+          },
+          "response": []
+        },
+        {
+          "name": "get all characters",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base url}}/api/characters",
+            "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+          },
+          "response": []
+        },
+        {
+          "name": "get character",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base url}}/api/characters/{id}",
+            "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+          },
+          "response": []
+        },
+        {
+          "name": "update character",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{base url}}/api/characters/{id}",
+            "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+          },
+          "response": []
+        },
+        {
+          "name": "delete character",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{base url}}/api/characters/durchir"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "events",
+      "item": [
+        {
+          "name": "get events",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base url}}/api/events",
+            "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "places",
+      "item": []
+    },
+    {
+      "name": "deities",
+      "item": []
+    },
+    {
+      "name": "organizations",
+      "item": [
+        {
+          "name": "read all organizations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base url}}/api/organizations"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "items",
+      "item": []
+    }
+  ]
+}
