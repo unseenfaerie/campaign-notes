@@ -162,7 +162,8 @@ db.serialize(() => {
       FOREIGN KEY (related_id) REFERENCES characters(id)
     )`);
 
-  /* not unique (no foreign keys) */
+  /* not unique (no foreign keys)
+     tracks history (acquired_date as primary key) */
   db.run(`CREATE TABLE IF NOT EXISTS character_items (
       character_id TEXT,
       item_id TEXT,
@@ -172,16 +173,16 @@ db.serialize(() => {
       PRIMARY KEY (character_id, item_id, acquired_date)
     )`);
 
-  /* not unique (no foreign keys) */
+  /* not unique (no foreign keys)
+    tracks history (joined_date as primary key) */
   db.run(`CREATE TABLE IF NOT EXISTS character_organizations (
       character_id TEXT,
       organization_id TEXT,
-      role TEXT,
       joined_date TEXT,
       left_date TEXT,
       short_description TEXT,
       long_explanation TEXT,
-      PRIMARY KEY (character_id, organization_id)
+      PRIMARY KEY (character_id, organization_id, joined_date)
     )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS character_deities (

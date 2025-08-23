@@ -132,6 +132,15 @@ db.serialize(() => {
     ('durchir', 'cormac', 'ally', 'Short description.', 'Long Explanation.');
   `);
 
+  console.log('Inserting character_organizations...');
+  db.run(`INSERT OR IGNORE INTO character_organizations (character_id, organization_id, joined_date, left_date, short_description, long_explanation) VALUES
+    ('alann-barnett', 'adventurers-guild', 'jan-01-200', 'dec-31-200', 'Joined the Adventurers Guild to protect Wavethorn, left after the Night of Spiders.', 'Long Explanation.'),
+    ('alann-barnett', 'adventurers-guild', 'jan-01-201', '', 'Rejoined due to pressure from the party.', 'Long Explanation.'),
+    ('releas-neb', 'adventurers-guild', 'feb-01-200', '', 'Became a member of the Adventurers Guild.', 'Long Explanation.'),
+    ('durchir', 'adventurers-guild', 'mar-01-200', '', 'Allied with the Adventurers Guild for information.', 'Long Explanation.'),
+    ('cormac', 'adventurers-guild', 'apr-01-200', '', 'Sworn to protect the realm as a knight.', 'Long Explanation.');
+  `);
+
   console.log('Inserting spell_spheres...');
   db.run(`INSERT OR IGNORE INTO spell_spheres (spell_id, sphere_id) VALUES
     ('fireball', 'war'),

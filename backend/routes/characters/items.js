@@ -42,7 +42,7 @@ router.get('/', async (req, res) => {
       const relationships = await characterItemsService.getAllCharacterItemRecords(character_id, item_id);
       // Sort relationships chronologically
       const sortedRelationships = sortObjectsByLoreDate(relationships, 'acquired_date', false);
-      return { item, relationships: sortedRelationships };
+      return { item, history: sortedRelationships };
     }));
     // Filter out any nulls (in case an item was deleted)
     res.json(results.filter(Boolean));
