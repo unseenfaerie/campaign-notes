@@ -1,5 +1,5 @@
 <template>
-	<div v-if="event">
+	<div v-if="event" class="main-content">
 		<div v-if="!isEditing">
 			<h1>{{ event.name }}</h1>
 			<p><strong>ID:</strong> {{ event.id }}</p>

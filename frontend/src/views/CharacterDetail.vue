@@ -1,5 +1,5 @@
 <template>
-	<div v-if="character">
+	<div v-if="character"  class="main-content">
 		<div v-if="!isEditing">
 			<h1>{{ character.name }}</h1>
 			<p><strong>Type:</strong> <span v-if="character.type == 'pc'">Player Character</span><span v-else>Non-Player Character</span></p>
