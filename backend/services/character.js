@@ -1,89 +1,49 @@
 // services/character.js
 // Centralized logic for managing character CRUD and queries
-const db = require('../db');
+const dbUtils = require('../utils/dbUtils');
 const characterDeities = require('./characterDeities');
 const characterItems = require('./characterItems');
 const characterOrganizations = require('./characterOrganizations');
 const characterRelationships = require('./characterRelationships');
 
+const TABLE = 'characters';
+
 // Create a new character
 function createCharacter(character) {
-  return new Promise((resolve, reject) => {
-    const sql = `INSERT INTO characters (id, type, name, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, short_description, long_explanation)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    const params = [
-      character.id, character.type, character.name, character.class, character.level, character.alignment,
-      character.strength, character.dexterity, character.constitution, character.intelligence, character.wisdom,
-      character.charisma, character.total_health, character.deceased, character.short_description, character.long_explanation
-    ];
-    db.run(sql, params, function (err) {
-      if (err) return reject(err);
-      resolve({ id: character.id });
-    });
-  });
+  return dbUtils.insert(TABLE, character);
 }
 
 // Get all characters
 function getAllCharacters() {
-  return new Promise((resolve, reject) => {
-    db.all('SELECT * FROM characters', [], (err, rows) => {
-      if (err) return reject(err);
-      resolve(rows || []);
-    });
-  });
+  return dbUtils.select(TABLE);
 }
 
 // Get a character by id
 function getCharacterById(id) {
-  return new Promise((resolve, reject) => {
-    db.get('SELECT * FROM characters WHERE id = ?', [id], (err, row) => {
-      if (err) return reject(err);
-      resolve(row || null);
-    });
-  });
+  return dbUtils.select(TABLE, { id }, true);
 }
 
 // Update a character (full update)
 function updateCharacter(id, character) {
-  return new Promise((resolve, reject) => {
-    const sql = `UPDATE characters SET type=?, name=?, class=?, level=?, alignment=?, strength=?, dexterity=?, constitution=?, intelligence=?, wisdom=?, charisma=?, total_health=?, deceased=?, description=? WHERE id=?`;
-    const params = [
-      character.type, character.name, character.class, character.level, character.alignment,
-      character.strength, character.dexterity, character.constitution, character.intelligence, character.wisdom,
-      character.charisma, character.total_health, character.deceased, character.description, id
-    ];
-    db.run(sql, params, function (err) {
-      if (err) return reject(err);
-      resolve({ updated: id });
-    });
-  });
+  // Only update allowed fields (excluding id)
+  const allowed = ['type', 'name', 'class', 'level', 'alignment', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma', 'total_health', 'deceased', 'short_description', 'long_explanation'];
+  const updates = {};
+  for (const key of allowed) {
+    if (character[key] !== undefined) updates[key] = character[key];
+  }
+  return dbUtils.update(TABLE, { id }, updates);
 }
 
 // Patch (partial update) a character
 function patchCharacter(id, updates) {
-  return new Promise((resolve, reject) => {
-    const allowed = ['type', 'name', 'class', 'level', 'alignment', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma', 'total_health', 'deceased', 'short_description', 'long_explanation'];
-    const fields = Object.keys(updates).filter(key => allowed.includes(key));
-    if (fields.length === 0) return resolve({ no_changes: id });
-    const setClause = fields.map(f => `${f} = ?`).join(', ');
-    const params = fields.map(f => updates[f]);
-    params.push(id);
-    const sql = `UPDATE characters SET ${setClause} WHERE id = ?`;
-    db.run(sql, params, function (err) {
-      if (err) return reject(err);
-      resolve({ updated: id });
-    });
-  });
+  const allowed = ['type', 'name', 'class', 'level', 'alignment', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma', 'total_health', 'deceased', 'short_description', 'long_explanation'];
+  const filtered = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)));
+  return dbUtils.update(TABLE, { id }, filtered);
 }
 
 // Delete a character
 function deleteCharacter(id) {
-  return new Promise((resolve, reject) => {
-    db.run('DELETE FROM characters WHERE id = ?', [id], function (err) {
-      if (err) return reject(err);
-      resolve({ deleted: id });
-    });
-  });
+  return dbUtils.remove(TABLE, { id });
 }
 
 // Fetch full character details with all associations
