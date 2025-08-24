@@ -21,51 +21,48 @@
 
 		<!-- Deities Section -->
 		<section>
-			<h2>Deities</h2>
-			<ul v-if="deities && deities.length">
-				<li v-for="deity in deities" :key="deity.deity_id || deity.id">
-					{{ deity.name }}<span v-if="deity.short_description">: {{ deity.short_description }}</span>
-				</li>
-			</ul>
-			<div v-else>No deities associated.</div>
+		<h2>Deities</h2>
+		<ul v-if="deities && deities.length">
+			<li v-for="deity in deities" :key="deity.deity_id">
+				<strong>{{ deity.deity_id }}</strong>
+				<span v-if="deity.short_description">: {{ deity.short_description }}</span>
+			</li>
+		</ul>
+		<div v-else>No deities associated.</div>
 		</section>
 
 		<!-- Organizations Section -->
 		<section>
-			<h2>Organizations</h2>
-			<ul v-if="organizations && organizations.length">
-				<li v-for="org in organizations" :key="org.organization_id || org.id">
+		<h2>Organizations</h2>
+		<ul v-if="organizations && organizations.length">
+			<li v-for="org in organizations" :key="org.organization_id">
+				<div>
+					<strong>{{ org.organization_id }}</strong>
 					<div>
-						<strong>{{ org.organization_id || org.id }}</strong>
-						<ul>
-								<li v-for="record in org.history" :key="record.joined_date">
-									Joined: {{ record.joined_date }}<span v-if="record.left_date">, Left: {{ record.left_date }}</span>
-									<span v-if="record.short_description"> - {{ record.short_description }}</span>
-								</li>
-						</ul>
+						Joined: {{ org.joined_date }}<span v-if="org.left_date">, Left: {{ org.left_date }}</span>
+						<span v-if="org.short_description"> - {{ org.short_description }}</span>
 					</div>
-				</li>
-			</ul>
-			<div v-else>No organizations associated.</div>
+				</div>
+			</li>
+		</ul>
+		<div v-else>No organizations associated.</div>
 		</section>
 
 		<!-- Items Section -->
 		<section>
-			<h2>Items</h2>
-			<ul v-if="items && items.length">
-				<li v-for="item in items" :key="item.item.id || item.item_id">
+		<h2>Items</h2>
+		<ul v-if="items && items.length">
+			<li v-for="item in items" :key="item.id || item.item_id">
+				<div>
+					<strong>{{ item.name }}</strong>
 					<div>
-						<strong>{{ item.item.name }}</strong>
-						<ul>
-							<li v-for="record in item.history" :key="record.acquired_date">
-								Acquired: {{ record.acquired_date }}<span v-if="record.relinquished_date">, Relinquished: {{ record.relinquished_date }}</span>
-								<span v-if="record.short_description"> - {{ record.short_description }}</span>
-							</li>
-						</ul>
+						Acquired: {{ item.acquired_date }}<span v-if="item.relinquished_date">, Relinquished: {{ item.relinquished_date }}</span>
+						<span v-if="item.short_description"> - {{ item.short_description }}</span>
 					</div>
-				</li>
-			</ul>
-			<div v-else>No items associated.</div>
+				</div>
+			</li>
+		</ul>
+		<div v-else>No items associated.</div>
 		</section>
 
 		<!-- Events Section -->
@@ -81,14 +78,14 @@
 
 		<!-- Relationships Section -->
 		<section>
-			<h2>Relationships</h2>
-			<ul v-if="relationships && relationships.length">
-				<li v-for="rel in relationships" :key="rel.related_id || rel.target_character_id">
-					With: {{ rel.related_id || rel.target_character_id }}<span v-if="rel.relationship_type"> ({{ rel.relationship_type }})</span>
-					<span v-if="rel.short_description"> - {{ rel.short_description }}</span>
-				</li>
-			</ul>
-			<div v-else>No relationships associated.</div>
+		<h2>Relationships</h2>
+		<ul v-if="relationships && relationships.length">
+			<li v-for="rel in relationships" :key="rel.character_id + '-' + rel.related_id">
+				With: {{ rel.character_id }} <span v-if="rel.relationship_type">({{ rel.relationship_type }})</span>
+				<span v-if="rel.short_description"> - {{ rel.short_description }}</span>
+			</li>
+		</ul>
+		<div v-else>No relationships associated.</div>
 		</section>
 	</div>
 	<div v-else>
