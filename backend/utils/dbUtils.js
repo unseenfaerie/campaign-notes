@@ -90,4 +90,64 @@ function remove(table, where) {
   });
 }
 
-module.exports = { insert, select, update, remove };
+/**
+ * Selects rows from a join between two tables, returning both main and join-table fields.
+ * @param {string} joinTable - The join table name (e.g., 'character_items')
+ * @param {string} mainTable - The main table name (e.g., 'items')
+ * @param {string} joinKey - The key to join on (e.g., 'item_id')
+ * @param {object} where - Where clause for the join table (e.g., { character_id: 1 })
+ * @param {string[]} joinFields - Fields to select from the join table
+ * @param {string[]} mainFields - Fields to select from the main table
+ * @returns {Promise<Array>} Array of joined rows
+ */
+function selectJoin(joinTable, mainTable, joinKey, where, joinFields = [], mainFields = ['*']) {
+  return new Promise((resolve, reject) => {
+    const whereKeys = Object.keys(where);
+    const whereClause = whereKeys.map(k => `${joinTable}.${k} = ?`).join(' AND ');
+    const fields = [
+      ...mainFields.map(f => `${mainTable}.${f}`),
+      ...joinFields.map(f => `${joinTable}.${f}`)
+    ].join(', ');
+    const sql = `SELECT ${fields} FROM ${joinTable} JOIN ${mainTable} ON ${joinTable}.${joinKey} = ${mainTable}.id WHERE ${whereClause}`;
+    db.all(sql, whereKeys.map(k => where[k]), (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+}
+
+/**
+ * Fetches an entity and its relationship history.
+ * @param {string} mainTable - The main entity table (e.g., 'items')
+ * @param {string} joinTable - The relationship table (e.g., 'character_items')
+ * @param {string} entityKey - The entity's primary key (e.g., 'id')
+ * @param {string} joinKey - The foreign key in the join table (e.g., 'item_id')
+ * @param {any} entityId - The entity's ID value
+ * @param {object} [historyWhere] - Optional extra where clause for history (e.g., { character_id: ... })
+ * @param {string} [historySortField] - Field to sort history by (e.g., 'acquired_date')
+ * @param {boolean} [ascending] - Sort order for history
+ * @returns {Promise<{item: object, history: object[]}|null>}
+ */
+async function getEntityWithHistory(mainTable, joinTable, entityKey, joinKey, entityId, historyWhere = {}, historySortField, ascending = true) {
+  // Get entity details
+  const entityRows = await select(mainTable, { [entityKey]: entityId }, true);
+  if (!entityRows) return null;
+
+  // Build where clause for history
+  const where = { ...historyWhere, [joinKey]: entityId };
+  const history = await select(joinTable, where);
+
+  // Optionally sort history
+  let sortedHistory = history;
+  if (historySortField) {
+    // You may want to use your loreDateToSortable here if it's a date field
+    sortedHistory = history.sort((a, b) => {
+      if (a[historySortField] === b[historySortField]) return 0;
+      return (a[historySortField] > b[historySortField] ? 1 : -1) * (ascending ? 1 : -1);
+    });
+  }
+
+  return { item: entityRows, history: sortedHistory };
+}
+
+module.exports = { insert, select, update, remove, selectJoin, getEntityWithHistory };
