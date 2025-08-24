@@ -1,6 +1,7 @@
+
 <template>
-	<div v-if="character"  class="main-content">
-		<div v-if="!isEditing">
+	<div v-if="character" class="main-content">
+		<div>
 			<h1>{{ character.name }}</h1>
 			<p><strong>Type:</strong> <span v-if="character.type == 'pc'">Player Character</span><span v-else>Non-Player Character</span></p>
 			<p><strong>Class:</strong> {{ character.class }}</p>
@@ -16,44 +17,79 @@
 			<p><strong>Deceased:</strong> <span v-if="character.deceased">Yes</span><span v-else>No</span></p>
 			<p><strong>Short Description:</strong> {{ character.short_description }}</p>
 			<p><strong>Long Explanation:</strong> {{ character.long_explanation }}</p>
-			<button @click="startEdit">Edit</button>
 		</div>
-		<form v-else @submit.prevent="saveEdit">
-			<h1>
-				<input v-model="editCharacter.name" required />
-			</h1>
-			<p>
-				<strong>Type:</strong>
-				<select v-model="editCharacter.type">
-					<option value="pc">Player Character</option>
-					<option value="npc">Non-Player Character</option>
-				</select>
-			</p>
-			<p><strong>Class:</strong> <input v-model="editCharacter.class" /></p>
-			<p><strong>Level:</strong> <input v-model.number="editCharacter.level" type="number" min="1" /></p>
-			<p><strong>Alignment:</strong> <input v-model="editCharacter.alignment" /></p>
-			<p><strong>Strength:</strong> <input v-model.number="editCharacter.strength" type="number" /></p>
-			<p><strong>Dexterity:</strong> <input v-model.number="editCharacter.dexterity" type="number" /></p>
-			<p><strong>Constitution:</strong> <input v-model.number="editCharacter.constitution" type="number" /></p>
-			<p><strong>Intelligence:</strong> <input v-model.number="editCharacter.intelligence" type="number" /></p>
-			<p><strong>Wisdom:</strong> <input v-model.number="editCharacter.wisdom" type="number" /></p>
-			<p><strong>Charisma:</strong> <input v-model.number="editCharacter.charisma" type="number" /></p>
-			<p><strong>Total Health:</strong> <input v-model.number="editCharacter.total_health" type="number" /></p>
-			<p>
-				<strong>Deceased:</strong>
-				<input type="checkbox" v-model="editCharacter.deceased" true-value="1" false-value="0" />
-			</p>
-			<p><strong>Short Description:</strong><br />
-				<textarea v-model="editCharacter.short_description" rows="2" />
-			</p>
-			<p><strong>Long Explanation:</strong><br />
-				<textarea v-model="editCharacter.long_explanation" rows="12" style="width:100%; min-width:350px; min-height:200px;" />
-			</p>
-			<button type="submit">Save</button>
-			<button type="button" @click="cancelEdit">Cancel</button>
-			<div v-if="saveStatus === 'success'" style="color: green;">Saved!</div>
-			<div v-if="saveStatus === 'error'" style="color: red;">Error saving changes.</div>
-		</form>
+
+		<!-- Deities Section -->
+		<section>
+			<h2>Deities</h2>
+			<ul v-if="deities && deities.length">
+				<li v-for="deity in deities" :key="deity.deity_id || deity.id">
+					{{ deity.name }}<span v-if="deity.short_description">: {{ deity.short_description }}</span>
+				</li>
+			</ul>
+			<div v-else>No deities associated.</div>
+		</section>
+
+		<!-- Organizations Section -->
+		<section>
+			<h2>Organizations</h2>
+			<ul v-if="organizations && organizations.length">
+				<li v-for="org in organizations" :key="org.organization_id || org.id">
+					<div>
+						<strong>{{ org.organization_id || org.id }}</strong>
+						<ul>
+								<li v-for="record in org.history" :key="record.joined_date">
+									Joined: {{ record.joined_date }}<span v-if="record.left_date">, Left: {{ record.left_date }}</span>
+									<span v-if="record.short_description"> - {{ record.short_description }}</span>
+								</li>
+						</ul>
+					</div>
+				</li>
+			</ul>
+			<div v-else>No organizations associated.</div>
+		</section>
+
+		<!-- Items Section -->
+		<section>
+			<h2>Items</h2>
+			<ul v-if="items && items.length">
+				<li v-for="item in items" :key="item.item.id || item.item_id">
+					<div>
+						<strong>{{ item.item.name }}</strong>
+						<ul>
+							<li v-for="record in item.history" :key="record.acquired_date">
+								Acquired: {{ record.acquired_date }}<span v-if="record.relinquished_date">, Relinquished: {{ record.relinquished_date }}</span>
+								<span v-if="record.short_description"> - {{ record.short_description }}</span>
+							</li>
+						</ul>
+					</div>
+				</li>
+			</ul>
+			<div v-else>No items associated.</div>
+		</section>
+
+		<!-- Events Section -->
+		<section>
+			<h2>Events</h2>
+			<ul v-if="events && events.length">
+				<li v-for="event in events" :key="event.event_id || event.id">
+					{{ event.name || event.event_id }}<span v-if="event.short_description">: {{ event.short_description }}</span>
+				</li>
+			</ul>
+			<div v-else>No events associated.</div>
+		</section>
+
+		<!-- Relationships Section -->
+		<section>
+			<h2>Relationships</h2>
+			<ul v-if="relationships && relationships.length">
+				<li v-for="rel in relationships" :key="rel.related_id || rel.target_character_id">
+					With: {{ rel.related_id || rel.target_character_id }}<span v-if="rel.relationship_type"> ({{ rel.relationship_type }})</span>
+					<span v-if="rel.short_description"> - {{ rel.short_description }}</span>
+				</li>
+			</ul>
+			<div v-else>No relationships associated.</div>
+		</section>
 	</div>
 	<div v-else>
 		Loading character...
@@ -61,7 +97,12 @@
 </template>
 
 <script>
-import { getCharacter, updateCharacter } from '../api/characters';
+
+import { updateCharacter } from '../api/characters';
+
+import {
+	getFullCharacterById
+} from '../api/characterAssociations';
 
 export default {
 	name: 'CharacterDetail',
@@ -70,44 +111,53 @@ export default {
 			character: null,
 			editCharacter: null,
 			saveStatus: null,
-			isEditing: false
+			isEditing: false,
+			deities: [],
+			organizations: [],
+			items: [],
+			events: [],
+			relationships: []
 		};
 	},
 	mounted() {
 		this.fetchCharacter();
 	},
 	methods: {
-			fetchCharacter() {
-				const id = this.$route.params.id;
-				getCharacter(id)
-					.then(data => {
-						this.character = data;
-						this.editCharacter = { ...data };
-					})
-					.catch(err => {
-						console.error('Error fetching character:', err);
-					});
-			},
+		fetchCharacter() {
+			const id = this.$route.params.id;
+			getFullCharacterById(id)
+				.then(data => {
+					this.character = data;
+					this.editCharacter = { ...data };
+					this.deities = data.deities || [];
+					this.organizations = data.organizations || [];
+					this.items = data.items || [];
+					this.relationships = data.relationships || [];
+				})
+				.catch(err => {
+					console.error('Error fetching character:', err);
+				});
+		},
 		startEdit() {
 			this.editCharacter = { ...this.character };
 			this.isEditing = true;
 			this.saveStatus = null;
 		},
-			saveEdit() {
-				const id = this.$route.params.id;
-				const patchData = { ...this.editCharacter };
-				updateCharacter(id, patchData)
-					.then(() => {
-						this.saveStatus = 'success';
-						this.fetchCharacter();
-						this.isEditing = false;
-						setTimeout(() => { this.saveStatus = null; }, 2000);
-					})
-					.catch(() => {
-						this.saveStatus = 'error';
-						setTimeout(() => { this.saveStatus = null; }, 2000);
-					});
-			},
+		saveEdit() {
+			const id = this.$route.params.id;
+			const patchData = { ...this.editCharacter };
+			updateCharacter(id, patchData)
+				.then(() => {
+					this.saveStatus = 'success';
+					this.fetchCharacter();
+					this.isEditing = false;
+					setTimeout(() => { this.saveStatus = null; }, 2000);
+				})
+				.catch(() => {
+					this.saveStatus = 'error';
+					setTimeout(() => { this.saveStatus = null; }, 2000);
+				});
+		},
 		cancelEdit() {
 			this.editCharacter = { ...this.character };
 			this.isEditing = false;
