@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const idUtils = require('../utils/idUtils')
+const itemsService = require('../services/items');
 
 // Helper: Validate item data
 function validateItem(i, isUpdate = false) {
@@ -11,92 +12,89 @@ function validateItem(i, isUpdate = false) {
         return `Missing or invalid required field: ${field}`;
       }
     }
+    if (!idUtils.validateIdFormat(i.id)) {
+      return `Invalid id format. Only use lowercase letters and dashes.`;
+    }
   }
   return null;
 }
 
 // Create a new item
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const i = req.body;
   const validationError = validateItem(i);
   if (validationError) {
     return res.status(400).json({ error: validationError });
   }
-  db.get('SELECT id FROM items WHERE id = ?', [i.id], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (row) {
+  try {
+    // Check for duplicate
+    const existing = await itemsService.getItemById(i.id);
+    if (existing) {
       return res.status(409).json({ error: 'An item with this id already exists.' });
     }
-    const sql = `INSERT INTO items (id, name, short_description) VALUES (?, ?, ?)`;
-    const params = [i.id, i.name, i.short_description];
-    db.run(sql, params, function (err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      res.status(201).json({ id: i.id });
-    });
-  });
+    await itemsService.createItem(i);
+    res.status(201).json({ id: i.id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Update an existing item
-router.patch('/:id', (req, res) => {
-  const i = req.body;
+// Update an existing item (PATCH)
+router.patch('/:id', async (req, res) => {
+  const updates = req.body;
   const allowed = ['name', 'short_description', 'long_explanation'];
-  const fields = Object.keys(i).filter(key => allowed.includes(key));
+  const fields = Object.keys(updates).filter(key => allowed.includes(key));
   if (fields.length === 0) {
     return res.status(400).json({ error: 'No valid fields to update.' });
   }
-  const setClause = fields.map(f => `${f} = ?`).join(', ');
-  const params = fields.map(f => i[f]);
-  params.push(req.params.id);
-  const sql = `UPDATE items SET ${setClause} WHERE id = ?`;
-  db.run(sql, params, function (err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (this.changes === 0) {
+  try {
+    const result = await itemsService.patchItem(req.params.id, updates);
+    // Optionally, check if item exists
+    const updated = await itemsService.getItemById(req.params.id);
+    if (!updated) {
       return res.status(404).json({ error: 'Item not found' });
     }
     res.json({ updated: req.params.id });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Delete an item
-router.delete('/:id', (req, res) => {
-  db.run('DELETE FROM items WHERE id = ?', [req.params.id], function (err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (this.changes === 0) {
+router.delete('/:id', async (req, res) => {
+  try {
+    const existing = await itemsService.getItemById(req.params.id);
+    if (!existing) {
       return res.status(404).json({ error: 'Item not found' });
     }
+    await itemsService.deleteItem(req.params.id);
     res.json({ deleted: req.params.id });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Get all items (JSON)
-router.get('/', (req, res) => {
-  db.all('SELECT * FROM items', [], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json(rows);
-  });
+router.get('/', async (req, res) => {
+  try {
+    const items = await itemsService.getAllItems();
+    res.json(items);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Get a single item by id (JSON)
-router.get('/:id', (req, res) => {
-  db.get('SELECT * FROM items WHERE id = ?', [req.params.id], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (!row) {
+router.get('/:id', async (req, res) => {
+  try {
+    const item = await itemsService.getItemById(req.params.id);
+    if (!item) {
       return res.status(404).json({ error: 'Item not found' });
     }
-    res.json(row);
-  });
+    res.json(item);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;
