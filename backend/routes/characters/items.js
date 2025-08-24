@@ -29,23 +29,8 @@ router.post('/', (req, res) => {
 router.get('/', async (req, res) => {
   const character_id = req.params.id;
   try {
-    // Get all item_ids for this character using the service layer
-    const itemIds = await characterItemsService.getItemIdsForCharacter(character_id);
-    if (!itemIds.length) return res.json([]);
-
-    // For each item, get details and all relationship records
-    const results = await Promise.all(itemIds.map(async (item_id) => {
-      // Get item details using the service layer
-      const item = await itemsService.getItemDetails(item_id);
-      if (!item) return null;
-      // Get all relationship records
-      const relationships = await characterItemsService.getAllCharacterItemRecords(character_id, item_id);
-      // Sort relationships chronologically
-      const sortedRelationships = sortObjectsByLoreDate(relationships, 'acquired_date', false);
-      return { item, history: sortedRelationships };
-    }));
-    // Filter out any nulls (in case an item was deleted)
-    res.json(results.filter(Boolean));
+    const results = await characterItemsService.getAllItemsWithHistoryForCharacter(character_id);
+    res.json(results);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -65,11 +50,11 @@ router.get('/:itemId', async (req, res) => {
     // Sort by acquired_date ascending (chronological) using loreDateToSortable helper
     records = sortObjectsByLoreDate(records, 'acquired_date', true);
     // Get item details using the service layer
-    const item = await characterItemsService.getItemDetails(item_id);
+    const item = await itemsService.getItemDetails(item_id);
     if (!item) return res.status(404).json({ error: 'Item not found' });
     return res.json({
       item,
-      relationships: records
+      history: records
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });

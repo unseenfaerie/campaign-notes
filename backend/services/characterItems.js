@@ -13,30 +13,49 @@ function getItemIdsForCharacter(character_id) {
   return dbUtils.select(TABLE, { character_id }).then(rows => rows.map(r => r.item_id));
 }
 
-// Get all items for a character (with join table metadata, custom logic)
-function getItemsForCharacter(character_id) {
-  return new Promise((resolve, reject) => {
-    const sql = `SELECT i.*, ci.item_id, ci.acquired_date, ci.relinquished_date, ci.short_description
-                 FROM character_items ci
-                 JOIN items i ON ci.item_id = i.id
-                 WHERE ci.character_id = ?`;
-    db.all(sql, [character_id], (err, rows) => {
-      if (err) return reject(err);
-
-      const latest = new Map();
-      for (const row of rows || []) {
-        const key = row.item_id;
-        const current = latest.get(key);
-        if (isValidDateFormat(row.acquired_date)) {
-          if (!current || loreDateToSortable(row.acquired_date) > loreDateToSortable(current.acquired_date)) {
-            latest.set(key, row);
-          }
-        }
-      }
-      resolve(Array.from(latest.values()));
-    });
+// Get all unique item IDs for a character
+function getUniqueItemIdsForCharacter(character_id) {
+  return dbUtils.select(TABLE, { character_id }).then(rows => {
+    const uniqueIds = new Set(rows.map(r => r.item_id));
+    return Array.from(uniqueIds);
   });
 }
+
+// Get all items for a character (with join table metadata, custom logic)
+function getItemsForCharacter(character_id) {
+  return getEntityWithHistory(
+    'items',           // mainTable
+    'character_items', // joinTable
+    'id',              // entityKey (items.id)
+    'item_id',         // joinKey (character_items.item_id)
+    item_id,           // entityId
+    { character_id },  // historyWhere
+    'acquired_date',   // historySortField
+    true               // ascending
+  );
+}
+
+// Get all items (with history) for a character
+async function getAllItemsWithHistoryForCharacter(character_id) {
+  // Get all item_ids for this character
+  const itemIds = await getUniqueItemIdsForCharacter(character_id);
+  // For each item_id, get the item and its history for this character
+  const results = await Promise.all(itemIds.map(item_id =>
+    dbUtils.getEntityWithHistory(
+      'items',
+      'character_items',
+      'id',
+      'item_id',
+      item_id,
+      { character_id },
+      'acquired_date',
+      true
+    )
+  ));
+  // Filter out any nulls (in case an item was deleted)
+  return results.filter(Boolean);
+}
+
 
 // Get a specific character-item relationship (can use dbUtils)
 function getCharacterItem(character_id, item_id, acquired_date) {
@@ -99,5 +118,7 @@ module.exports = {
   getCharacterItem,
   getAllCharacterItemRecords,
   getItemIdsForCharacter,
-  removeAllCharacterItemRecords
+  removeAllCharacterItemRecords,
+  getAllItemsWithHistoryForCharacter,
+  getUniqueItemIdsForCharacter
 };
