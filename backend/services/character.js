@@ -1,6 +1,10 @@
 // services/character.js
 // Centralized logic for managing character CRUD and queries
 const db = require('../db');
+const characterDeities = require('./characterDeities');
+const characterItems = require('./characterItems');
+const characterOrganizations = require('./characterOrganizations');
+const characterRelationships = require('./characterRelationships');
 
 // Create a new character
 function createCharacter(character) {
@@ -82,11 +86,31 @@ function deleteCharacter(id) {
   });
 }
 
+// Fetch full character details with all associations
+async function getFullCharacterById(id) {
+  const [character, deities, items, organizations, relationships] = await Promise.all([
+    getCharacterById(id),
+    characterDeities.getDeitiesForCharacter(id),
+    characterItems.getItemsForCharacter(id),
+    characterOrganizations.getOrganizationsForCharacter(id),
+    characterRelationships.getRelationshipsForCharacter(id)
+  ]);
+  if (!character) return null;
+  return {
+    ...character,
+    deities,
+    items,
+    organizations,
+    relationships
+  };
+}
+
 module.exports = {
   createCharacter,
   getAllCharacters,
   getCharacterById,
   updateCharacter,
   patchCharacter,
-  deleteCharacter
+  deleteCharacter,
+  getFullCharacterById
 };

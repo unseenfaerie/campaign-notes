@@ -49,7 +49,8 @@ router.get('/', (req, res) => {
         .catch(err => res.status(500).json({ error: err.message }));
 });
 
-// Read a particular character by ID
+
+// Read a particular character by ID (basic)
 router.get('/:id', (req, res) => {
     characterService.getCharacterById(req.params.id)
         .then(row => {
@@ -59,6 +60,19 @@ router.get('/:id', (req, res) => {
             res.json(row);
         })
         .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Read a full-detail character with all associations
+router.get('/:id/full', async (req, res) => {
+    try {
+        const fullCharacter = await characterService.getFullCharacterById(req.params.id);
+        if (!fullCharacter) {
+            return res.status(404).json({ error: 'Character not found' });
+        }
+        res.json(fullCharacter);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // Update an existing character
