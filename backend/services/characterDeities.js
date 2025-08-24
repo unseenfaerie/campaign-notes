@@ -1,82 +1,40 @@
 // services/characterDeities.js
 // Centralized logic for managing character-deity relationships
-const db = require('../db');
+const dbHelpers = require('./dbHelpers');
+
+const TABLE = 'character_deities';
 
 // Add a character-deity relationship
 function addCharacterDeity(character_id, deity_id, short_description = '', long_explanation = '') {
-  return new Promise((resolve, reject) => {
-    const sql = `INSERT OR IGNORE INTO character_deities (character_id, deity_id, short_description, long_explanation)
-                 VALUES (?, ?, ?, ?)`;
-    db.run(sql, [character_id, deity_id, short_description, long_explanation], function (err) {
-      if (err) return reject(err);
-      resolve({ character_id, deity_id });
-    });
-  });
+  return dbHelpers.insert(TABLE, { character_id, deity_id, short_description, long_explanation });
 }
 
 // Get all deities for a character (join table only)
 function getDeitiesForCharacter(character_id) {
-  return new Promise((resolve, reject) => {
-    const sql = `SELECT * FROM character_deities WHERE character_id = ?`;
-    db.all(sql, [character_id], (err, rows) => {
-      if (err) return reject(err);
-      resolve(rows || []);
-    });
-  });
+  return dbHelpers.select(TABLE, { character_id });
 }
 
 // Get all characters for a deity (join table only)
 function getCharactersForDeity(deity_id) {
-  return new Promise((resolve, reject) => {
-    const sql = `SELECT * FROM character_deities WHERE deity_id = ?`;
-    db.all(sql, [deity_id], (err, rows) => {
-      if (err) return reject(err);
-      resolve(rows || []);
-    });
-  });
+  return dbHelpers.select(TABLE, { deity_id });
 }
 
 // Get a specific character-deity relationship (with join table metadata)
 function getCharacterDeity(character_id, deity_id) {
-  return new Promise((resolve, reject) => {
-    const sql = `SELECT * FROM character_deities WHERE character_id = ? AND deity_id = ?`;
-    db.get(sql, [character_id, deity_id], (err, row) => {
-      if (err) return reject(err);
-      resolve(row || null);
-    });
-  });
+  return dbHelpers.select(TABLE, { character_id, deity_id }, true);
 }
 
 // Update a character-deity relationship
 function updateCharacterDeity(character_id, deity_id, updates) {
   const allowed = ['short_description', 'long_explanation'];
-  const fields = Object.keys(updates).filter(key => allowed.includes(key));
-  if (fields.length === 0) return Promise.resolve({ character_id, deity_id, message: "no updates made" });
-
-  const setClause = fields.map(field => `${field} = ?`).join(', ');
-  const values = fields.map(field => updates[field]);
-  values.push(character_id, deity_id);
-
-  const sql = `UPDATE character_deities SET ${setClause} WHERE character_id = ? AND deity_id = ?`;
-  return new Promise((resolve, reject) => {
-    db.run(sql, values, function (err) {
-      if (err) return reject(err);
-      resolve({ character_id, deity_id });
-    });
-  });
+  const filtered = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)));
+  return dbHelpers.update(TABLE, { character_id, deity_id }, filtered);
 }
 
 // Remove a character-deity relationship
 function removeCharacterDeity(character_id, deity_id) {
-  return new Promise((resolve, reject) => {
-    const sql = `DELETE FROM character_deities WHERE character_id = ? AND deity_id = ?`;
-    db.run(sql, [character_id, deity_id], function (err) {
-      if (err) return reject(err);
-      resolve({ character_id, deity_id });
-    });
-  });
+  return dbHelpers.remove(TABLE, { character_id, deity_id });
 }
-
 
 module.exports = {
   addCharacterDeity,
