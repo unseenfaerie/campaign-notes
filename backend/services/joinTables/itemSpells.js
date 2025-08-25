@@ -1,5 +1,5 @@
 // services/itemSpells.js
-const dbUtils = require('../utils/dbUtils');
+const dbUtils = require('../../utils/dbUtils');
 const TABLE = 'item_spells';
 
 function addItemSpell(item_id, spell_id) { return dbUtils.insert(TABLE, { item_id, spell_id }); }

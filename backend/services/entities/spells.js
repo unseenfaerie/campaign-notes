@@ -1,5 +1,5 @@
-// services/spells.js
-const dbUtils = require('../utils/dbUtils');
+// services/entities/spells.js
+const dbUtils = require('../../utils/dbUtils');
 const TABLE = 'spells';
 
 function addSpell(data) { return dbUtils.insert(TABLE, data); }

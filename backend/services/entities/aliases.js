@@ -1,5 +1,5 @@
 // services/aliases.js
-const dbUtils = require('../utils/dbUtils');
+const dbUtils = require('../../utils/dbUtils');
 const TABLE = 'aliases';
 
 function addAlias(entity_type, entity_id, alias) { return dbUtils.insert(TABLE, { entity_type, entity_id, alias }); }

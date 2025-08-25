@@ -1,5 +1,5 @@
 // services/spellSpheres.js
-const dbUtils = require('../utils/dbUtils');
+const dbUtils = require('../../utils/dbUtils');
 const TABLE = 'spell_spheres';
 
 function addSpellSphere(spell_id, sphere_id) { return dbUtils.insert(TABLE, { spell_id, sphere_id }); }

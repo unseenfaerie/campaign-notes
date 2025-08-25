@@ -1,5 +1,5 @@
 // services/deitySpheres.js
-const dbUtils = require('../utils/dbUtils');
+const dbUtils = require('../../utils/dbUtils');
 const TABLE = 'deity_spheres';
 
 function addDeitySphere(deity_id, sphere_id) { return dbUtils.insert(TABLE, { deity_id, sphere_id }); }

@@ -1,10 +1,10 @@
 // services/character.js
 // Centralized logic for managing character CRUD and queries
-const dbUtils = require('../utils/dbUtils');
-const characterDeities = require('./characterDeities');
-const characterItems = require('./characterItems');
-const characterOrganizations = require('./characterOrganizations');
-const characterRelationships = require('./characterRelationships');
+const dbUtils = require('../../utils/dbUtils');
+const characterDeities = require('../characterDeities');
+const characterItems = require('../characterItems');
+const characterOrganizations = require('../characterOrganizations');
+const characterRelationships = require('../characterRelationships');
 
 const TABLE = 'characters';
 

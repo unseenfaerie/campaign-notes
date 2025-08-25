@@ -1,5 +1,5 @@
-// services/spheres.js
-const dbUtils = require('../utils/dbUtils');
+// services/entities/spheres.js
+const dbUtils = require('../../utils/dbUtils');
 const TABLE = 'spheres';
 
 function addSphere(data) { return dbUtils.insert(TABLE, data); }
