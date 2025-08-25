@@ -1,6 +1,6 @@
 // services/characterDeities.js
 // Centralized logic for managing character-deity relationships
-const dbUtils = require('../utils/dbUtils');
+const dbUtils = require('../../utils/dbUtils');
 
 const TABLE = 'character_deities';
 

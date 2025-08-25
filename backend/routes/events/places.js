@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const eventPlaces = require('../../services/eventPlaces');
+const eventPlaces = require('../../services/joinTables/eventPlaces');
 
 // Add a place to an event
 router.post('/', (req, res) => {

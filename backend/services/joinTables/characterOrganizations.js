@@ -1,6 +1,6 @@
 // services/characterOrganizations.js
 // Centralized logic for managing character-organization relationships
-const dbUtils = require('../utils/dbUtils');
+const dbUtils = require('../../utils/dbUtils');
 
 const TABLE = 'character_organizations';
 

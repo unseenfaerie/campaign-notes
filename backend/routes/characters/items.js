@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const characterItemsService = require('../../services/characterItems');
-const itemsService = require('../../services/items');
+const itemsService = require('../../services/entities/items');
+const characterItemsService = require('../../services/joinTables/characterItems');
 const { isValidDateFormat, sortObjectsByLoreDate } = require('../../utils/dateUtils');
 
 // ITEM - CHARACTER ASSOCIATIONS

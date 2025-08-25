@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const eventCharacters = require('../../services/eventCharacters');
+const eventCharacters = require('../../services/joinTables/eventCharacters');
 
 // Add a character to an event
 router.post('/', (req, res) => {

@@ -32,9 +32,6 @@ app.use('/api/spells', spellsRouter);
 const spheresRouter = require('./routes/spheres/index');
 app.use('/api/spheres', spheresRouter);
 
-const aliasesRouter = require('./routes/aliases/index');
-app.use('/api/aliases', aliasesRouter);
-
 //main index route
 app.get('/', (req, res) => {
     res.render('index', { title: 'Campaign Notes' });

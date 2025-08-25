@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const characterService = require('../../services/entities/character');
+const characterService = require('../../services/entities/characters');
 
 // Helper: Validate character data
 function validateCharacter(c, isUpdate = false) {

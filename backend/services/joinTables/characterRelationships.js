@@ -1,7 +1,6 @@
 // services/characterRelationships.js
 // Centralized logic for managing character-to-character relationships
-const dbUtils = require('../utils/dbUtils');
-const db = require('../db');
+const dbUtils = require('../../utils/dbUtils');
 
 const TABLE = 'character_relationships';
 

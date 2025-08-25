@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const deitiesService = require('../../services/entities/deities');
 
 // Helper: Validate deity data
 function validateDeity(d, isUpdate = false) {
@@ -26,87 +26,78 @@ function validateDeity(d, isUpdate = false) {
 }
 
 // Create a new deity
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const d = req.body;
   const validationError = validateDeity(d);
   if (validationError) {
     return res.status(400).json({ error: validationError });
   }
-  db.get('SELECT id FROM deities WHERE id = ?', [d.id], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (row) {
+  try {
+    const existing = await deitiesService.getDeityById(d.id);
+    if (existing) {
       return res.status(409).json({ error: 'A deity with this id already exists.' });
     }
-    const sql = `INSERT INTO deities (id, name, pantheon, alignment, short_description) VALUES (?, ?, ?, ?, ?)`;
-    const params = [d.id, d.name, d.pantheon, d.alignment, d.short_description];
-    db.run(sql, params, function (err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      res.status(201).json({ id: d.id });
-    });
-  });
+    await deitiesService.createDeity(d);
+    res.status(201).json({ id: d.id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Update an existing deity
-router.patch('/:id', (req, res) => {
+router.patch('/:id', async (req, res) => {
   const d = req.body;
-  const allowed = ['name', 'pantheon', 'alignment', 'short_description', 'long_explanation'];
-  const fields = Object.keys(d).filter(key => allowed.includes(key));
-  if (fields.length === 0) {
+  if (!Object.keys(d).length) {
     return res.status(400).json({ error: 'No valid fields to update.' });
   }
-  const setClause = fields.map(f => `${f} = ?`).join(', ');
-  const params = fields.map(f => d[f]);
-  params.push(req.params.id);
-  const sql = `UPDATE deities SET ${setClause} WHERE id = ?`;
-  db.run(sql, params, function (err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (this.changes === 0) {
+  try {
+    const result = await deitiesService.patchDeity(req.params.id, d);
+    // Check if deity exists after update
+    const updated = await deitiesService.getDeityById(req.params.id);
+    if (!updated) {
       return res.status(404).json({ error: 'Deity not found' });
     }
     res.json({ updated: req.params.id });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Delete a deity
-router.delete('/:id', (req, res) => {
-  db.run('DELETE FROM deities WHERE id = ?', [req.params.id], function (err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (this.changes === 0) {
+router.delete('/:id', async (req, res) => {
+  try {
+    const existing = await deitiesService.getDeityById(req.params.id);
+    if (!existing) {
       return res.status(404).json({ error: 'Deity not found' });
     }
+    await deitiesService.deleteDeity(req.params.id);
     res.json({ deleted: req.params.id });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Get all deities (JSON)
-router.get('/', (req, res) => {
-  db.all('SELECT * FROM deities', [], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
+router.get('/', async (req, res) => {
+  try {
+    const rows = await deitiesService.getAllDeities();
     res.json(rows);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Get a single deity by id (JSON)
-router.get('/:id', (req, res) => {
-  db.get('SELECT * FROM deities WHERE id = ?', [req.params.id], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
+router.get('/:id', async (req, res) => {
+  try {
+    const row = await deitiesService.getDeityById(req.params.id);
     if (!row) {
       return res.status(404).json({ error: 'Deity not found' });
     }
     res.json(row);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

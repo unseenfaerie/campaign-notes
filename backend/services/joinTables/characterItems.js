@@ -1,5 +1,5 @@
-const { isValidDateFormat, loreDateToSortable } = require('../utils/dateUtils');
-const dbUtils = require('../utils/dbUtils');
+const { isValidDateFormat, loreDateToSortable } = require('../../utils/dateUtils');
+const dbUtils = require('../../utils/dbUtils');
 
 const TABLE = 'character_items';
 

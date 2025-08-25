@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const characterOrganizations = require('../../services/characterOrganizations');
+const characterOrganizations = require('../../services/joinTables/characterOrganizations');
 
 // ORGANIZATION - CHARACTER ASSOCIATIONS
 

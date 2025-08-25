@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const characterDeities = require('../../services/characterDeities');
+const characterDeities = require('../../services/joinTables/characterDeities');
 
 // DEITY - CHARACTER ASSOCIATIONS
 // Add a deity to a character

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const eventItems = require('../../services/eventItems');
+const eventItems = require('../../services/joinTables/eventItems');
 
 // Add an item to an event
 router.post('/', (req, res) => {

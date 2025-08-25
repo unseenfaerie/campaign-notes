@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
 
+
+const organizationsService = require('../../services/entities/organizations');
 // Helper: Validate organization data
 function validateOrganization(o, isUpdate = false) {
   const requiredFields = ['id', 'name', 'type'];
@@ -20,87 +21,78 @@ function validateOrganization(o, isUpdate = false) {
 }
 
 // Create a new organization
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const o = req.body;
   const validationError = validateOrganization(o);
   if (validationError) {
     return res.status(400).json({ error: validationError });
   }
-  db.get('SELECT id FROM organizations WHERE id = ?', [o.id], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (row) {
+  try {
+    const existing = await organizationsService.getOrganizationById(o.id);
+    if (existing) {
       return res.status(409).json({ error: 'An organization with this id already exists.' });
     }
-    const sql = `INSERT INTO organizations (id, name, locations, type, description) VALUES (?, ?, ?, ?, ?)`;
-    const params = [o.id, o.name, o.locations, o.type, o.description];
-    db.run(sql, params, function (err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      res.status(201).json({ id: o.id });
-    });
-  });
+    await organizationsService.createOrganization(o);
+    res.status(201).json({ id: o.id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Partially update an existing organization
-router.patch('/:id', (req, res) => {
+router.patch('/:id', async (req, res) => {
   const o = req.body;
-  const allowed = ['name', 'type', 'locations', 'description'];
-  const fields = Object.keys(o).filter(key => allowed.includes(key));
-  if (fields.length === 0) {
+  if (!Object.keys(o).length) {
     return res.status(400).json({ error: 'No valid fields to update.' });
   }
-  const setClause = fields.map(f => `${f} = ?`).join(', ');
-  const params = fields.map(f => o[f]);
-  params.push(req.params.id);
-  const sql = `UPDATE organizations SET ${setClause} WHERE id = ?`;
-  db.run(sql, params, function (err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (this.changes === 0) {
+  try {
+    const result = await organizationsService.patchOrganization(req.params.id, o);
+    // Check if organization exists after update
+    const updated = await organizationsService.getOrganizationById(req.params.id);
+    if (!updated) {
       return res.status(404).json({ error: 'Organization not found' });
     }
     res.json({ updated: req.params.id });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Delete an organization
-router.delete('/:id', (req, res) => {
-  db.run('DELETE FROM organizations WHERE id = ?', [req.params.id], function (err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (this.changes === 0) {
+router.delete('/:id', async (req, res) => {
+  try {
+    const existing = await organizationsService.getOrganizationById(req.params.id);
+    if (!existing) {
       return res.status(404).json({ error: 'Organization not found' });
     }
+    await organizationsService.deleteOrganization(req.params.id);
     res.json({ deleted: req.params.id });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Get all organizations (JSON)
-router.get('/', (req, res) => {
-  db.all('SELECT * FROM organizations', [], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
+router.get('/', async (req, res) => {
+  try {
+    const rows = await organizationsService.getAllOrganizations();
     res.json(rows);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Get a single organization by id (JSON)
-router.get('/:id', (req, res) => {
-  db.get('SELECT * FROM organizations WHERE id = ?', [req.params.id], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
+router.get('/:id', async (req, res) => {
+  try {
+    const row = await organizationsService.getOrganizationById(req.params.id);
     if (!row) {
       return res.status(404).json({ error: 'Organization not found' });
     }
     res.json(row);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

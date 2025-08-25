@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const eventsService = require('../../services/event');
+const eventsService = require('../../services/entities/events');
 
 // Helper: Validate event data
 function validateEvent(e, isUpdate = false) {

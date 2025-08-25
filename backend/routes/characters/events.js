@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const eventCharacters = require('../../services/eventCharacters.js');
+const eventCharacters = require('../../services/joinTables/eventCharacters.js');
 
 // EVENT - CHARACTER ASSOCIATIONS
 

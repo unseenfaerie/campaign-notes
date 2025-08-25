@@ -1,6 +1,6 @@
 // services/eventCharacters.js
 // Centralized logic for managing event-character relationships
-const dbUtils = require('../utils/dbUtils');
+const dbUtils = require('../../utils/dbUtils');
 
 const TABLE = 'event_characters';
 

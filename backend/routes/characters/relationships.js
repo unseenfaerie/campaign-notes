@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const characterRelationships = require('../../services/characterRelationships');
+const characterRelationships = require('../../services/joinTables/characterRelationships');
 
 // CHARACTER - CHARACTER ASSOCIATIONS
 // Add a relationship to another character

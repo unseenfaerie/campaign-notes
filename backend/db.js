@@ -76,7 +76,6 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS spheres (
     id TEXT PRIMARY KEY,
     name TEXT,
-    description TEXT,
     short_description TEXT,
     long_explanation TEXT
   )`);

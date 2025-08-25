@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const placesService = require('../../services/entities/places');
 
 // Helper: Validate place data
 function validatePlace(p, isUpdate = false) {
@@ -20,87 +20,78 @@ function validatePlace(p, isUpdate = false) {
 }
 
 // Create a new place
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const p = req.body;
   const validationError = validatePlace(p);
   if (validationError) {
     return res.status(400).json({ error: validationError });
   }
-  db.get('SELECT id FROM places WHERE id = ?', [p.id], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (row) {
+  try {
+    const existing = await placesService.getPlaceById(p.id);
+    if (existing) {
       return res.status(409).json({ error: 'A place with this id already exists.' });
     }
-    const sql = `INSERT INTO places (id, name, type, parent_id, short_description) VALUES (?, ?, ?, ?, ?)`;
-    const params = [p.id, p.name, p.type, p.parent_id, p.short_description];
-    db.run(sql, params, function (err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      res.status(201).json({ id: p.id });
-    });
-  });
+    await placesService.createPlace(p);
+    res.status(201).json({ id: p.id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Update an existing place
-router.patch('/:id', (req, res) => {
+router.patch('/:id', async (req, res) => {
   const p = req.body;
-  const allowed = ['name', 'type', 'parent_id', 'short_description', 'long_explanation'];
-  const fields = Object.keys(p).filter(key => allowed.includes(key));
-  if (fields.length === 0) {
+  if (!Object.keys(p).length) {
     return res.status(400).json({ error: 'No valid fields to update.' });
   }
-  const setClause = fields.map(f => `${f} = ?`).join(', ');
-  const params = fields.map(f => p[f]);
-  params.push(req.params.id);
-  const sql = `UPDATE places SET ${setClause} WHERE id = ?`;
-  db.run(sql, params, function (err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (this.changes === 0) {
+  try {
+    const result = await placesService.patchPlace(req.params.id, p);
+    // Check if place exists after update
+    const updated = await placesService.getPlaceById(req.params.id);
+    if (!updated) {
       return res.status(404).json({ error: 'Place not found' });
     }
     res.json({ updated: req.params.id });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Delete a place
-router.delete('/:id', (req, res) => {
-  db.run('DELETE FROM places WHERE id = ?', [req.params.id], function (err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (this.changes === 0) {
+router.delete('/:id', async (req, res) => {
+  try {
+    const existing = await placesService.getPlaceById(req.params.id);
+    if (!existing) {
       return res.status(404).json({ error: 'Place not found' });
     }
+    await placesService.deletePlace(req.params.id);
     res.json({ deleted: req.params.id });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Get all places (JSON)
-router.get('/', (req, res) => {
-  db.all('SELECT * FROM places', [], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
+router.get('/', async (req, res) => {
+  try {
+    const rows = await placesService.getAllPlaces();
     res.json(rows);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Get a single place by id (JSON)
-router.get('/:id', (req, res) => {
-  db.get('SELECT * FROM places WHERE id = ?', [req.params.id], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
+router.get('/:id', async (req, res) => {
+  try {
+    const row = await placesService.getPlaceById(req.params.id);
     if (!row) {
       return res.status(404).json({ error: 'Place not found' });
     }
     res.json(row);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;
