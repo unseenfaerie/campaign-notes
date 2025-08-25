@@ -10,14 +10,16 @@ app.use(cors());
 
 const charactersRouter = require('./routes/characters/index');
 app.use('/api/characters', charactersRouter);
+
+const eventsRouter = require('./routes/events/index');
+app.use('/api/events', eventsRouter);
+
 const itemsRouter = require('./routes/items');
 app.use('/api/items', itemsRouter);
 const organizationsRouter = require('./routes/organizations');
 app.use('/api/organizations', organizationsRouter);
 const deitiesRouter = require('./routes/deities');
 app.use('/api/deities', deitiesRouter);
-const eventsRouter = require('./routes/events');
-app.use('/api/events', eventsRouter);
 const placesRouter = require('./routes/places');
 app.use('/api/places', placesRouter)
 

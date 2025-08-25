@@ -1,7 +1,6 @@
-const eventCharacters = require('../services/eventCharacters');
 const express = require('express');
 const router = express.Router();
-const eventsService = require('../services/events');
+const eventsService = require('../../services/event');
 
 // Helper: Validate event data
 function validateEvent(e, isUpdate = false) {
@@ -106,34 +105,10 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// EVENT - CHARACTER ASSOCIATIONS
+router.use('/:id/organizations', require('./organizations'));
+router.use('/:id/places', require('./places'));
+router.use('/:id/items', require('./items'));
+router.use('/:id/deities', require('./deities'));
+router.use('/:id/characters', require('./characters'));
 
-// Add a character to an event
-router.post('/:id/characters', (req, res) => {
-  const event_id = req.params.id;
-  const { character_id, short_description, long_explanation } = req.body;
-  if (!character_id) return res.status(400).json({ error: 'character_id is required' });
-  eventCharacters.addEventCharacter(event_id, character_id, short_description || '', long_explanation || '')
-    .then(result => res.status(201).json(result))
-    .catch(err => res.status(500).json({ error: err.message }));
-});
-
-// Update event-character association
-router.patch('/:id/characters/:characterId', (req, res) => {
-  const event_id = req.params.id;
-  const character_id = req.params.characterId;
-  eventCharacters.updateEventCharacter(event_id, character_id, req.body)
-    .then(result => res.json(result))
-    .catch(err => res.status(500).json({ error: err.message }));
-});
-
-// Remove a character from an event
-router.delete('/:id/characters/:characterId', (req, res) => {
-  const event_id = req.params.id;
-  const character_id = req.params.characterId;
-  eventCharacters.removeEventCharacter(event_id, character_id)
-    .then(result => res.json(result))
-    .catch(err => res.status(500).json({ error: err.message }));
-});
-
-module.exports
+module.exports = router;
