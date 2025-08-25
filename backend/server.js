@@ -14,14 +14,26 @@ app.use('/api/characters', charactersRouter);
 const eventsRouter = require('./routes/events/index');
 app.use('/api/events', eventsRouter);
 
-const itemsRouter = require('./routes/items');
+const itemsRouter = require('./routes/items/index');
 app.use('/api/items', itemsRouter);
-const organizationsRouter = require('./routes/organizations');
+
+const organizationsRouter = require('./routes/organizations/index');
 app.use('/api/organizations', organizationsRouter);
-const deitiesRouter = require('./routes/deities');
+
+const deitiesRouter = require('./routes/deities/index');
 app.use('/api/deities', deitiesRouter);
-const placesRouter = require('./routes/places');
-app.use('/api/places', placesRouter)
+
+const placesRouter = require('./routes/places/index');
+app.use('/api/places', placesRouter);
+
+const spellsRouter = require('./routes/spells/index');
+app.use('/api/spells', spellsRouter);
+
+const spheresRouter = require('./routes/spheres/index');
+app.use('/api/spheres', spheresRouter);
+
+const aliasesRouter = require('./routes/aliases/index');
+app.use('/api/aliases', aliasesRouter);
 
 //main index route
 app.get('/', (req, res) => {

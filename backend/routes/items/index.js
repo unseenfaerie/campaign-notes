@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const idUtils = require('../utils/idUtils')
-const itemsService = require('../services/entities/items');
+const idUtils = require('../../utils/idUtils')
+const itemsService = require('../../services/entities/items');
 
 // Helper: Validate item data
 function validateItem(i, isUpdate = false) {
