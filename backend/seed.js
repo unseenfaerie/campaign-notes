@@ -27,6 +27,7 @@ db.serialize(() => {
     ('wyaris', 'Wyaris', 'Three Sister Goddesses', 'Chaotic Good', 'Lady of Swords.', 'Long Explanation.'),
     ('danaris', 'Danaris', 'Three Sister Goddesses', 'Chaotic Neutral', 'Lady of Death.', 'Long Explanation.'),
     ('vaharis', 'Vaharis', 'Three Sister Goddesses', 'Lawful Neutral', 'Lady of Judgement.', 'Long Explanation.'),
+    ('sylrineth', 'Sylrineth', 'Ancient Elven', 'Chaotic Evil', 'Keeper of Forbidden Knowledge.', 'Syrineth is queen of the 666 layers of the abyss. There she hoards esoteric knowledge and hedonistic souls. Her many demons do her bidding.'),
     ('doh', 'Doh', 'Main Human', 'Lawful Neutral', 'God of Law.', 'Long Explanation.');
   `);
 
@@ -36,6 +37,8 @@ db.serialize(() => {
     ('order-of-the-iron-duch', 'The Order of the Iron Düch', 'adventuring party', 'A party of heroes.', 'Long Explanation.'),
     ('wyvernfang', 'Wyvernfang', 'adventuring party', 'A group based in Wavethorn.', 'Long Explanation.'),
     ('three-sisters', 'The Three Sisters', 'pantheon', 'The Three Sister Goddesses.', 'Long Explanation.'),
+    ('main-human-pantheon', 'The Main Human Pantheon', 'pantheon', 'The primary deities worshipped by humans.', 'Long Explanation.'),
+    ('ancient-elven-pantheon', 'The Ancient Elven Pantheon', 'pantheon', 'The primary deities worshipped by the ancient elves.', 'Long Explanation.'),
     ('adventurers-guild', 'The Adventurer''s Guild', 'guild', 'A guild for adventurers in Novafell and Wavethorn.', 'Long Explanation.')
   `);
 
@@ -129,7 +132,13 @@ db.serialize(() => {
     ('alann-barnett', 'cormac', 'ally', 'Short description.', 'Long Explanation.'),
     ('releas-neb', 'durchir', 'ally', 'Short description.', 'Long Explanation.'),
     ('releas-neb', 'cormac', 'ally', 'Short description.', 'Long Explanation.'),
-    ('durchir', 'cormac', 'ally', 'Short description.', 'Long Explanation.');
+    ('releas-neb', 'alann-barnett', 'ally', 'Short description.', 'Long Explanation.'),
+    ('durchir', 'cormac', 'ally', 'Short description.', 'Long Explanation.'),
+    ('durchir', 'releas-neb', 'ally', 'Short description.', 'Long Explanation.'),
+    ('durchir', 'alann-barnett', 'ally', 'Short description.', 'Long Explanation.'),
+    ('cormac', 'durchir', 'ally', 'Short description.', 'Long Explanation.'),
+    ('cormac', 'releas-neb', 'ally', 'Short description.', 'Long Explanation.'),
+    ('cormac', 'alann-barnett', 'ally', 'Short description.', 'Long Explanation.');
   `);
 
   console.log('Inserting character_organizations...');
