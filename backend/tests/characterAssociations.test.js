@@ -1,7 +1,7 @@
 const request = require('supertest');
 const app = require('../server');
 
-describe('Character Associations API', () => {
+describe('Character Associations GETs', () => {
   const charId = 'jest-char-1';
   // These tests assume the character exists (see characters.test.js)
 

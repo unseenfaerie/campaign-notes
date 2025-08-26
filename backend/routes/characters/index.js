@@ -79,24 +79,11 @@ router.get('/:id/full', async (req, res) => {
 router.patch('/:id', async (req, res) => {
     const c = req.body;
     try {
-        await characterService.patchCharacter(req.params.id, c);
-        // Fetch the updated character
-        const updated = await characterService.getCharacterById(req.params.id);
-        if (!updated) {
+        const result = await characterService.patchCharacter(req.params.id, c);
+        if (result.message === 'record not found') {
             return res.status(404).json({ error: 'Character not found' });
         }
-        // If specific fields were updated, return only those fields and id
-        if (Object.keys(c).length > 0 && Object.keys(c).length < Object.keys(updated).length) {
-            const response = { id: updated.id };
-            for (const key of Object.keys(c)) {
-                if (updated.hasOwnProperty(key)) {
-                    response[key] = updated[key];
-                }
-            }
-            return res.json(response);
-        }
-        // Otherwise, return the full character
-        res.json(updated);
+        res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
