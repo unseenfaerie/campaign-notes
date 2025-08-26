@@ -51,7 +51,7 @@ async function getFullCharacterById(id) {
   const [character, deities, items, organizations, relationships] = await Promise.all([
     getCharacterById(id),
     characterDeities.getDeitiesForCharacter(id),
-    characterItems.getItemsForCharacter(id),
+    characterItems.getAllItemsWithHistoryForCharacter(id),
     characterOrganizations.getOrganizationsForCharacter(id),
     characterRelationships.getRelationshipsForCharacter(id)
   ]);

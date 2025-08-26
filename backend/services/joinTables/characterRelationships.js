@@ -25,14 +25,19 @@ function removeCharacterRelationship(character_id, related_id) {
 }
 
 // Get all relationships for a character (as either character_id or related_id)
-function getRelationshipsForCharacter(character_id) {
-  // Custom logic: need OR condition, so can't use dbUtils.select directly
-  return new Promise((resolve, reject) => {
-    const sql = `SELECT * FROM ${TABLE} WHERE character_id = ? OR related_id = ?`;
-    db.all(sql, [character_id, character_id], (err, rows) => {
-      if (err) return reject(err);
-      resolve(rows || []);
-    });
+async function getRelationshipsForCharacter(character_id) {
+  // Get relationships where character is the source
+  const asSource = await dbUtils.select(TABLE, { character_id });
+  // Get relationships where character is the target
+  const asTarget = await dbUtils.select(TABLE, { related_id: character_id });
+  // Merge and deduplicate (in case of self-relationships)
+  const all = [...asSource, ...asTarget];
+  const seen = new Set();
+  return all.filter(r => {
+    const key = `${r.character_id}|${r.related_id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
 }
 

@@ -22,8 +22,8 @@ function getUniqueItemIdsForCharacter(character_id) {
 }
 
 // Get all items for a character (with join table metadata, custom logic)
-function getItemsForCharacter(character_id) {
-  return getEntityWithHistory(
+function getItemForCharacter(character_id, item_id) {
+  return dbUtils.getEntityWithHistory(
     'items',           // mainTable
     'character_items', // joinTable
     'id',              // entityKey (items.id)
@@ -67,18 +67,8 @@ function getAllCharacterItemRecords(character_id, item_id) {
   return dbUtils.select(TABLE, { character_id, item_id });
 }
 
-// Get all characters for an item (with join table metadata, custom logic)
 function getCharactersForItem(item_id) {
-  return new Promise((resolve, reject) => {
-    const sql = `SELECT c.*, ci.acquired_date, ci.relinquished_date, ci.short_description
-                 FROM character_items ci
-                 JOIN characters c ON ci.character_id = c.id
-                 WHERE ci.item_id = ?`;
-    db.all(sql, [item_id], (err, rows) => {
-      if (err) return reject(err);
-      resolve(rows || []);
-    });
-  });
+  return dbUtils.select(TABLE, { item_id }).then(rows => rows.map(r => r.character_id));
 }
 
 // Update a character-item relationship (custom validation logic)
@@ -113,12 +103,12 @@ module.exports = {
   updateCharacterItem,
   removeCharacterItem,
   removeInstanceCharacterItem,
-  getItemsForCharacter,
-  getCharactersForItem,
+  getItemForCharacter,
   getCharacterItem,
   getAllCharacterItemRecords,
   getItemIdsForCharacter,
   removeAllCharacterItemRecords,
   getAllItemsWithHistoryForCharacter,
-  getUniqueItemIdsForCharacter
+  getUniqueItemIdsForCharacter,
+  getCharactersForItem
 };
