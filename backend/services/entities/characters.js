@@ -39,7 +39,7 @@ function updateCharacter(id, character) {
 
 function patchCharacter(id, updates) {
   const allowed = ['type', 'name', 'class', 'level', 'alignment', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma', 'total_health', 'deceased', 'short_description', 'long_explanation'];
-  return serviceUtilsupdateWithChangedFields(TABLE, { id }, updates, allowed);
+  return serviceUtils.updateWithChangedFields(TABLE, { id }, updates, allowed);
 }
 
 // Delete a character
