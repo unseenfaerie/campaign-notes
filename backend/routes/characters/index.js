@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const { validateFields } = require('../../../common/validate');
 const characterService = require('../../services/entities/characters');
 
-// Helper: Validate character data
 function validateCharacter(c, isUpdate = false) {
     const requiredFields = ['id', 'type', 'name'];
     if (!isUpdate) {
@@ -12,7 +12,7 @@ function validateCharacter(c, isUpdate = false) {
             }
         }
     }
-    // Optionally check stat fields are numbers or null
+    // check to make sure stat fields are numbers or null
     const statFields = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma', 'total_health'];
     for (const stat of statFields) {
         if (c[stat] !== undefined && c[stat] !== null && typeof c[stat] !== 'number') {
@@ -28,11 +28,17 @@ function validateCharacter(c, isUpdate = false) {
 // Create a new character (with uniqueness check for id)
 router.post('/', (req, res) => {
     const c = req.body;
-    const validationError = validateCharacter(c);
+    // schema validation
+    const { valid, errors, validated } = validateFields('Character', c);
+    if (!valid) {
+        return res.status(400).json({ error: errors.join('; ') });
+    }
+    // business logic validation
+    const validationError = validateCharacter(validated);
     if (validationError) {
         return res.status(400).json({ error: validationError });
     }
-    characterService.createCharacter(c)
+    characterService.createCharacter(validated)
         .then(result => res.status(201).json(result))
         .catch(err => {
             if (err.message && err.message.includes('UNIQUE constraint failed')) {
@@ -42,7 +48,7 @@ router.post('/', (req, res) => {
         });
 });
 
-// Read all characters
+// Read all characters (only info from the characters table.)
 router.get('/', (req, res) => {
     characterService.getAllCharacters()
         .then(rows => res.json(rows))
@@ -50,7 +56,7 @@ router.get('/', (req, res) => {
 });
 
 
-// Read a particular character by ID (basic)
+// Read a particular character by ID (only info from the characters table.)
 router.get('/:id', (req, res) => {
     characterService.getCharacterById(req.params.id)
         .then(row => {
@@ -75,11 +81,20 @@ router.get('/:id/full', async (req, res) => {
     }
 });
 
-// Update an existing character
 router.patch('/:id', async (req, res) => {
     const c = req.body;
+    // schema validation (partial)
+    const { valid, errors, validated } = validateFields('Character', c, { allowPartial: true });
+    if (!valid) {
+        return res.status(400).json({ error: errors.join('; ') });
+    }
+    // business logic validation (partial)
+    const validationError = validateCharacter(validated, true);
+    if (validationError) {
+        return res.status(400).json({ error: validationError });
+    }
     try {
-        const result = await characterService.patchCharacter(req.params.id, c);
+        const result = await characterService.patchCharacter(req.params.id, validated);
         if (result.message === 'record not found') {
             return res.status(404).json({ error: 'Character not found' });
         }
@@ -89,7 +104,6 @@ router.patch('/:id', async (req, res) => {
     }
 });
 
-// Delete a character
 router.delete('/:id', (req, res) => {
     characterService.deleteCharacter(req.params.id)
         .then(result => res.json(result))
