@@ -76,11 +76,17 @@ router.get('/:id/full', async (req, res) => {
 });
 
 // Update an existing character
-router.patch('/:id', (req, res) => {
+router.patch('/:id', async (req, res) => {
     const c = req.body;
-    characterService.patchCharacter(req.params.id, c)
-        .then(result => res.json(result))
-        .catch(err => res.status(500).json({ error: err.message }));
+    try {
+        const result = await characterService.patchCharacter(req.params.id, c);
+        if (result.message === 'record not found') {
+            return res.status(404).json({ error: 'Character not found' });
+        }
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // Delete a character

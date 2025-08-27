@@ -2,7 +2,6 @@
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
-const db = require('./db');
 
 const app = express();
 app.use(express.json());
@@ -40,7 +39,12 @@ app.get('/', (req, res) => {
 
 app.use(express.static(path.join(__dirname, '../public')));
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`API server running at http://localhost:${PORT}`);
-});
+
+if (require.main === module) {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`API server running at http://localhost:${PORT}`);
+    });
+}
+
+module.exports = app;

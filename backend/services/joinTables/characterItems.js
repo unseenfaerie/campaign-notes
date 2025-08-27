@@ -1,5 +1,6 @@
 const { isValidDateFormat, loreDateToSortable } = require('../../utils/dateUtils');
 const dbUtils = require('../../utils/dbUtils');
+const { updateWithChangedFields } = require('../../utils/serviceUtils');
 
 const TABLE = 'character_items';
 
@@ -22,8 +23,8 @@ function getUniqueItemIdsForCharacter(character_id) {
 }
 
 // Get all items for a character (with join table metadata, custom logic)
-function getItemsForCharacter(character_id) {
-  return getEntityWithHistory(
+function getItemForCharacter(character_id, item_id) {
+  return dbUtils.getEntityWithHistory(
     'items',           // mainTable
     'character_items', // joinTable
     'id',              // entityKey (items.id)
@@ -67,30 +68,26 @@ function getAllCharacterItemRecords(character_id, item_id) {
   return dbUtils.select(TABLE, { character_id, item_id });
 }
 
-// Get all characters for an item (with join table metadata, custom logic)
 function getCharactersForItem(item_id) {
-  return new Promise((resolve, reject) => {
-    const sql = `SELECT c.*, ci.acquired_date, ci.relinquished_date, ci.short_description
-                 FROM character_items ci
-                 JOIN characters c ON ci.character_id = c.id
-                 WHERE ci.item_id = ?`;
-    db.all(sql, [item_id], (err, rows) => {
-      if (err) return reject(err);
-      resolve(rows || []);
-    });
-  });
+  return dbUtils.select(TABLE, { item_id }).then(rows => rows.map(r => r.character_id));
 }
 
 // Update a character-item relationship (custom validation logic)
-function updateCharacterItem(character_id, item_id, acquired_date, updates) {
+async function updateCharacterItem(character_id, item_id, acquired_date, updates) {
   const allowed = ['relinquished_date', 'short_description'];
-  const fields = Object.keys(updates).filter(key => allowed.includes(key));
-  if (fields.length === 0) return Promise.resolve({ character_id, item_id, acquired_date, message: 'no updates made' });
-  if (fields.includes('acquired_date')) return Promise.resolve({ character_id, item_id, acquired_date, message: 'cannot update acquired date; make a new object' });
-  if (fields.includes('relinquished_date') && !isValidDateFormat(updates.relinquished_date)) {
-    return Promise.resolve({ character_id, item_id, acquired_date, message: 'invalid date format, use mmm-dd-yyy (eg mar-19-002 or jun-01-999)' });
+  if ('relinquished_date' in updates && !isValidDateFormat(updates.relinquished_date)) {
+    return { character_id, item_id, acquired_date, message: 'invalid date format, use mmm-dd-yyy (eg mar-19-002 or jun-01-999)' };
   }
-  return dbUtils.update(TABLE, { character_id, item_id, acquired_date }, updates);
+  const filtered = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)));
+  if (Object.keys(filtered).length === 0) {
+    return { character_id, item_id, acquired_date, message: 'no updates made' };
+  }
+  return updateWithChangedFields(
+    TABLE,
+    { character_id, item_id, acquired_date },
+    filtered,
+    allowed
+  );
 }
 
 // Remove a character-item relationship (can use dbUtils)
@@ -113,12 +110,12 @@ module.exports = {
   updateCharacterItem,
   removeCharacterItem,
   removeInstanceCharacterItem,
-  getItemsForCharacter,
-  getCharactersForItem,
+  getItemForCharacter,
   getCharacterItem,
   getAllCharacterItemRecords,
   getItemIdsForCharacter,
   removeAllCharacterItemRecords,
   getAllItemsWithHistoryForCharacter,
-  getUniqueItemIdsForCharacter
+  getUniqueItemIdsForCharacter,
+  getCharactersForItem
 };

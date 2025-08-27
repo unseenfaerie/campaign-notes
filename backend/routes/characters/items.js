@@ -41,23 +41,13 @@ router.get('/:itemId', async (req, res) => {
   const character_id = req.params.id;
   const item_id = req.params.itemId;
   try {
-    // Get all relationship records for this character-item pair
-    let records = await characterItemsService.getAllCharacterItemRecords(character_id, item_id);
-    if (!records || records.length === 0) {
+    const result = await characterItemsService.getItemForCharacter(character_id, item_id);
+    if (!result) {
       return res.status(404).json({ error: 'No records found for this character-item pair' });
     }
-
-    // Sort by acquired_date ascending (chronological) using loreDateToSortable helper
-    records = sortObjectsByLoreDate(records, 'acquired_date', true);
-    // Get item details using the service layer
-    const item = await itemsService.getItemDetails(item_id);
-    if (!item) return res.status(404).json({ error: 'Item not found' });
-    return res.json({
-      item,
-      history: records
-    });
+    res.json(result);
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 

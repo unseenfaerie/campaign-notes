@@ -1,6 +1,7 @@
 // services/character.js
 // Centralized logic for managing character CRUD and queries
 const dbUtils = require('../../utils/dbUtils');
+const serviceUtils = require('../../utils/serviceUtils');
 const characterDeities = require('../joinTables/characterDeities');
 const characterItems = require('../joinTables/characterItems');
 const characterOrganizations = require('../joinTables/characterOrganizations');
@@ -35,10 +36,10 @@ function updateCharacter(id, character) {
 }
 
 // Patch (partial update) a character
+
 function patchCharacter(id, updates) {
   const allowed = ['type', 'name', 'class', 'level', 'alignment', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma', 'total_health', 'deceased', 'short_description', 'long_explanation'];
-  const filtered = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)));
-  return dbUtils.update(TABLE, { id }, filtered);
+  return serviceUtils.updateWithChangedFields(TABLE, { id }, updates, allowed);
 }
 
 // Delete a character
@@ -51,7 +52,7 @@ async function getFullCharacterById(id) {
   const [character, deities, items, organizations, relationships] = await Promise.all([
     getCharacterById(id),
     characterDeities.getDeitiesForCharacter(id),
-    characterItems.getItemsForCharacter(id),
+    characterItems.getAllItemsWithHistoryForCharacter(id),
     characterOrganizations.getOrganizationsForCharacter(id),
     characterRelationships.getRelationshipsForCharacter(id)
   ]);

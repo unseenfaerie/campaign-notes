@@ -1,6 +1,7 @@
 // services/characterOrganizations.js
 // Centralized logic for managing character-organization relationships
 const dbUtils = require('../../utils/dbUtils');
+const { updateWithChangedFields } = require('../../utils/serviceUtils');
 
 const TABLE = 'character_organizations';
 
@@ -55,13 +56,14 @@ function getCharacterOrganization(character_id, organization_id) {
 }
 
 // Update a character-organization relationship
-function updateCharacterOrganization(character_id, organization_id, joined_date, updates) {
+async function updateCharacterOrganization(character_id, organization_id, joined_date, updates) {
   const allowed = ['left_date', 'short_description', 'long_explanation'];
-  const filtered = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)));
-  if (Object.keys(filtered).length === 0) {
-    return Promise.resolve({ organization_id, character_id, joined_date, message: "no updates made" });
-  }
-  return dbUtils.update(TABLE, { character_id, organization_id, joined_date }, filtered);
+  return updateWithChangedFields(
+    TABLE,
+    { character_id, organization_id, joined_date },
+    updates,
+    allowed
+  );
 }
 
 // Remove all records for a character-organization pair (alias for removeCharacterOrganizationRecords)
