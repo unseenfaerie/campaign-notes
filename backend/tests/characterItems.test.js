@@ -5,7 +5,8 @@ const app = require('../server');
 const charId = 'jest-char-1';
 const itemId = 'jest-item-1';
 const acquiredDate = 'jan-01-100';
-const lostDate = 'feb-01-100';
+const relinquishedDate = 'feb-01-100';
+const shortDescription = 'Acquired for testing';
 
 // Helper to create a test item
 async function ensureTestItem() {
@@ -27,7 +28,7 @@ describe('Character-Item Associations API', () => {
 
   afterAll(async () => {
     // Clean up association and item
-    await request(app).delete(`/api/characters/${charId}/items/${itemId}/${acquiredDate}`);
+    await request(app).delete(`/api/characters/${charId}/items/${itemId}`);
     await request(app).delete(`/api/items/${itemId}`);
   });
 
@@ -37,9 +38,8 @@ describe('Character-Item Associations API', () => {
       .send({
         item_id: itemId,
         acquired_date: acquiredDate,
-        lost_date: '',
-        short_description: 'Acquired for testing',
-        long_explanation: 'Jest test acquire.'
+        relinquished_date: '',
+        short_description: shortDescription
       });
     expect([201, 409]).toContain(res.statusCode);
     expect(res.body).toBeDefined();
@@ -71,10 +71,10 @@ describe('Character-Item Associations API', () => {
   it('should update a character-item association by acquired_date', async () => {
     const res = await request(app)
       .patch(`/api/characters/${charId}/items/${itemId}/${acquiredDate}`)
-      .send({ relinquished_date: lostDate });
+      .send({ relinquished_date: relinquishedDate });
     expect([200, 404]).toContain(res.statusCode);
     if (res.statusCode === 200) {
-      expect(res.body.relinquished_date).toBe(lostDate);
+      expect(res.body.relinquished_date).toBe(relinquishedDate);
     }
   });
 
