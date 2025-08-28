@@ -13,6 +13,7 @@ db.serialize(() => {
     id TEXT PRIMARY KEY,
     type TEXT,
     name TEXT,
+    age INTEGER,
     class TEXT,
     level TEXT,
     alignment TEXT,
@@ -100,6 +101,62 @@ db.serialize(() => {
   // ~actually~ 
   // exists in the characters table.
 
+  db.run(`CREATE TABLE IF NOT EXISTS character_relationships (
+    character_id TEXT,
+    related_id TEXT,
+    relationship_type TEXT,
+    short_description TEXT,
+    long_explanation TEXT,
+    PRIMARY KEY (character_id, related_id),
+    FOREIGN KEY (character_id) REFERENCES characters(id),
+    FOREIGN KEY (related_id) REFERENCES characters(id)
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS character_deities (
+    character_id TEXT,
+    deity_id TEXT,
+    short_description TEXT,
+    long_explanation TEXT,
+    PRIMARY KEY (character_id, deity_id),
+    FOREIGN KEY (character_id) REFERENCES characters(id),
+    FOREIGN KEY (deity_id) REFERENCES deities(id)
+  )`);
+
+  /* not unique (no foreign keys)
+    tracks history (joined_date as primary key) */
+  db.run(`CREATE TABLE IF NOT EXISTS character_organizations (
+    character_id TEXT,
+    organization_id TEXT,
+    joined_date TEXT,
+    left_date TEXT,
+    short_description TEXT,
+    long_explanation TEXT,
+    PRIMARY KEY (character_id, organization_id, joined_date)
+  )`);
+
+  /* not unique (no foreign keys)
+    tracks history (acquired_date as primary key) */
+  db.run(`CREATE TABLE IF NOT EXISTS character_places (
+    character_id TEXT,
+    place_id TEXT,
+    arrived_date TEXT,
+    left_date TEXT,
+    short_description TEXT,
+    long_explanation TEXT,
+    PRIMARY KEY (character_id, place_id, arrived_date)
+  )`);
+
+  /* not unique (no foreign keys)
+    tracks history (acquired_date as primary key) */
+  db.run(`CREATE TABLE IF NOT EXISTS character_items (
+    character_id TEXT,
+    item_id TEXT,
+    acquired_date TEXT,
+    relinquished_date TEXT,
+    short_description TEXT,
+    PRIMARY KEY (character_id, item_id, acquired_date)
+  )`);
+
   db.run(`CREATE TABLE IF NOT EXISTS event_characters (
     event_id TEXT,
     character_id TEXT,
@@ -108,6 +165,16 @@ db.serialize(() => {
     PRIMARY KEY (event_id, character_id),
     FOREIGN KEY (event_id) REFERENCES events(id),
     FOREIGN KEY (character_id) REFERENCES characters(id)
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS event_deities (
+    event_id TEXT,
+    deity_id TEXT,
+    short_description TEXT,
+    long_explanation TEXT,
+    PRIMARY KEY (event_id, deity_id),
+    FOREIGN KEY (event_id) REFERENCES events(id),
+    FOREIGN KEY (deity_id) REFERENCES deities(id)
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS event_organizations (
@@ -130,16 +197,6 @@ db.serialize(() => {
     FOREIGN KEY (place_id) REFERENCES places(id)
   )`);
 
-  db.run(`CREATE TABLE IF NOT EXISTS event_deities (
-    event_id TEXT,
-    deity_id TEXT,
-    short_description TEXT,
-    long_explanation TEXT,
-    PRIMARY KEY (event_id, deity_id),
-    FOREIGN KEY (event_id) REFERENCES events(id),
-    FOREIGN KEY (deity_id) REFERENCES deities(id)
-  )`);
-
   db.run(`CREATE TABLE IF NOT EXISTS event_items (
     event_id TEXT,
     item_id TEXT,
@@ -148,50 +205,6 @@ db.serialize(() => {
     PRIMARY KEY (event_id, item_id),
     FOREIGN KEY (event_id) REFERENCES events(id),
     FOREIGN KEY (item_id) REFERENCES items(id)
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS character_relationships (
-    character_id TEXT,
-    related_id TEXT,
-    relationship_type TEXT,
-    short_description TEXT,
-    long_explanation TEXT,
-    PRIMARY KEY (character_id, related_id),
-    FOREIGN KEY (character_id) REFERENCES characters(id),
-    FOREIGN KEY (related_id) REFERENCES characters(id)
-  )`);
-
-  /* not unique (no foreign keys)
-     tracks history (acquired_date as primary key) */
-  db.run(`CREATE TABLE IF NOT EXISTS character_items (
-    character_id TEXT,
-    item_id TEXT,
-    acquired_date TEXT,
-    relinquished_date TEXT,
-    short_description TEXT,
-    PRIMARY KEY (character_id, item_id, acquired_date)
-  )`);
-
-  /* not unique (no foreign keys)
-    tracks history (joined_date as primary key) */
-  db.run(`CREATE TABLE IF NOT EXISTS character_organizations (
-    character_id TEXT,
-    organization_id TEXT,
-    joined_date TEXT,
-    left_date TEXT,
-    short_description TEXT,
-    long_explanation TEXT,
-    PRIMARY KEY (character_id, organization_id, joined_date)
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS character_deities (
-    character_id TEXT,
-    deity_id TEXT,
-    short_description TEXT,
-    long_explanation TEXT,
-    PRIMARY KEY (character_id, deity_id),
-    FOREIGN KEY (character_id) REFERENCES characters(id),
-    FOREIGN KEY (deity_id) REFERENCES deities(id)
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS spell_spheres (
