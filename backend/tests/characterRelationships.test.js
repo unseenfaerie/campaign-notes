@@ -15,31 +15,31 @@ describe('Character-Relationship API', () => {
     await request(app).delete(`/api/characters/${testOtherCharId}`);
   });
 
-  describe('POST /api/character-relationships', () => {
+  describe('POST /api/characters/:character_id/relationships', () => {
     it('should create a character-relationship association', async () => {
-      const res = await request(app).post('/api/character-relationships').send(testAssoc);
+      const res = await request(app).post(`/api/characters/${testCharacterId}/relationships`).send(testAssoc);
       expect([201, 409]).toContain(res.statusCode);
     });
   });
 
-  describe('GET /api/character-relationships', () => {
+  describe('GET /api/characters/:character_id/relationships', () => {
     it('should list all character-relationship associations', async () => {
-      const res = await request(app).get('/api/character-relationships');
+      const res = await request(app).get(`/api/characters/${testCharacterId}/relationships`);
       expect(res.statusCode).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
     });
   });
 
-  describe('GET /api/character-relationships/:character_id/:related_character_id', () => {
+  describe('GET /api/characters/:character_id/relationships/:related_character_id', () => {
     it('should get a specific association', async () => {
-      const res = await request(app).get(`/api/character-relationships/${testCharacterId}/${testOtherCharId}`);
+      const res = await request(app).get(`/api/characters/${testCharacterId}/relationships/${testOtherCharId}`);
       expect([200, 404]).toContain(res.statusCode);
     });
   });
 
-  describe('DELETE /api/character-relationships/:character_id/:related_character_id', () => {
+  describe('DELETE /api/characters/:character_id/relationships/:related_character_id', () => {
     it('should delete the association', async () => {
-      const res = await request(app).delete(`/api/character-relationships/${testCharacterId}/${testOtherCharId}`);
+      const res = await request(app).delete(`/api/characters/${testCharacterId}/relationships/${testOtherCharId}`);
       expect([200, 404]).toContain(res.statusCode);
     });
   });

@@ -1,50 +1,6 @@
 const request = require('supertest');
 const app = require('../server');
 
-describe('Character-Item API', () => {
-  const testCharacterId = 'jest-char-1';
-  const testItemId = 'jest-item-1';
-  const testAssoc = { character_id: testCharacterId, item_id: testItemId };
-
-  beforeAll(async () => {
-    await request(app).post('/api/characters').send({ id: testCharacterId, name: 'Char', type: 'PC' });
-    await request(app).post('/api/items').send({ id: testItemId, name: 'Item' });
-  });
-  afterAll(async () => {
-    await request(app).delete(`/api/characters/${testCharacterId}`);
-    await request(app).delete(`/api/items/${testItemId}`);
-  });
-
-  describe('POST /api/character-items', () => {
-    it('should create a character-item association', async () => {
-      const res = await request(app).post('/api/character-items').send(testAssoc);
-      expect([201, 409]).toContain(res.statusCode);
-    });
-  });
-
-  describe('GET /api/character-items', () => {
-    it('should list all character-item associations', async () => {
-      const res = await request(app).get('/api/character-items');
-      expect(res.statusCode).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
-    });
-  });
-
-  describe('GET /api/character-items/:character_id/:item_id', () => {
-    it('should get a specific association', async () => {
-      const res = await request(app).get(`/api/character-items/${testCharacterId}/${testItemId}`);
-      expect([200, 404]).toContain(res.statusCode);
-    });
-  });
-
-  describe('DELETE /api/character-items/:character_id/:item_id', () => {
-    it('should delete the association', async () => {
-      const res = await request(app).delete(`/api/character-items/${testCharacterId}/${testItemId}`);
-      expect([200, 404]).toContain(res.statusCode);
-    });
-  });
-});
-
 // Test data for associations
 const charId = 'jest-char-1';
 const itemId = 'jest-item-1';

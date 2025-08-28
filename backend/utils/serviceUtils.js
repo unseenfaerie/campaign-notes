@@ -11,18 +11,15 @@ const dbUtils = require('./dbUtils');
  * @param {string[]} allowedFields - List of allowed fields to update
  * @returns {Promise<Object>} - Info about the update and changed fields
  */
-async function updateWithChangedFields(table, where, updates, allowedFields) {
-  const filtered = Object.fromEntries(
-    Object.entries(updates).filter(([k]) => allowedFields.includes(k))
-  );
-  if (Object.keys(filtered).length === 0) {
+async function updateWithChangedFields(table, where, updates) {
+  if (!updates || Object.keys(updates).length === 0) {
     return { ...where, message: 'no updates made' };
   }
   const original = await dbUtils.select(table, where, true);
   if (!original) {
     return { ...where, message: 'record not found' };
   }
-  const changedFields = dbUtils.getChangedFields(original, { ...original, ...filtered });
+  const changedFields = dbUtils.getChangedFields(original, { ...original, ...updates });
   if (Object.keys(changedFields).length === 0) {
     return { ...where, message: 'no changes detected' };
   }
