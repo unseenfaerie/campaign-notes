@@ -1,6 +1,7 @@
 // services/characterDeities.js
 // Centralized logic for managing character-deity relationships
 const dbUtils = require('../../utils/dbUtils');
+const serviceUtils = require('../../utils/serviceUtils');
 
 const TABLE = 'character_deities';
 
@@ -25,10 +26,14 @@ function getCharacterDeity(character_id, deity_id) {
 }
 
 // Update a character-deity relationship
-function updateCharacterDeity(character_id, deity_id, updates) {
+async function updateCharacterDeity(character_id, deity_id, updates) {
   const allowed = ['short_description', 'long_explanation'];
-  const filtered = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)));
-  return dbUtils.update(TABLE, { character_id, deity_id }, filtered);
+  return serviceUtils.updateWithChangedFields(
+    TABLE,
+    { character_id, deity_id },
+    updates,
+    allowed
+  );
 }
 
 // Remove a character-deity relationship
