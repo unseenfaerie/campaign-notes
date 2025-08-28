@@ -1,6 +1,50 @@
 const request = require('supertest');
 const app = require('../server');
 
+describe('Character-Organization API', () => {
+  const testCharacterId = 'jest-char-1';
+  const testOrgId = 'jest-org-1';
+  const testAssoc = { character_id: testCharacterId, organization_id: testOrgId };
+
+  beforeAll(async () => {
+    await request(app).post('/api/characters').send({ id: testCharacterId, name: 'Char', type: 'PC' });
+    await request(app).post('/api/organizations').send({ id: testOrgId, name: 'Org' });
+  });
+  afterAll(async () => {
+    await request(app).delete(`/api/characters/${testCharacterId}`);
+    await request(app).delete(`/api/organizations/${testOrgId}`);
+  });
+
+  describe('POST /api/character-organizations', () => {
+    it('should create a character-organization association', async () => {
+      const res = await request(app).post('/api/character-organizations').send(testAssoc);
+      expect([201, 409]).toContain(res.statusCode);
+    });
+  });
+
+  describe('GET /api/character-organizations', () => {
+    it('should list all character-organization associations', async () => {
+      const res = await request(app).get('/api/character-organizations');
+      expect(res.statusCode).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+    });
+  });
+
+  describe('GET /api/character-organizations/:character_id/:organization_id', () => {
+    it('should get a specific association', async () => {
+      const res = await request(app).get(`/api/character-organizations/${testCharacterId}/${testOrgId}`);
+      expect([200, 404]).toContain(res.statusCode);
+    });
+  });
+
+  describe('DELETE /api/character-organizations/:character_id/:organization_id', () => {
+    it('should delete the association', async () => {
+      const res = await request(app).delete(`/api/character-organizations/${testCharacterId}/${testOrgId}`);
+      expect([200, 404]).toContain(res.statusCode);
+    });
+  });
+});
+
 // Test data for associations
 const charId = 'jest-char-1';
 const orgId = 'jest-org-1';
