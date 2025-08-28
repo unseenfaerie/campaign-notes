@@ -128,8 +128,9 @@ defineEntity('CharacterPlace', {
 defineEntity('CharacterItem', {
   character_id: { type: 'string', primary: true, ref: 'Character' },
   item_id: { type: 'string', primary: true, ref: 'Item' },
-  short_description: { type: 'string' },
-  long_explanation: { type: 'string', optional: true },
+  acquired_date: { type: 'string', primary: true },
+  relinquished_date: { type: 'string', optional: true },
+  short_description: { type: 'string' }
 });
 
 defineEntity('EventCharacter', {
