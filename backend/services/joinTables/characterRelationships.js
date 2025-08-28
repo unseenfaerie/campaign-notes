@@ -1,22 +1,22 @@
 // services/characterRelationships.js
 // Centralized logic for managing character-to-character relationships
 const dbUtils = require('../../utils/dbUtils');
+const serviceUtils = require('../../utils/serviceUtils');
 
 const TABLE = 'character_relationships';
 
 // Create a new character-character relationship
-function addCharacterRelationship(character_id, related_id, short_description = '', long_explanation = '') {
-  return dbUtils.insert(TABLE, { character_id, related_id, short_description, long_explanation });
+function addCharacterRelationship(character_id, related_id, relationship_type, short_description = '', long_explanation = '') {
+  return dbUtils.insert(TABLE, { character_id, related_id, relationship_type, short_description, long_explanation });
 }
 
 // Update an existing character-character relationship
-function updateCharacterRelationship(character_id, related_id, updates) {
-  const allowed = ['short_description', 'long_explanation'];
-  const filtered = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)));
-  if (Object.keys(filtered).length === 0) {
-    return Promise.resolve({ character_id, related_id, message: "no updates made" });
-  }
-  return dbUtils.update(TABLE, { character_id, related_id }, filtered);
+async function updateCharacterRelationship(character_id, related_id, updates) {
+  return serviceUtils.updateWithChangedFields(
+    TABLE,
+    { character_id, related_id },
+    updates
+  );
 }
 
 // Delete a character-character relationship

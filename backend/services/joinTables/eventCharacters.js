@@ -1,6 +1,7 @@
 // services/eventCharacters.js
 // Centralized logic for managing event-character relationships
 const dbUtils = require('../../utils/dbUtils');
+const serviceUtils = require('../../utils/serviceUtils');
 
 const TABLE = 'event_characters';
 
@@ -25,13 +26,12 @@ function getEventCharacter(event_id, character_id) {
 }
 
 // Update a specific event-character relationship
-function updateEventCharacter(event_id, character_id, updates) {
-  const allowed = ['short_description', 'long_explanation'];
-  const filtered = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)));
-  if (Object.keys(filtered).length === 0) {
-    return Promise.resolve({ event_id, character_id, message: "no updates made" });
-  }
-  return dbUtils.update(TABLE, { event_id, character_id }, filtered);
+async function updateEventCharacter(event_id, character_id, updates) {
+  return serviceUtils.updateWithChangedFields(
+    TABLE,
+    { event_id, character_id },
+    updates
+  );
 }
 
 // Delete a specific event-character relationship
