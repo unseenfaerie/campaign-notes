@@ -6,6 +6,7 @@ const path = require('path');
 const dbPath = path.join(__dirname, '../campaign.db');
 const db = new sqlite3.Database(dbPath);
 
+// Updates made here should be made compatible with entities.js
 // Base entity tables (characters, deities, organizations, places, items, events, spheres, spells)
 
 db.serialize(() => {

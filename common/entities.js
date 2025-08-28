@@ -1,5 +1,6 @@
 // common/entities.js
 // Central entity and join table definitions
+// Any major changes here need to be considered for the database and schema as well
 
 // Entity registry and export
 const entities = {};
