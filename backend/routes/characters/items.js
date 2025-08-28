@@ -2,25 +2,39 @@ const express = require('express');
 const router = express.Router({ mergeParams: true });
 const itemsService = require('../../services/entities/items');
 const characterItemsService = require('../../services/joinTables/characterItems');
-const { isValidDateFormat, sortObjectsByLoreDate } = require('../../utils/dateUtils');
+const { isValidDateFormat } = require('../../utils/dateUtils');
+const { validateFields } = require('../../../common/validate');
 
 // ITEM - CHARACTER ASSOCIATIONS
 // Add an item to a character
 router.post('/', (req, res) => {
   const character_id = req.params.id;
   const { item_id, acquired_date, relinquished_date, short_description } = req.body;
-  if (!item_id) return res.status(400).json({ error: 'item_id is required' });
-  if (!acquired_date) return res.status(400).json({ error: 'acquired_date is required' });
+  // Validate using generic entity validator
+  const { valid, errors, validated } = validateFields('CharacterItem', {
+    character_id,
+    item_id,
+    acquired_date,
+    relinquished_date,
+    short_description
+  });
+  if (!valid) return res.status(400).json({ errors });
 
   // Validate acquired_date and relinquished_date if present
-  if (acquired_date && !isValidDateFormat(acquired_date)) {
+  if (validated.acquired_date && !isValidDateFormat(validated.acquired_date)) {
     return res.status(400).json({ error: 'acquired_date must be formatted as mmm-dd-yyy (e.g., jan-01-177)' });
   }
-  if (relinquished_date && !isValidDateFormat(relinquished_date)) {
+  if (validated.relinquished_date && !isValidDateFormat(validated.relinquished_date)) {
     return res.status(400).json({ error: 'relinquished_date must be formatted as mmm-dd-yyy (e.g., jan-01-177)' });
   }
 
-  characterItemsService.addCharacterItem(character_id, item_id, acquired_date, relinquished_date || '', short_description || '')
+  characterItemsService.addCharacterItem(
+    validated.character_id,
+    validated.item_id,
+    validated.acquired_date,
+    validated.relinquished_date || '',
+    validated.short_description || ''
+  )
     .then(result => res.status(201).json(result))
     .catch(err => res.status(500).json({ error: err.message }));
 });
@@ -68,9 +82,11 @@ router.get('/:itemId/:acquiredDate', (req, res) => {
 router.patch('/:itemId/:acquiredDate', (req, res) => {
   const character_id = req.params.id;
   const item_id = req.params.itemId;
-  const acquired_date = req.params.acquiredDate
-  const updates = req.body;
-  characterItemsService.updateCharacterItem(character_id, item_id, acquired_date, updates)
+  const acquired_date = req.params.acquiredDate;
+  // Validate PATCH body for allowed fields only (partial allowed)
+  const { valid, errors, validated } = validateFields('CharacterItem', req.body, { allowPartial: true });
+  if (!valid) return res.status(400).json({ errors });
+  characterItemsService.updateCharacterItem(character_id, item_id, acquired_date, validated)
     .then(result => res.json(result))
     .catch(err => res.status(500).json({ error: err.message }));
 });
