@@ -23,14 +23,14 @@ describe('Character API', () => {
   };
 
   const testItem = {
-    id: 'jestar-s-spellbook',
-    name: 'Jestar\'s Spellbook',
-    short_description: 'Contains the very spells of the Morningstar.'
+    id: 'elven-dagger',
+    name: 'Indistinct Elven Dagger',
+    short_description: 'Contains the very heart of the Morningstar.'
   };
 
   const testItemAssoc = {
     character_id: 'jestar-morningstar',
-    item_id: 'jestar-s-spellbook',
+    item_id: 'elven-dagger',
     acquired_date: 'sep-11-198',
     short_description: 'Given to him by the universe.'
   };
@@ -38,6 +38,8 @@ describe('Character API', () => {
   afterAll(async () => {
     // Clean up test character
     await request(app).delete(`/api/characters/${testCharacter.id}`);
+    await request(app).delete(`/api/characters/${testCharacter.id}/items`);
+    await request(app).delete(`/api/items/${testItem.id}`);
   });
 
   describe('POST /api/characters', () => {
@@ -68,20 +70,16 @@ describe('Character API', () => {
     });
   });
 
-  //to-do: this test doesn't check anything regarding "full" details. maybe make an item and associate it to them.
+  // note: this test will create an item and associate it to the test character as defined above.
   describe('GET /api/characters/:id/full', () => {
     it('should return full details for the test character', async () => {
-      console.log('Posting ' + testItem.id);
-      const itemRes = (await request(app).post(`/api/items`).send(testItem));
-      expect([200]).toContain(itemRes.statusCode);
-      console.log('Posting ' + testItemAssoc.id);
-      const itemAssRes = (((await request(app).post(`/api/${testCharacter.id}/items`).send(testItemAssoc))));
-      expect([200]).toContain(itemAssRes.statusCode);
-      console.log('Testing full endpoint');
+      await request(app).post(`/api/items`).send(testItem);
+      await request(app).post(`/api/${testCharacter.id}/items`).send(testItemAssoc);
       const res = await request(app).get(`/api/characters/${testCharacter.id}/full`);
       expect([200, 404]).toContain(res.statusCode);
       if (res.statusCode === 200) {
         expect(res.body.id).toBe(testCharacter.id);
+        expect(res.body.items.length).toBeDefined;
       }
     });
   });
