@@ -4,12 +4,12 @@ const app = require('../server');
 describe('Character API', () => {
   // Test data for creating a character
   const testCharacter = {
-    id: 'jest-char-1',
-    type: 'PC',
-    name: 'Jest Test',
+    id: 'jestar-morningstar',
+    type: 'pc',
+    name: 'Jestar the Morningstar',
     class: 'Wizard',
     level: '5',
-    alignment: 'NG',
+    alignment: 'Neutral Good',
     strength: 10,
     dexterity: 12,
     constitution: 14,
@@ -18,8 +18,21 @@ describe('Character API', () => {
     charisma: 8,
     total_health: 30,
     deceased: 0,
-    short_description: 'A test character',
+    short_description: 'Jestar seeks magical power.',
     long_explanation: 'Created by Jest for API testing.'
+  };
+
+  const testItem = {
+    id: 'jestar-s-spellbook',
+    name: 'Jestar\'s Spellbook',
+    short_description: 'Contains the very spells of the Morningstar.'
+  };
+
+  const testItemAssoc = {
+    character_id: 'jestar-morningstar',
+    item_id: 'jestar-s-spellbook',
+    acquired_date: 'sep-11-198',
+    short_description: 'Given to him by the universe.'
   };
 
   afterAll(async () => {
@@ -55,8 +68,16 @@ describe('Character API', () => {
     });
   });
 
+  //to-do: this test doesn't check anything regarding "full" details. maybe make an item and associate it to them.
   describe('GET /api/characters/:id/full', () => {
     it('should return full details for the test character', async () => {
+      console.log('Posting ' + testItem.id);
+      const itemRes = (await request(app).post(`/api/items`).send(testItem));
+      expect([200]).toContain(itemRes.statusCode);
+      console.log('Posting ' + testItemAssoc.id);
+      const itemAssRes = (((await request(app).post(`/api/${testCharacter.id}/items`).send(testItemAssoc))));
+      expect([200]).toContain(itemAssRes.statusCode);
+      console.log('Testing full endpoint');
       const res = await request(app).get(`/api/characters/${testCharacter.id}/full`);
       expect([200, 404]).toContain(res.statusCode);
       if (res.statusCode === 200) {
