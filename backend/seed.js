@@ -66,7 +66,7 @@ db.serialize(() => {
   `);
 
   console.log('Inserting spheres...');
-  db.run(`INSERT OR IGNORE INTO spheres (id, name, description) VALUES
+  db.run(`INSERT OR IGNORE INTO spheres (id, name, short_description) VALUES
     ('all', 'All', 'Sphere of All.'),
     ('animal', 'Animal', 'Sphere of Animal.'),
     ('astral', 'Astral', 'Sphere of Astral.'),
