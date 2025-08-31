@@ -1,6 +1,7 @@
 // services/entities/deities.js
 // Centralized logic for managing deity CRUD and queries
 const dbUtils = require('../../utils/dbUtils');
+const { updateWithChangedFields } = require('../../utils/serviceUtils');
 
 const TABLE = 'deities';
 
@@ -19,22 +20,11 @@ function getDeityById(id) {
   return dbUtils.select(TABLE, { id }, true);
 }
 
-// Update a deity (full update)
-function updateDeity(id, deity) {
-  // Only update allowed fields (excluding id)
-  const allowed = ['name', 'pantheon', 'alignment', 'short_description', 'long_explanation'];
-  const updates = {};
-  for (const key of allowed) {
-    if (deity[key] !== undefined) updates[key] = deity[key];
-  }
-  return dbUtils.update(TABLE, { id }, updates);
-}
-
-// Patch (partial update) a deity
-function patchDeity(id, updates) {
+// Patch (partial update) a deity, returning changed fields
+async function patchDeity(id, updates) {
   const allowed = ['name', 'pantheon', 'alignment', 'short_description', 'long_explanation'];
   const filtered = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)));
-  return dbUtils.update(TABLE, { id }, filtered);
+  return updateWithChangedFields(TABLE, { id }, filtered, allowed);
 }
 
 // Delete a deity
@@ -46,7 +36,6 @@ module.exports = {
   createDeity,
   getAllDeities,
   getDeityById,
-  updateDeity,
   patchDeity,
   deleteDeity,
 };
