@@ -35,13 +35,11 @@ describe('Item API', () => {
 
   const testCharAssoc = {
     character_id: testChar.id,
-    item_id: testItem.id,
     acquired_date: 'sep-11-224',
     short_description: 'Peach digs up the shiny dildo in her back garden.'
   };
 
   const testSpellAssoc = {
-    item_id: testItem.id,
     spell_id: testSpell.id
   };
 
@@ -95,8 +93,8 @@ describe('Item API', () => {
   // note: this test will create an item and associate it to the test character as defined above.
   describe('get a item in full detail', () => {
     it('should return full details for the test item', async () => {
-      await request(app).post(`/api/${testItem.id}/characters`).send(testCharAssoc);
-      await request(app).post(`/api/${testItem.id}/spells`).send(testSpellAssoc);
+      const charAssRes = await request(app).post(`/api/items/${testItem.id}/characters`).send(testCharAssoc);
+      const spellAssRes = await request(app).post(`/api/items/${testItem.id}/spells`).send(testSpellAssoc);
       const res = await request(app).get(`/api/items/${testItem.id}/full`);
       expect([200]).toContain(res.statusCode);
       if (res.statusCode === 200) {
