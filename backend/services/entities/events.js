@@ -1,40 +1,18 @@
 // services/entities/event.js
 const dbUtils = require('../../utils/dbUtils');
+const serviceUtils = require('../../utils/serviceUtils');
 const TABLE = 'events';
 
 function createEvent(event) { return dbUtils.insert(TABLE, event); }
 function getAllEvents() { return dbUtils.select(TABLE); }
 function getEventById(id) { return dbUtils.select(TABLE, { id }, true); }
 function updateEvent(id, event) {
-  const allowed = [
-    'name',
-    'real_world_date',
-    'in_game_time',
-    'previous_event_id',
-    'next_event_id',
-    'short_description',
-    'long_explanation'
-  ];
-  const updates = {};
-  for (const key of allowed) {
-    if (event[key] !== undefined) updates[key] = event[key];
-  }
-  return dbUtils.update(TABLE, { id }, updates);
+  // Route already validates and filters allowed fields
+  return dbUtils.update(TABLE, { id }, event);
 }
 function patchEvent(id, updates) {
-  const allowed = [
-    'name',
-    'real_world_date',
-    'in_game_time',
-    'previous_event_id',
-    'next_event_id',
-    'short_description',
-    'long_explanation'
-  ];
-  const filtered = Object.fromEntries(
-    Object.entries(updates).filter(([k]) => allowed.includes(k))
-  );
-  return dbUtils.update(TABLE, { id }, filtered);
+  // Route already validates and filters allowed fields
+  return serviceUtils.updateWithChangedFields(TABLE, { id }, updates);
 }
 function deleteEvent(id) { return dbUtils.remove(TABLE, { id }); }
 
