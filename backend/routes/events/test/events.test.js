@@ -31,14 +31,12 @@ describe('Event API', () => {
 
   const testCharAssoc = {
     character_id: testChar.id,
-    event_id: testEvent.id,
     short_description: 'Jestar actually becomes a deity.',
     long_description: 'After a series of trials, Jestar ascends to godhood, gaining immense power and influence.'
   };
 
   const testDeityAssoc = {
-    deity_id: testDeity.id,
-    event_id: testEvent.id
+    deity_id: testDeity.id
   };
 
   afterAll(async () => {
@@ -97,8 +95,8 @@ describe('Event API', () => {
       expect([200]).toContain(res.statusCode);
       if (res.statusCode === 200) {
         expect(res.body.id).toBe(testEvent.id);
-        expect(res.body.characters[0].id).toBe(testChar.id);
-        expect(res.body.deities[0].id).toBe(testDeity.id);
+        expect(res.body.characters[0].character_id).toBe(testChar.id);
+        expect(res.body.deities[0].deity_id).toBe(testDeity.id);
       }
     });
   });
@@ -136,7 +134,7 @@ describe('Event API', () => {
         .send(fuckedEvent);
       // make sure that the event entity does not include a location field
       expect(Object.keys(entities.Event)).not.toContain('location');
-      expect([400,500]).toContain(res.statusCode);
+      expect([400, 500]).toContain(res.statusCode);
     });
   });
 
