@@ -1,23 +1,4 @@
 /**
- * Returns an object with only the fields that have changed between original and updated.
- * @param {Object} original - The original object from the database.
- * @param {Object} updated - The updated object after changes.
- * @returns {Object} - Object with only changed fields and their new values.
- */
-function getChangedFields(original, updated) {
-  const changed = {};
-  for (const key in updated) {
-    if (
-      Object.prototype.hasOwnProperty.call(updated, key) &&
-      original[key] !== updated[key]
-    ) {
-      changed[key] = updated[key];
-    }
-  }
-  return changed;
-}
-
-/**
  * dbHelpers.js
  * 
  * Provides generic CRUD helper functions for interacting with SQLite tables.
@@ -167,6 +148,25 @@ async function getEntityWithHistory(mainTable, joinTable, entityKey, joinKey, en
   }
 
   return { item: entityRows, history: sortedHistory };
+}
+
+/**
+ * Returns an object with only the fields that have changed between original and updated.
+ * @param {Object} original - The original object from the database.
+ * @param {Object} updated - The updated object after changes.
+ * @returns {Object} - Object with only changed fields and their new values.
+ */
+function getChangedFields(original, updated) {
+  const changed = {};
+  for (const key in updated) {
+    if (
+      Object.prototype.hasOwnProperty.call(updated, key) &&
+      original[key] !== updated[key]
+    ) {
+      changed[key] = updated[key];
+    }
+  }
+  return changed;
 }
 
 module.exports = { insert, select, update, remove, selectJoin, getEntityWithHistory, getChangedFields };
