@@ -15,7 +15,7 @@ describe('Deity API', () => {
     id: 'mario-luigicus',
     type: 'npc',
     name: 'Mario Luigicus',
-    deceased: '0',
+    deceased: 0,
     short_description: 'Just getting by.'
   };
 
@@ -46,9 +46,9 @@ describe('Deity API', () => {
   // ...setup for tests...
   beforeAll(async () => {
     const charRes = await request(app).post('/api/characters').send(testChar);
+    console.log('Character setup response:', charRes.statusCode, charRes.body);
     const sphereRes = await request(app).post('/api/spheres').send(testSphere);
-    // if (charRes.statusCode !== 201) throw new Error('Character setup failed');
-    // if (sphereRes.statusCode !== 201) throw new Error('Sphere setup failed');
+    console.log('Sphere setup response:', sphereRes.statusCode, sphereRes.body);
   });
 
   // ~CREATE TESTS~
@@ -84,14 +84,14 @@ describe('Deity API', () => {
   // note: this test will create an item and associate it to the test character as defined above.
   describe('get a deity in full detail', () => {
     it('should return full details for the test deity', async () => {
-      await request(app).post(`/api/${testDeity.id}/characters`).send(testCharAssoc);
-      await request(app).post(`/api/${testDeity.id}/spheres`).send(testSphereAssoc);
+      const charAssRes = await request(app).post(`/api/deities/${testDeity.id}/characters`).send(testCharAssoc);
+      const sphereAssRes = await request(app).post(`/api/deities/${testDeity.id}/spheres`).send(testSphereAssoc);
       const res = await request(app).get(`/api/deities/${testDeity.id}/full`);
       expect([200]).toContain(res.statusCode);
       if (res.statusCode === 200) {
         expect(res.body.id).toBe(testDeity.id);
-        expect(res.body.characters[0].id).toBe(testChar.id);
-        expect(res.body.spheres[0].id).toBe(testSphere.id);
+        expect(res.body.characters[0].character_id).toBe(testChar.id);
+        expect(res.body.spheres[0].sphere_id).toBe(testSphere.id);
       }
     });
   });
