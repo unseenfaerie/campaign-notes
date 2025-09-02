@@ -83,14 +83,11 @@ router.get('/:id', async (req, res) => {
 // read a deity with association details
 router.get('/:id/full', async (req, res) => {
   try {
-    const row = await deitiesService.getDeityById(req.params.id);
-    if (!row) {
+    const fullDeity = await deitiesService.getFullDeityById(req.params.id);
+    if (!fullDeity) {
       return res.status(404).json({ error: 'Deity not found' });
     }
-    // Fetch associated characters and spheres
-    const characters = await deitiesService.getDeityCharacters(req.params.id);
-    const spheres = await deitiesService.getDeitySpheres(req.params.id);
-    res.json({ ...row, characters, spheres });
+    res.json(fullDeity);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -150,5 +147,8 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+router.use('/:id/characters', require('./characters'));
+router.use('/:id/spheres', require('./spheres'));
 
 module.exports = router;

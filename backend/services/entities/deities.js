@@ -2,6 +2,8 @@
 // Centralized logic for managing deity CRUD and queries
 const dbUtils = require('../../utils/dbUtils');
 const { updateWithChangedFields } = require('../../utils/serviceUtils');
+const characterDeities = require('../joinTables/characterDeities');
+const deitySpheres = require('../joinTables/deitySpheres');
 
 const TABLE = 'deities';
 
@@ -32,10 +34,26 @@ function deleteDeity(id) {
   return dbUtils.remove(TABLE, { id });
 }
 
+// Fetch full deity details with all associations
+async function getFullDeityById(id) {
+  const [deity, characters, spheres] = await Promise.all([
+    getDeityById(id),
+    characterDeities.getCharactersForDeity(id),
+    deitySpheres.getSpheresForDeity(id)
+  ]);
+  if (!deity) return null;
+  return {
+    ...deity,
+    characters,
+    spheres
+  };
+}
+
 module.exports = {
   createDeity,
   getAllDeities,
   getDeityById,
   patchDeity,
   deleteDeity,
+  getFullDeityById
 };
