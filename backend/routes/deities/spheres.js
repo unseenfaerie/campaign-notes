@@ -1,5 +1,5 @@
 const express = require('express');
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 const deitySpheres = require('../../services/joinTables/deitySpheres');
 const validate = require('../../../common/validate');
 
@@ -8,10 +8,11 @@ const validate = require('../../../common/validate');
 router.post('/', (req, res) => {
   const deity_id = req.params.id;
   const { sphere_id } = req.body;
+  console.log('Adding sphere to deity:', deity_id, sphere_id);
   // Validate using generic entity validator
   const { valid, errors, validated } = validate.validateFields('DeitySphere', {
-    sphere_id,
-    deity_id
+    deity_id,
+    sphere_id
   });
   if (!valid) return res.status(400).json({ errors });
   deitySpheres.addDeitySphere(

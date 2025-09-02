@@ -1,5 +1,5 @@
 const express = require('express');
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 const characterDeities = require('../../services/joinTables/characterDeities');
 const validate = require('../../../common/validate');
 
@@ -9,7 +9,7 @@ router.post('/', (req, res) => {
   const deity_id = req.params.id;
   const { character_id, short_description, long_explanation } = req.body;
   // Validate using generic entity validator
-  const { valid, errors, validated } = validateFields('CharacterDeity', {
+  const { valid, errors, validated } = validate.validateFields('CharacterDeity', {
     character_id,
     deity_id,
     short_description,
