@@ -1,4 +1,5 @@
 const dbUtils = require('../../utils/dbUtils');
+const serviceUtils = require('../../utils/serviceUtils');
 const characterService = require('../entities/characters');
 const eventService = require('../entities/events');
 const spellService = require('../entities/spells');
@@ -31,8 +32,7 @@ function updateItem(id, item) {
 
 function patchItem(id, updates) {
   const allowed = ['name', 'short_description', 'long_explanation'];
-  const filtered = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)));
-  return dbUtils.update(TABLE, { id }, filtered);
+  return serviceUtils.updateWithChangedFields(TABLE, { id }, updates, allowed);
 }
 
 function deleteItem(id) {
@@ -46,41 +46,13 @@ async function getFullItemById(id) {
   if (!item) return null;
 
   // Get associated characters with join metadata (history)
-  const charRows = await characterItems.getCharactersForItem(id);
-  // Group by character_id
-  const charMap = {};
-  for (const row of charRows) {
-    if (!charMap[row.character_id]) charMap[row.character_id] = [];
-    charMap[row.character_id].push(row);
-  }
-  const characters = await Promise.all(Object.keys(charMap).map(async charId => {
-    const charInfo = await characterService.getCharacterById(charId);
-    return {
-      ...charInfo,
-      history: charMap[charId]
-    };
-  }));
+  const characters = await characterItems.getCharactersForItem(id);
 
   // Get associated events with join metadata
-  const eventRows = await eventItems.getEventsForItem(id);
-  // Group by event_id
-  const eventMap = {};
-  for (const row of eventRows) {
-    if (!eventMap[row.event_id]) eventMap[row.event_id] = [];
-    eventMap[row.event_id].push(row);
-  }
-  const events = await Promise.all(Object.keys(eventMap).map(async eventId => {
-    const eventInfo = await eventService.getEventById(eventId);
-    return {
-      ...eventInfo,
-      join: eventMap[eventId]
-    };
-  }));
+  const events = await eventItems.getEventsForItem(id);
 
-  // Get associated spells (no join metadata except ids)
-  const spellRows = await itemSpells.getSpellsForItem(id);
-  const spellIds = spellRows.map(r => r.spell_id);
-  const spells = await Promise.all(spellIds.map(spellId => spellService.getSpellById(spellId)));
+  // Get associated spells (just join table info)
+  const spells = await itemSpells.getSpellsForItem(id);
 
   return {
     ...item,
