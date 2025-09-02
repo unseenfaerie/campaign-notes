@@ -17,10 +17,15 @@ function updateEventItem(event_id, item_id, updates) {
 }
 function removeEventItem(event_id, item_id) { return dbUtils.remove(TABLE, { event_id, item_id }); }
 
+function getEventsForItem(item_id) {
+  return dbUtils.select(TABLE, { item_id });
+}
+
 module.exports = {
   addEventItem,
   getItemsForEvent,
   getEventItem,
   updateEventItem,
-  removeEventItem
+  removeEventItem,
+  getEventsForItem
 };

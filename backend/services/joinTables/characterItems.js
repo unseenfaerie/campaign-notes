@@ -69,7 +69,7 @@ function getAllCharacterItemRecords(character_id, item_id) {
 }
 
 function getCharactersForItem(item_id) {
-  return dbUtils.select(TABLE, { item_id }).then(rows => rows.map(r => r.character_id));
+  return dbUtils.select(TABLE, { item_id });
 }
 
 // Update a character-item relationship (custom validation logic)
@@ -104,6 +104,7 @@ function removeCharacterItem(character_id, item_id) {
 function removeAllCharacterItemRecords(character_id) {
   return dbUtils.remove(TABLE, { character_id });
 }
+
 
 module.exports = {
   addCharacterItem,
