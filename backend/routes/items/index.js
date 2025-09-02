@@ -39,6 +39,42 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Get all items (JSON)
+router.get('/', async (req, res) => {
+  try {
+    const items = await itemsService.getAllItems();
+    res.json(items);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get a single item by id (JSON)
+router.get('/:id', async (req, res) => {
+  try {
+    const item = await itemsService.getItemById(req.params.id);
+    if (!item) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    res.json(item);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get a single item by id (JSON)
+router.get('/:id/full', async (req, res) => {
+  try {
+    const item = await itemsService.getFullItemById(req.params.id);
+    if (!item) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    res.json(item);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Update an existing item (PATCH)
 router.patch('/:id', async (req, res) => {
   const updates = req.body;
@@ -69,29 +105,6 @@ router.delete('/:id', async (req, res) => {
     }
     await itemsService.deleteItem(req.params.id);
     res.json({ deleted: req.params.id });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Get all items (JSON)
-router.get('/', async (req, res) => {
-  try {
-    const items = await itemsService.getAllItems();
-    res.json(items);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Get a single item by id (JSON)
-router.get('/:id', async (req, res) => {
-  try {
-    const item = await itemsService.getItemById(req.params.id);
-    if (!item) {
-      return res.status(404).json({ error: 'Item not found' });
-    }
-    res.json(item);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
