@@ -1,6 +1,11 @@
 // services/entities/event.js
 const dbUtils = require('../../utils/dbUtils');
 const serviceUtils = require('../../utils/serviceUtils');
+const eventCharacters = require('../joinTables/eventCharacters');
+const eventDeities = require('../joinTables/eventDeities');
+const eventItems = require('../joinTables/eventItems');
+const eventOrganizations = require('../joinTables/eventOrganizations');
+const eventPlaces = require('../joinTables/eventPlaces');
 const TABLE = 'events';
 
 function createEvent(event) { return dbUtils.insert(TABLE, event); }
@@ -23,4 +28,25 @@ module.exports = {
   updateEvent,
   patchEvent,
   deleteEvent
+  ,
+  // Fetch full event details with all associations
+  async getFullEventById(id) {
+    const [event, characters, deities, items, organizations, places] = await Promise.all([
+      getEventById(id),
+      eventCharacters.getCharactersForEvent(id),
+      eventDeities.getDeitiesForEvent(id),
+      eventItems.getItemsForEvent(id),
+      eventOrganizations.getOrganizationsForEvent(id),
+      eventPlaces.getPlacesForEvent(id)
+    ]);
+    if (!event) return null;
+    return {
+      ...event,
+      characters,
+      deities,
+      items,
+      organizations,
+      places
+    };
+  }
 };

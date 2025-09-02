@@ -37,6 +37,19 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Get a full-detail event with all associations
+router.get('/:id/full', async (req, res) => {
+  try {
+    const fullEvent = await eventsService.getFullEventById(req.params.id);
+    if (!fullEvent) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    res.json(fullEvent);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Create a new event
 router.post('/', async (req, res) => {
   const e = req.body;
