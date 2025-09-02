@@ -131,7 +131,7 @@ describe('Deity API', () => {
         .send(fuckedDeity);
       // make sure that the deity entity does not include a favor field
       expect(Object.keys(entities.Deity)).not.toContain('favor');
-      expect([400,500]).toContain(res.statusCode);
+      expect([400, 500]).toContain(res.statusCode);
     });
   });
 

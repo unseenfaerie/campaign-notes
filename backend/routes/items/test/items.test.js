@@ -133,14 +133,14 @@ describe('Item API', () => {
     it('should reject a item with an additional stat', async () => {
       const fuckedItem = {
         ...testItem,
-        favor: 22
+        melting_point: 5001
       }
       const res = await request(app)
         .post('/api/items')
         .send(fuckedItem);
-      // make sure that the item entity does not include a favor field
-      expect(Object.keys(entities.Item)).not.toContain('favor');
-      expect([400,500]).toContain(res.statusCode);
+      // make sure that the item entity does not include a melting_point field
+      expect(Object.keys(entities.Item)).not.toContain('melting_point');
+      expect([400, 500]).toContain(res.statusCode);
     });
   });
 
