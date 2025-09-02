@@ -27,12 +27,10 @@ describe('Deity API', () => {
 
   const testCharAssoc = {
     character_id: testChar.id,
-    deity_id: testDeity.id,
     short_description: 'Mario gains faith after seeing his friend encompassed in slime.'
   };
 
   const testSphereAssoc = {
-    deity_id: testDeity.id,
     sphere_id: testSphere.id
   };
 
