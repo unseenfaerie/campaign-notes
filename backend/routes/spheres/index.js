@@ -50,7 +50,7 @@ router.post('/', async (req, res) => {
     if (existing) {
       return res.status(409).json({ error: 'A sphere with this id already exists.' });
     }
-    await eventsService.createSphere(s);
+    await eventsService.addSphere(s);
     res.status(201).json({ id: s.id });
   } catch (err) {
     res.status(500).json({ error: err.message });
