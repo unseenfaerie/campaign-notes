@@ -1,5 +1,7 @@
 // services/joinTables/eventDeities.js
 const dbUtils = require('../../utils/dbUtils');
+const { updateWithChangedFields } = require('../../utils/serviceUtils');
+
 const TABLE = 'event_deities';
 
 function addEventDeity(event_id, deity_id, short_description, long_explanation) {
@@ -10,10 +12,7 @@ function getEventDeity(event_id, deity_id) { return dbUtils.select(TABLE, { even
 function updateEventDeity(event_id, deity_id, updates) {
   const allowed = ['short_description', 'long_explanation'];
   const filtered = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)));
-  if (Object.keys(filtered).length === 0) {
-    return Promise.resolve({ event_id, deity_id, message: "no updates made" });
-  }
-  return dbUtils.update(TABLE, { event_id, deity_id }, filtered);
+  return updateWithChangedFields(TABLE, { event_id, deity_id }, filtered);
 }
 function removeEventDeity(event_id, deity_id) { return dbUtils.remove(TABLE, { event_id, deity_id }); }
 
