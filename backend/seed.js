@@ -173,13 +173,14 @@ db.serialize(() => {
   `);
 
   console.log('Inserting character_deities...');
-  db.run(`INSERT OR IGNORE INTO character_deities (character_id, deity_id, short_description, long_explanation) VALUES
-    ('alann-barnett', 'achiel', 'Short description.', 'Long Explanation.'),
-    ('alann-barnett', 'doh', 'Short description.', 'Long Explanation.'),
-    ('releas-neb', 'wyaris', 'Short description.', 'Long Explanation.'),
-    ('appolonia-palleday', 'idona', 'Short description.', 'Long Explanation.'),
-    ('durchir', 'ponat', 'Short description.', 'Long Explanation.'),
-    ('cormac', 'idona', 'Short description.', 'Long Explanation.');
+  db.run(`INSERT OR IGNORE INTO character_deities (character_id, deity_id, adopted_date, dissolution_date, relationship_type, short_description, long_explanation) VALUES
+    ('alann-barnett', 'achiel', 'jan-01-200', '', 'patron', 'Short description.', 'Long Explanation.'),
+    ('alann-barnett', 'doh', 'jan-01-200', '', 'patron', 'Short description.', 'Long Explanation.'),
+    ('releas-neb', 'wyaris', 'jan-01-200', 'dec-31-200', 'patron', 'Short description.', 'Long Explanation.'),
+    ('releas-neb', 'achiel', 'dec-31-200', '', 'patron', 'Converted to worshipping Achiel.', 'Long Explanation.'),
+    ('appolonia-palleday', 'idona', 'jan-01-200', '', 'patron', 'Short description.', 'Long Explanation.'),
+    ('durchir', 'ponat', 'jan-01-200', '', 'patron', 'Short description.', 'Long Explanation.'),
+    ('cormac', 'idona', 'jan-01-200', '', 'patron', 'Short description.', 'Long Explanation.');
   `);
 
   console.log('Example data inserted.');

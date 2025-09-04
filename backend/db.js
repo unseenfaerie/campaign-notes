@@ -101,9 +101,12 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS character_deities (
     character_id TEXT,
     deity_id TEXT,
+    adopted_date TEXT,
+    dissolution_date TEXT,
+    relationship_type TEXT,
     short_description TEXT,
     long_explanation TEXT,
-    PRIMARY KEY (character_id, deity_id),
+    PRIMARY KEY (character_id, deity_id, adopted_date),
     FOREIGN KEY (character_id) REFERENCES characters(id),
     FOREIGN KEY (deity_id) REFERENCES deities(id)
   )`);

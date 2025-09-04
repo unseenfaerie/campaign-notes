@@ -96,6 +96,9 @@ defineEntity('Sphere', {
 defineEntity('CharacterDeity', {
   character_id: { type: 'string', primary: true, ref: 'Character' },
   deity_id: { type: 'string', primary: true, ref: 'Deity' },
+  adopted_date: { type: 'string', primary: true },
+  dissolution_date: { type: 'string', optional: true },
+  relationship_type: { type: 'string', optional: true },
   short_description: { type: 'string' },
   long_explanation: { type: 'string', optional: true },
 });
