@@ -35,6 +35,25 @@ defineEntity('Deity', {
   long_explanation: { type: 'string', optional: true },
 });
 
+defineEntity('Event', {
+  id: { type: 'string', primary: true },
+  name: { type: 'string' },
+  real_world_date: { type: 'string', optional: true },
+  in_game_time: { type: 'string', optional: true },
+  previous_event_id: { type: 'string', optional: true },
+  next_event_id: { type: 'string', optional: true },
+  short_description: { type: 'string' },
+  long_explanation: { type: 'string', optional: true },
+});
+
+defineEntity('Item', {
+  id: { type: 'string', primary: true },
+  name: { type: 'string' },
+  short_description: { type: 'string' },
+  long_explanation: { type: 'string', optional: true },
+});
+
+
 defineEntity('Organization', {
   id: { type: 'string', primary: true },
   name: { type: 'string' },
@@ -53,31 +72,6 @@ defineEntity('Place', {
   long_explanation: { type: 'string', optional: true },
 });
 
-defineEntity('Item', {
-  id: { type: 'string', primary: true },
-  name: { type: 'string' },
-  short_description: { type: 'string' },
-  long_explanation: { type: 'string', optional: true },
-});
-
-defineEntity('Event', {
-  id: { type: 'string', primary: true },
-  name: { type: 'string' },
-  real_world_date: { type: 'string', optional: true },
-  in_game_time: { type: 'string', optional: true },
-  previous_event_id: { type: 'string', optional: true },
-  next_event_id: { type: 'string', optional: true },
-  short_description: { type: 'string' },
-  long_explanation: { type: 'string', optional: true },
-});
-
-defineEntity('Sphere', {
-  id: { type: 'string', primary: true },
-  name: { type: 'string' },
-  short_description: { type: 'string' },
-  long_explanation: { type: 'string', optional: true },
-});
-
 defineEntity('Spell', {
   id: { type: 'string', primary: true },
   type: { type: 'string' },
@@ -92,35 +86,16 @@ defineEntity('Spell', {
   short_description: { type: 'string' },
 });
 
-// Join table types (examples)
-defineEntity('CharacterRelationship', {
-  character_id: { type: 'string', primary: true, ref: 'Character' },
-  related_id: { type: 'string', primary: true, ref: 'Character' },
-  relationship_type: { type: 'string' },
+defineEntity('Sphere', {
+  id: { type: 'string', primary: true },
+  name: { type: 'string' },
   short_description: { type: 'string' },
-  long_explanation: { type: 'string', optional: true },
 });
 
+// Join table types (examples)
 defineEntity('CharacterDeity', {
   character_id: { type: 'string', primary: true, ref: 'Character' },
   deity_id: { type: 'string', primary: true, ref: 'Deity' },
-  short_description: { type: 'string' },
-  long_explanation: { type: 'string', optional: true },
-});
-
-defineEntity('CharacterOrganization', {
-  character_id: { type: 'string', primary: true, ref: 'Character' },
-  organization_id: { type: 'string', primary: true, ref: 'Organization' },
-  short_description: { type: 'string' },
-  long_explanation: { type: 'string', optional: true },
-});
-
-
-defineEntity('CharacterPlace', {
-  character_id: { type: 'string', primary: true, ref: 'Character' },
-  place_id: { type: 'string', primary: true, ref: 'Place' },
-  arrived_date: { type: 'string' },
-  left_date: { type: 'string', optional: true },
   short_description: { type: 'string' },
   long_explanation: { type: 'string', optional: true },
 });
@@ -133,6 +108,35 @@ defineEntity('CharacterItem', {
   short_description: { type: 'string' }
 });
 
+defineEntity('CharacterOrganization', {
+  character_id: { type: 'string', primary: true, ref: 'Character' },
+  organization_id: { type: 'string', primary: true, ref: 'Organization' },
+  short_description: { type: 'string' },
+  long_explanation: { type: 'string', optional: true },
+});
+
+defineEntity('CharacterPlace', {
+  character_id: { type: 'string', primary: true, ref: 'Character' },
+  place_id: { type: 'string', primary: true, ref: 'Place' },
+  arrived_date: { type: 'string' },
+  left_date: { type: 'string', optional: true },
+  short_description: { type: 'string' },
+  long_explanation: { type: 'string', optional: true },
+});
+
+defineEntity('CharacterRelationship', {
+  character_id: { type: 'string', primary: true, ref: 'Character' },
+  related_id: { type: 'string', primary: true, ref: 'Character' },
+  relationship_type: { type: 'string' },
+  short_description: { type: 'string' },
+  long_explanation: { type: 'string', optional: true },
+});
+
+defineEntity('DeitySphere', {
+  deity_id: { type: 'string', primary: true, ref: 'Deity' },
+  sphere_id: { type: 'string', primary: true, ref: 'Sphere' },
+});
+
 defineEntity('EventCharacter', {
   event_id: { type: 'string', primary: true, ref: 'Event' },
   character_id: { type: 'string', primary: true, ref: 'Character' },
@@ -143,6 +147,13 @@ defineEntity('EventCharacter', {
 defineEntity('EventDeity', {
   event_id: { type: 'string', primary: true, ref: 'Event' },
   deity_id: { type: 'string', primary: true, ref: 'Deity' },
+  short_description: { type: 'string' },
+  long_explanation: { type: 'string', optional: true },
+});
+
+defineEntity('EventItem', {
+  event_id: { type: 'string', primary: true, ref: 'Event' },
+  item_id: { type: 'string', primary: true, ref: 'Item' },
   short_description: { type: 'string' },
   long_explanation: { type: 'string', optional: true },
 });
@@ -161,26 +172,14 @@ defineEntity('EventPlace', {
   long_explanation: { type: 'string', optional: true },
 });
 
-defineEntity('EventItem', {
-  event_id: { type: 'string', primary: true, ref: 'Event' },
+defineEntity('ItemSpell', {
   item_id: { type: 'string', primary: true, ref: 'Item' },
-  short_description: { type: 'string' },
-  long_explanation: { type: 'string', optional: true },
+  spell_id: { type: 'string', primary: true, ref: 'Spell' },
 });
 
 defineEntity('SpellSphere', {
   spell_id: { type: 'string', primary: true, ref: 'Spell' },
   sphere_id: { type: 'string', primary: true, ref: 'Sphere' },
-});
-
-defineEntity('DeitySphere', {
-  deity_id: { type: 'string', primary: true, ref: 'Deity' },
-  sphere_id: { type: 'string', primary: true, ref: 'Sphere' },
-});
-
-defineEntity('ItemSpell', {
-  item_id: { type: 'string', primary: true, ref: 'Item' },
-  spell_id: { type: 'string', primary: true, ref: 'Spell' },
 });
 
 defineEntity('Alias', {
