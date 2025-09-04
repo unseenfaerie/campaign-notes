@@ -11,6 +11,7 @@ defineEntity('Character', {
   type: { type: 'string' },
   name: { type: 'string' },
   age: { type: 'number', optional: true },
+  stock: { type: 'string', optional: true },
   class: { type: 'string', optional: true },
   level: { type: 'string', optional: true },
   alignment: { type: 'string', optional: true },
@@ -57,7 +58,6 @@ defineEntity('Item', {
 defineEntity('Organization', {
   id: { type: 'string', primary: true },
   name: { type: 'string' },
-  locations: { type: 'string', optional: true },
   type: { type: 'string', optional: true },
   short_description: { type: 'string' },
   long_explanation: { type: 'string', optional: true },
@@ -74,16 +74,16 @@ defineEntity('Place', {
 
 defineEntity('Spell', {
   id: { type: 'string', primary: true },
-  type: { type: 'string' },
+  type: { type: 'string', optional: true },
   name: { type: 'string' },
-  level: { type: 'number' },
-  school: { type: 'string' },
+  level: { type: 'number', optional: true },
+  school: { type: 'string', optional: true },
   sphere: { type: 'string', optional: true },
-  casting_time: { type: 'string' },
-  range: { type: 'string' },
+  casting_time: { type: 'string', optional: true },
+  range: { type: 'string', optional: true },
   components: { type: 'string', optional: true },
   duration: { type: 'string', optional: true },
-  short_description: { type: 'string' },
+  description: { type: 'string' },
 });
 
 defineEntity('Sphere', {
@@ -114,6 +114,8 @@ defineEntity('CharacterItem', {
 defineEntity('CharacterOrganization', {
   character_id: { type: 'string', primary: true, ref: 'Character' },
   organization_id: { type: 'string', primary: true, ref: 'Organization' },
+  joined_date: { type: 'string', primary: true },
+  left_date: { type: 'string', optional: true },
   short_description: { type: 'string' },
   long_explanation: { type: 'string', optional: true },
 });
@@ -121,7 +123,7 @@ defineEntity('CharacterOrganization', {
 defineEntity('CharacterPlace', {
   character_id: { type: 'string', primary: true, ref: 'Character' },
   place_id: { type: 'string', primary: true, ref: 'Place' },
-  arrived_date: { type: 'string' },
+  arrived_date: { type: 'string', primary: true },
   left_date: { type: 'string', optional: true },
   short_description: { type: 'string' },
   long_explanation: { type: 'string', optional: true },
@@ -130,6 +132,8 @@ defineEntity('CharacterPlace', {
 defineEntity('CharacterRelationship', {
   character_id: { type: 'string', primary: true, ref: 'Character' },
   related_id: { type: 'string', primary: true, ref: 'Character' },
+  established_date: { type: 'string', primary: true },
+  dissolution_date: { type: 'string', optional: true },
   relationship_type: { type: 'string' },
   short_description: { type: 'string' },
   long_explanation: { type: 'string', optional: true },
@@ -170,6 +174,13 @@ defineEntity('EventOrganization', {
 
 defineEntity('EventPlace', {
   event_id: { type: 'string', primary: true, ref: 'Event' },
+  place_id: { type: 'string', primary: true, ref: 'Place' },
+  short_description: { type: 'string' },
+  long_explanation: { type: 'string', optional: true },
+});
+
+defineEntity('OrganizationPlace', {
+  organization_id: { type: 'string', primary: true, ref: 'Organization' },
   place_id: { type: 'string', primary: true, ref: 'Place' },
   short_description: { type: 'string' },
   long_explanation: { type: 'string', optional: true },
