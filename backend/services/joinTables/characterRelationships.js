@@ -10,8 +10,8 @@ function addCharacterRelationship(character_id, related_id, relationship_type, s
   return dbUtils.insert(TABLE, { character_id, related_id, relationship_type, short_description, long_explanation });
 }
 
-// Update an existing character-character relationship
-async function updateCharacterRelationship(character_id, related_id, updates) {
+// Patch an existing character-character relationship
+async function patchCharacterRelationship(character_id, related_id, updates) {
   return serviceUtils.updateWithChangedFields(
     TABLE,
     { character_id, related_id },
@@ -48,7 +48,7 @@ function getCharacterRelationship(character_id, related_id) {
 
 module.exports = {
   addCharacterRelationship,
-  updateCharacterRelationship,
+  patchCharacterRelationship,
   removeCharacterRelationship,
   getRelationshipsForCharacter,
   getCharacterRelationship

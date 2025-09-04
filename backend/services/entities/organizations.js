@@ -1,6 +1,7 @@
 // services/entities/organizations.js
 // Centralized logic for managing organization CRUD and queries
 const dbUtils = require('../../utils/dbUtils');
+const serviceUtils = require('../../utils/serviceUtils');
 
 const TABLE = 'organizations';
 
@@ -32,9 +33,7 @@ function updateOrganization(id, org) {
 
 // Patch (partial update) an organization
 function patchOrganization(id, updates) {
-  const allowed = ['name', 'type', 'parent_id', 'short_description', 'long_explanation'];
-  const filtered = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)));
-  return dbUtils.update(TABLE, { id }, filtered);
+  return serviceUtils.updateWithChangedFields(TABLE, { id }, updates);
 }
 
 // Delete an organization

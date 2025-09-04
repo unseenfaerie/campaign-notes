@@ -25,14 +25,12 @@ function getCharacterDeity(character_id, deity_id) {
   return dbUtils.select(TABLE, { character_id, deity_id }, true);
 }
 
-// Update a character-deity relationship
-async function updateCharacterDeity(character_id, deity_id, updates) {
-  const allowed = ['short_description', 'long_explanation'];
+// Patch a character-deity relationship
+async function patchCharacterDeity(character_id, deity_id, updates) {
   return serviceUtils.updateWithChangedFields(
     TABLE,
     { character_id, deity_id },
-    updates,
-    allowed
+    updates
   );
 }
 
@@ -43,7 +41,7 @@ function removeCharacterDeity(character_id, deity_id) {
 
 module.exports = {
   addCharacterDeity,
-  updateCharacterDeity,
+  patchCharacterDeity,
   removeCharacterDeity,
   getDeitiesForCharacter,
   getCharactersForDeity,
