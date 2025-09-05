@@ -35,17 +35,34 @@ function getEntityById(entityType, id) {
 }
 
 
-function patchEntity(entityType, id, updates) {
+
+async function patchEntity(entityType, id, updates) {
   // Allow partial validation for patch
   const { valid, errors, validated } = validateFields(entityType, updates, { allowPartial: true });
   if (!valid) {
     throw new Error('Validation failed: ' + errors.join('; '));
   }
-  return serviceUtils.updateWithChangedFields(getTable(entityType), { id }, validated);
+  const result = await serviceUtils.updateWithChangedFields(getTable(entityType), { id }, validated);
+  if (result && result.message === 'record not found') {
+    const err = new Error('Record not found');
+    err.code = 'NOT_FOUND';
+    throw err;
+  }
+  return result;
 }
 
-function deleteEntity(entityType, id) {
-  return dbUtils.remove(getTable(entityType), { id });
+
+async function deleteEntity(entityType, id) {
+  // Try to delete, then check if any row was actually deleted
+  const table = getTable(entityType);
+  // First, check if the record exists
+  const existing = await dbUtils.select(table, { id }, true);
+  if (!existing) {
+    const err = new Error('Record not found');
+    err.code = 'NOT_FOUND';
+    throw err;
+  }
+  return dbUtils.remove(table, { id });
 }
 
 function getFullEntity(entityType, id) {
