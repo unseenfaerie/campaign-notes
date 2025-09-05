@@ -1,25 +1,36 @@
-// services/entities/event.js
 const dbUtils = require('../../utils/dbUtils');
 const serviceUtils = require('../../utils/serviceUtils');
-const eventCharacters = require('../joinTables/eventCharacters');
-const eventDeities = require('../joinTables/eventDeities');
-const eventItems = require('../joinTables/eventItems');
-const eventOrganizations = require('../joinTables/eventOrganizations');
-const eventPlaces = require('../joinTables/eventPlaces');
+const fullEntityService = require('../fullEntityService');
+
 const TABLE = 'events';
 
-function createEvent(event) { return dbUtils.insert(TABLE, event); }
-function getAllEvents() { return dbUtils.select(TABLE); }
-function getEventById(id) { return dbUtils.select(TABLE, { id }, true); }
+function createEvent(event) {
+  return dbUtils.insert(TABLE, event);
+}
+
+function getAllEvents() {
+  return dbUtils.select(TABLE);
+}
+
+function getEventById(id) {
+  return dbUtils.select(TABLE, { id }, true);
+}
+
+async function getFullEventById(id) {
+  return fullEntityService.getFullEntityById('Event', id);
+}
+
 function updateEvent(id, event) {
-  // Route already validates and filters allowed fields
   return dbUtils.update(TABLE, { id }, event);
 }
+
 function patchEvent(id, updates) {
-  // Route already validates and filters allowed fields
   return serviceUtils.updateWithChangedFields(TABLE, { id }, updates);
 }
-function deleteEvent(id) { return dbUtils.remove(TABLE, { id }); }
+
+function deleteEvent(id) {
+  return dbUtils.remove(TABLE, { id });
+}
 
 module.exports = {
   createEvent,
@@ -27,26 +38,6 @@ module.exports = {
   getEventById,
   updateEvent,
   patchEvent,
-  deleteEvent
-  ,
-  // Fetch full event details with all associations
-  async getFullEventById(id) {
-    const [event, characters, deities, items, organizations, places] = await Promise.all([
-      getEventById(id),
-      eventCharacters.getCharactersForEvent(id),
-      eventDeities.getDeitiesForEvent(id),
-      eventItems.getItemsForEvent(id),
-      eventOrganizations.getOrganizationsForEvent(id),
-      eventPlaces.getPlacesForEvent(id)
-    ]);
-    if (!event) return null;
-    return {
-      ...event,
-      characters,
-      deities,
-      items,
-      organizations,
-      places
-    };
-  }
+  deleteEvent,
+  getFullEventById
 };
