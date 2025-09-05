@@ -13,7 +13,7 @@ function getTable(entityType) {
 }
 
 
-function createEntity(entityType, data) {
+async function createEntity(entityType, data) {
   // ID format validation (for main entities)
   if (data.id !== undefined && !validateIdFormat(data.id)) {
     throw new Error('Invalid or missing id: must be lowercase letters and dashes only');
@@ -23,7 +23,8 @@ function createEntity(entityType, data) {
   if (!valid) {
     throw new Error('Validation failed: ' + errors.join('; '));
   }
-  return dbUtils.insert(getTable(entityType), validated);
+  await dbUtils.insert(getTable(entityType), validated);
+  return { id: validated.id };
 }
 
 function getAllEntities(entityType) {
@@ -62,7 +63,8 @@ async function deleteEntity(entityType, id) {
     err.code = 'NOT_FOUND';
     throw err;
   }
-  return dbUtils.remove(table, { id });
+  await dbUtils.remove(table, { id });
+  return { deleted: { id } };
 }
 
 function getFullEntity(entityType, id) {

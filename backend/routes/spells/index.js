@@ -6,8 +6,8 @@ const spellService = require('../../services/entities/spells');
 router.post('/', async (req, res) => {
   const s = req.body;
   try {
-    await spellService.createSpell(s);
-    res.status(201).json({ id: s.id });
+    const result = await spellService.createSpell(s);
+    res.status(201).json(result);
   } catch (err) {
     if (err.code === 'DUPLICATE_ID') {
       return res.status(409).json({ error: err.message });
@@ -69,8 +69,8 @@ router.patch('/:id', async (req, res) => {
 // Delete a spell
 router.delete('/:id', async (req, res) => {
   try {
-    await spellService.deleteSpell(req.params.id);
-    res.json({ deleted: req.params.id });
+    const result = await spellService.deleteSpell(req.params.id);
+    res.json(result);
   } catch (err) {
     if (err.code === 'NOT_FOUND') {
       return res.status(404).json({ error: 'Spell not found' });
@@ -78,5 +78,8 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+router.use('/:id/spheres', require('./spheres'));
+router.use('/:id/items', require('./items'));
 
 module.exports = router;
