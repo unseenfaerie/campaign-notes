@@ -17,10 +17,16 @@ const db = require('../db');
 function insert(table, data) {
   const fields = Object.keys(data);
   const placeholders = fields.map(() => '?').join(', ');
-  const sql = `INSERT OR IGNORE INTO ${table} (${fields.join(', ')}) VALUES (${placeholders})`;
+  const sql = `INSERT INTO ${table} (${fields.join(', ')}) VALUES (${placeholders})`;
   return new Promise((resolve, reject) => {
     db.run(sql, Object.values(data), function (err) {
-      if (err) return reject(err);
+      if (err) {
+        // Check for unique constraint violation (duplicate id or PK)
+        if (err.code === 'SQLITE_CONSTRAINT' && /UNIQUE|PRIMARY KEY/.test(err.message)) {
+          return reject({ code: 'DUPLICATE_ID', message: 'A record with this id or primary key already exists.' });
+        }
+        return reject(err);
+      }
       resolve(data);
     });
   });
