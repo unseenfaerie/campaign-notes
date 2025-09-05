@@ -65,15 +65,15 @@ db.serialize(() => {
   `);
 
   console.log('Inserting spells...');
-  db.run(`INSERT OR IGNORE INTO spells (id, type, name, level, school, sphere, casting_time, range, components, duration, description) VALUES
-    ('fireball', 'arcane', 'Fireball', 3, 'Evocation', 'elemental', '1 action', '150 feet', 'V,S,M', 'Instantaneous', 'A bright streak flashes to a point you choose.'),
-    ('raise-dead', 'divine', 'Raise Dead', 5, NULL, 'necromantic', '1 hour', 'Touch', NULL, 'Instantaneous', 'Return a dead creature to life.'),
-    ('lightning-bolt', 'arcane', 'Lightning Bolt', 3, 'Evocation', 'elemental', '1 action', '100 feet', 'V,S,M', 'Instantaneous', 'A stroke of lightning forming a line 100 feet long and 5 feet wide blasts out from you.'),
-    ('healing-word', 'divine', 'Healing Word', 1, NULL, 'healing', '1 bonus action', '60 feet', NULL, 'Instantaneous', 'A creature of your choice that you can see within range regains hit points.'),
-    ('mage-hand', 'arcane', 'Mage Hand', 0, 'Conjuration', '', '1 action', '30 feet', 'V,S', '1 minute', 'A spectral hand appears and can manipulate objects.'),
-    ('audible-glamer', 'arcane', 'Audible Glamer', 1, 'Illusion', '', '1 action', '30 feet', 'V,S', '1 minute', 'Creates a sound that can be heard up to 100 feet away.'),
-    ('change-self', 'arcane', 'Change Self', 1, 'Illusion', '', '1 action', 'Self', 'V,S', '1 hour', 'You assume a different form.'),
-    ('magic-missile', 'arcane', 'Magic Missile', 1, 'Evocation', '', '1 action', '120 feet', 'V,S', 'Instantaneous', 'Creates three glowing darts of magical force. 1d4+1 damage per bolt.');
+  db.run(`INSERT OR IGNORE INTO spells (id, type, name, level, school, casting_time, range, components, materials, duration, description) VALUES
+    ('fireball', 'arcane', 'Fireball', 3, 'Evocation', '1 action', '150 feet', 'V,S,M', 'Bat guano.','Instantaneous', 'A bright streak flashes to a point you choose.'),
+    ('raise-dead', 'divine', 'Raise Dead', 5, NULL, '1 hour', 'Touch', 'V, S, M', 'Mummy wrappings, some kind of salve.', 'Instantaneous', 'Return a dead creature to life.'),
+    ('lightning-bolt', 'arcane', 'Lightning Bolt', 3, 'Evocation', '1 action', '100 feet', 'V,S,M', 'A small bit of fulgurite.', 'Instantaneous', 'A stroke of lightning forming a line 100 feet long and 5 feet wide blasts out from you.'),
+    ('healing-word', 'divine', 'Healing Word', 1, NULL, '1 bonus action', '60 feet', NULL, NULL, 'Instantaneous', 'A creature of your choice that you can see within range regains hit points.'),
+    ('mage-hand', 'arcane', 'Mage Hand', 0, 'Conjuration', '1 action', '30 feet', 'V,S', NULL, '1 minute', 'A spectral hand appears and can manipulate objects.'),
+    ('audible-glamer', 'arcane', 'Audible Glamer', 1, 'Illusion', '1 action', '30 feet', 'V,S', NULL, '1 minute', 'Creates a sound that can be heard up to 100 feet away.'),
+    ('change-self', 'arcane', 'Change Self', 1, 'Illusion', '1 action', 'Self', 'V,S', NULL, '1 hour', 'You assume a different form.'),
+    ('magic-missile', 'arcane', 'Magic Missile', 1, 'Evocation', '1 action', '120 feet', 'V,S', NULL, 'Instantaneous', 'Creates three glowing darts of magical force. 1d4+1 damage per bolt.');
   `);
 
   console.log('Inserting spheres...');

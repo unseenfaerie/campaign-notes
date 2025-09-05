@@ -82,10 +82,10 @@ db.serialize(() => {
     name TEXT NOT NULL,
     level INTEGER,
     school TEXT,
-    sphere TEXT,
     casting_time TEXT,
     range TEXT,
     components TEXT,
+    materials TEXT,
     duration TEXT,
     description TEXT NOT NULL
   )`);
