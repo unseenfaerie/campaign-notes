@@ -78,10 +78,10 @@ defineEntity('Spell', {
   name: { type: 'string' },
   level: { type: 'number', optional: true },
   school: { type: 'string', optional: true },
-  sphere: { type: 'string', optional: true },
   casting_time: { type: 'string', optional: true },
   range: { type: 'string', optional: true },
   components: { type: 'string', optional: true },
+  materials: { type: 'string', optional: true },
   duration: { type: 'string', optional: true },
   description: { type: 'string' },
 });
