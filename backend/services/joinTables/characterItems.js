@@ -91,6 +91,11 @@ function removeAllCharacterItemRecords(character_id) {
   return historicalJoinTableService.deleteAllLinkages('character_items', { character_id });
 }
 
+function removeAllItemCharacterRecords(item_id) {
+  // Remove ALL character relationships for this item
+  return historicalJoinTableService.deleteAllLinkages('character_items', { item_id });
+}
+
 module.exports = {
   addCharacterItem,
   patchCharacterItem,
@@ -101,6 +106,7 @@ module.exports = {
   getAllCharacterItemRecords,
   getItemIdsForCharacter,
   removeAllCharacterItemRecords,
+  removeAllItemCharacterRecords,
   getAllItemsWithHistoryForCharacter,
   getUniqueItemIdsForCharacter,
   getCharactersForItem

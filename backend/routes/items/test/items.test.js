@@ -15,7 +15,7 @@ describe('Item API', () => {
     id: 'peach-daisycutter',
     type: 'npc',
     name: 'Peach Daisycutter',
-    deceased: '0',
+    deceased: 0,
     short_description: 'A frisky gardener.'
   };
 
@@ -25,8 +25,7 @@ describe('Item API', () => {
     name: 'Enliven',
     level: 3,
     school: 'enchantment',
-    sphere: 'plant/animal',
-    casting_time: '1',
+    casting_time: '1 segment',
     range: '30 feet',
     components: 'V, S',
     duration: '1 hour per Druid level of caster.',
