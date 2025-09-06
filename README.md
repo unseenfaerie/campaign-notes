@@ -1,14 +1,17 @@
 
-## Backend Architecture
+## Campaign Notes Architecture
 
 ### Database
 - SQLite file: `backend/campaign.db`
 - Create with `backend/db.js`, seed with `backend/seed.js`
 
+### ((honorable mention: db services layer))
+- Purely database utility. Execute basic SQL.
+
 ### Service Layer (`backend/services/`)
-- All business logic, validation, and error handling are centralized here.
+- All business logic, validation (beyond field existence), and error handling are centralized here.
 - Main entity services use a generic `entityDataService` for CRUD, enforcing schema and ID validation and returning standardized results (e.g., `{ id }` for create, `{ deleted: { id } }` for delete).
-- Join table services (e.g., spellSpheres, itemSpells) use a generic `simpleJoinTableService` for all CRUD and bulk operations:
+- Join table services (e.g., spellSpheres, itemSpells) use a generic `simpleJoinTableService`, `relationshipJoinTableService`, or `historicalJoinTableService` for all CRUD and bulk operations:
     - Foreign key existence is enforced before creating a linkage.
     - Deleting a linkage or bulk deleting returns a standardized object (e.g., `{ deleted: { ...ids } }` or `{ deleted: { ...where }, deletedCount }`).
     - All join table services are thin wrappers over the generic service.
