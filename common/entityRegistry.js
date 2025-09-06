@@ -9,8 +9,9 @@ const entityRegistry = {
       type: 'history',
       mainIdField: 'character_id',
       relatedIdField: 'deity_id',
+      dateKey: 'adopted_date',
       joinFields: [
-        'adopted_date', 'dissolution_date', 'relationship_type', 'short_description', 'long_explanation'
+        'dissolution_date', 'relationship_type', 'short_description', 'long_explanation'
       ]
     },
     {
@@ -19,8 +20,9 @@ const entityRegistry = {
       type: 'history',
       mainIdField: 'character_id',
       relatedIdField: 'item_id',
+      dateKey: 'acquired_date',
       joinFields: [
-        'acquired_date', 'relinquished_date', 'short_description'
+        'relinquished_date', 'short_description'
       ]
     },
     {
@@ -29,8 +31,9 @@ const entityRegistry = {
       type: 'history',
       mainIdField: 'character_id',
       relatedIdField: 'organization_id',
+      dateKey: 'joined_date',
       joinFields: [
-        'joined_date', 'left_date', 'short_description', 'long_explanation'
+        'left_date', 'short_description', 'long_explanation'
       ]
     },
     {
@@ -39,8 +42,9 @@ const entityRegistry = {
       type: 'history',
       mainIdField: 'character_id',
       relatedIdField: 'place_id',
+      dateKey: 'arrived_date',
       joinFields: [
-        'arrived_date', 'left_date', 'short_description', 'long_explanation'
+        'left_date', 'short_description', 'long_explanation'
       ]
     },
     {
@@ -49,8 +53,9 @@ const entityRegistry = {
       type: 'history',
       mainIdField: 'character_id',
       relatedIdField: 'related_id',
+      dateKey: 'established_date',
       joinFields: [
-        'established_date', 'dissolution_date', 'relationship_type', 'short_description', 'long_explanation'
+        'dissolution_date', 'relationship_type', 'short_description', 'long_explanation'
       ]
     }
   ],
@@ -61,8 +66,9 @@ const entityRegistry = {
       type: 'history',
       mainIdField: 'deity_id',
       relatedIdField: 'character_id',
+      dateKey: 'adopted_date',
       joinFields: [
-        'adopted_date', 'dissolution_date', 'relationship_type', 'short_description', 'long_explanation'
+        'dissolution_date', 'relationship_type', 'short_description', 'long_explanation'
       ]
     },
     {
@@ -91,8 +97,9 @@ const entityRegistry = {
       type: 'history',
       mainIdField: 'item_id',
       relatedIdField: 'character_id',
+      dateKey: 'acquired_date',
       joinFields: [
-        'acquired_date', 'relinquished_date', 'short_description'
+        'relinquished_date', 'short_description'
       ]
     },
     {
@@ -121,8 +128,9 @@ const entityRegistry = {
       type: 'history',
       mainIdField: 'organization_id',
       relatedIdField: 'character_id',
+      dateKey: 'joined_date',
       joinFields: [
-        'joined_date', 'left_date', 'short_description', 'long_explanation'
+        'left_date', 'short_description', 'long_explanation'
       ]
     },
     {
@@ -153,8 +161,9 @@ const entityRegistry = {
       type: 'history',
       mainIdField: 'place_id',
       relatedIdField: 'character_id',
+      dateKey: 'arrived_date',
       joinFields: [
-        'arrived_date', 'left_date', 'short_description', 'long_explanation'
+        'left_date', 'short_description', 'long_explanation'
       ]
     },
     {

@@ -1,46 +1,39 @@
-const { isValidDateFormat, loreDateToSortable } = require('../../utils/dateUtils');
+const historicalJoinTableService = require('../historicalJoinTableService');
 const dbUtils = require('../../utils/dbUtils');
-const { updateWithChangedFields } = require('../../utils/serviceUtils');
 
-const TABLE = 'character_items';
-
-// Add a character-item relationship
-function addCharacterItem(character_id, item_id, acquired_date, relinquished_date, short_description = '') {
-  return dbUtils.insert(TABLE, { character_id, item_id, acquired_date, relinquished_date, short_description });
-}
-
-// Get all item IDs for a character (custom, since it returns only IDs)
+// Custom logic: get all item IDs for a character (returns only IDs)
 function getItemIdsForCharacter(character_id) {
-  return dbUtils.select(TABLE, { character_id }).then(rows => rows.map(r => r.item_id));
+  return historicalJoinTableService.getLinkagesById('character_items', 'character_id', character_id)
+    .then(rows => rows.map(r => r.item_id));
 }
 
-// Get all unique item IDs for a character
+// Custom logic: get all unique item IDs for a character
 function getUniqueItemIdsForCharacter(character_id) {
-  return dbUtils.select(TABLE, { character_id }).then(rows => {
-    const uniqueIds = new Set(rows.map(r => r.item_id));
-    return Array.from(uniqueIds);
-  });
+  return historicalJoinTableService.getLinkagesById('character_items', 'character_id', character_id)
+    .then(rows => {
+      const uniqueIds = new Set(rows.map(r => r.item_id));
+      return Array.from(uniqueIds);
+    });
 }
 
-// Get all items for a character (with join table metadata, custom logic)
+// Custom logic: get all items for a character (with join table metadata)
+
 function getItemForCharacter(character_id, item_id) {
   return dbUtils.getEntityWithHistory(
-    'items',           // mainTable
-    'character_items', // joinTable
-    'id',              // entityKey (items.id)
-    'item_id',         // joinKey (character_items.item_id)
-    item_id,           // entityId
-    { character_id },  // historyWhere
-    'acquired_date',   // historySortField
-    true               // ascending
+    'items',
+    'character_items',
+    'id',
+    'item_id',
+    item_id,
+    { character_id },
+    'acquired_date',
+    true
   );
 }
 
-// Get all items (with history) for a character
+// Custom logic: get all items (with history) for a character
 async function getAllItemsWithHistoryForCharacter(character_id) {
-  // Get all item_ids for this character
   const itemIds = await getUniqueItemIdsForCharacter(character_id);
-  // For each item_id, get the item and its history for this character
   const results = await Promise.all(itemIds.map(item_id =>
     dbUtils.getEntityWithHistory(
       'items',
@@ -53,49 +46,50 @@ async function getAllItemsWithHistoryForCharacter(character_id) {
       true
     )
   ));
-  // Filter out any nulls (in case an item was deleted)
   return results.filter(Boolean);
 }
 
-
-// Get a specific character-item relationship (can use dbUtils)
-function getCharacterItem(character_id, item_id, acquired_date) {
-  return dbUtils.select(TABLE, { character_id, item_id, acquired_date }, true);
+// CRUD wrappers using the generic historicalJoinTableService
+function addCharacterItem(character_id, item_id, acquired_date, relinquished_date, short_description = '') {
+  return historicalJoinTableService.createLinkage('character_items', {
+    character_id,
+    item_id,
+    acquired_date,
+    relinquished_date,
+    short_description
+  });
 }
 
-// Get all records for a character-item pair (can use dbUtils)
+function getCharacterItem(character_id, item_id, acquired_date) {
+  return historicalJoinTableService.getLinkage('character_items', { character_id, item_id, acquired_date });
+}
+
 function getAllCharacterItemRecords(character_id, item_id) {
-  return dbUtils.select(TABLE, { character_id, item_id });
+  return historicalJoinTableService.getLinkagesById('character_items', 'character_id', character_id)
+    .then(rows => rows.filter(r => r.item_id === item_id));
 }
 
 function getCharactersForItem(item_id) {
-  return dbUtils.select(TABLE, { item_id });
+  return historicalJoinTableService.getLinkagesById('character_items', 'item_id', item_id);
 }
 
-// Patch a character-item relationship
-async function patchCharacterItem(character_id, item_id, acquired_date, updates) {
-  return updateWithChangedFields(
-    TABLE,
-    { character_id, item_id, acquired_date },
-    updates
-  );
+function patchCharacterItem(character_id, item_id, acquired_date, updates) {
+  return historicalJoinTableService.patchLinkage('character_items', { character_id, item_id, acquired_date }, updates);
 }
 
-// Remove a character-item relationship (can use dbUtils)
 function removeInstanceCharacterItem(character_id, item_id, acquired_date) {
-  return dbUtils.remove(TABLE, { character_id, item_id, acquired_date });
+  return historicalJoinTableService.deleteLinkage('character_items', { character_id, item_id, acquired_date });
 }
 
-// Remove all records for a character-item pair (can use dbUtils)
 function removeCharacterItem(character_id, item_id) {
-  return dbUtils.remove(TABLE, { character_id, item_id });
+  // Remove all records for a character-item pair
+  return historicalJoinTableService.deleteAllLinkages('character_items', { character_id, item_id });
 }
 
-// Remove ALL item relationships for this character (can use dbUtils)
 function removeAllCharacterItemRecords(character_id) {
-  return dbUtils.remove(TABLE, { character_id });
+  // Remove ALL item relationships for this character
+  return historicalJoinTableService.deleteAllLinkages('character_items', { character_id });
 }
-
 
 module.exports = {
   addCharacterItem,
