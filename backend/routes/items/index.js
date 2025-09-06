@@ -80,6 +80,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 router.use('/:id/characters', require('./characters'));
+router.use('/:id/events', require('./events'));
 router.use('/:id/spells', require('./spells'));
 
 module.exports = router;

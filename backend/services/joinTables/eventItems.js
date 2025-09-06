@@ -1,25 +1,34 @@
 // services/joinTables/eventItems.js
-const dbUtils = require('../../utils/dbUtils');
-const { updateWithChangedFields } = require('../../utils/serviceUtils');
-const TABLE = 'event_items';
+const relationshipJoinTableService = require('../relationshipJoinTableService');
 
 function addEventItem(event_id, item_id, short_description, long_explanation) {
-  return dbUtils.insert(TABLE, { event_id, item_id, short_description, long_explanation });
+  return relationshipJoinTableService.createLinkage('event_items', {
+    event_id,
+    item_id,
+    short_description,
+    long_explanation
+  });
 }
 
-function getItemsForEvent(event_id) { return dbUtils.select(TABLE, { event_id }); }
+function getItemsForEvent(event_id) {
+  return relationshipJoinTableService.getLinkagesById('event_items', 'event_id', event_id);
+}
 
 function getEventsForItem(item_id) {
-  return dbUtils.select(TABLE, { item_id });
+  return relationshipJoinTableService.getLinkagesById('event_items', 'item_id', item_id);
 }
 
-function getEventItem(event_id, item_id) { return dbUtils.select(TABLE, { event_id, item_id }, true); }
+function getEventItem(event_id, item_id) {
+  return relationshipJoinTableService.getLinkage('event_items', { event_id, item_id });
+}
 
 function patchEventItem(event_id, item_id, updates) {
-  return updateWithChangedFields(TABLE, { event_id, item_id }, updates);
+  return relationshipJoinTableService.patchLinkage('event_items', { event_id, item_id }, updates);
 }
 
-function removeEventItem(event_id, item_id) { return dbUtils.remove(TABLE, { event_id, item_id }); }
+function removeEventItem(event_id, item_id) {
+  return relationshipJoinTableService.deleteLinkage('event_items', { event_id, item_id });
+}
 
 module.exports = {
   addEventItem,
