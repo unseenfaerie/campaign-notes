@@ -38,16 +38,29 @@ function validateSpellBusinessRules(data, { isPatch = false, existing = null } =
     validateSpellLevel(data.level);
   }
 
-  // Components (normalize)
-  let components = (isPatch && !('components' in data) && existing) ? existing.components : data.components;
-  components = validateSpellComponents(components);
+  let normalized = {};
 
-  // Materials
-  let materials = (isPatch && !('materials' in data) && existing) ? existing.materials : data.materials;
-  validateSpellMaterials(components, materials);
+  // Only validate and normalize components if present
+  if (!isPatch || ('components' in data)) {
+    let components = data.components;
+    if (components === undefined || components === null) components = '';
+    components = validateSpellComponents(components);
+    normalized.components = components;
+  }
 
-  // For patch, return normalized fields to merge into updates
-  return { components, materials };
+  // Only validate and normalize materials if present
+  if (!isPatch || ('materials' in data)) {
+    let materials = data.materials;
+    if (materials === undefined || materials === null) materials = '';
+    // If components is present in patch, use normalized.components, else use data.components or existing.components
+    let componentsForMaterials = (normalized.components !== undefined)
+      ? normalized.components
+      : (data.components !== undefined ? data.components : (existing ? existing.components : ''));
+    validateSpellMaterials(componentsForMaterials, materials);
+    normalized.materials = materials;
+  }
+
+  return normalized;
 }
 
 function createSpell(data) {
@@ -74,7 +87,12 @@ async function patchSpell(id, updates) {
     existing = await getSpellById(id);
   }
   const validated = validateSpellBusinessRules(updates, { isPatch: true, existing });
-  return entityDataService.patchEntity(entityName, id, { ...updates, ...validated });
+  // Only include normalized fields that are actually present in the patch
+  const patch = { ...updates };
+  for (const key of Object.keys(validated)) {
+    if (key in updates) patch[key] = validated[key];
+  }
+  return entityDataService.patchEntity(entityName, id, patch);
 }
 
 function deleteSpell(id) {
