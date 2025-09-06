@@ -4,9 +4,12 @@ const itemSpellsService = require('../../services/joinTables/itemSpells');
 
 router.post('/', async (req, res) => {
   const spell_id = req.params.id;
-  const { item_id } = req.body;
+  const { item_id, ...rest } = req.body;
   if (!item_id) {
     return res.status(400).json({ error: 'item_id is required' });
+  }
+  if (Object.keys(rest).length > 0) {
+    return res.status(400).json({ error: 'Only item_id is allowed in the request body.' });
   }
   try {
     const result = await itemSpellsService.addItemSpell(item_id, spell_id);

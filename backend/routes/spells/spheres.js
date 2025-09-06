@@ -4,9 +4,12 @@ const spellSpheresService = require('../../services/joinTables/spellSpheres');
 
 router.post('/', async (req, res) => {
   const spell_id = req.params.id;
-  const { sphere_id } = req.body;
+  const { sphere_id, ...rest } = req.body;
   if (!sphere_id) {
     return res.status(400).json({ error: 'sphere_id is required' });
+  }
+  if (Object.keys(rest).length > 0) {
+    return res.status(400).json({ error: 'Only sphere_id is allowed in the request body.' });
   }
   try {
     await spellSpheresService.addSpellSphere(spell_id, sphere_id);
