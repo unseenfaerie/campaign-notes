@@ -2,8 +2,15 @@ const express = require('express');
 const router = express.Router({ mergeParams: true });
 const characterItemsService = require('../../services/joinTables/characterItems');
 
+const entities = require('../../../common/entities');
+
 router.post('/', async (req, res) => {
   const item_id = req.params.id;
+  const allowedFields = Object.keys(entities.CharacterItem);
+  const extraFields = Object.keys(req.body).filter(f => !allowedFields.includes(f));
+  if (extraFields.length > 0) {
+    return res.status(400).json({ error: `Unexpected fields: ${extraFields.join(', ')}` });
+  }
   const { character_id, acquired_date, relinquished_date, short_description } = req.body;
   try {
     const result = await characterItemsService.addCharacterItem(
@@ -63,6 +70,11 @@ router.patch('/:characterId/:acquiredDate', async (req, res) => {
   const item_id = req.params.id;
   const character_id = req.params.characterId;
   const acquired_date = req.params.acquiredDate;
+  const allowedFields = Object.keys(entities.CharacterItem);
+  const extraFields = Object.keys(req.body).filter(f => !allowedFields.includes(f));
+  if (extraFields.length > 0) {
+    return res.status(400).json({ error: `Unexpected fields: ${extraFields.join(', ')}` });
+  }
   try {
     const result = await characterItemsService.updateCharacterItem(
       character_id,
