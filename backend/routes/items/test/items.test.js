@@ -99,8 +99,8 @@ describe('Item API', () => {
       expect([200]).toContain(res.statusCode);
       if (res.statusCode === 200) {
         expect(res.body.id).toBe(testItem.id);
-        expect(res.body.characters[0].character_id).toBe(testChar.id);
-        expect(res.body.spells[0].spell_id).toBe(testSpell.id);
+        expect(res.body.characters[0].id).toBe(testChar.id);
+        expect(res.body.spells[0].id).toBe(testSpell.id);
       }
     });
   });
