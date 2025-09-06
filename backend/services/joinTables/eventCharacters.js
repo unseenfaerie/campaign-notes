@@ -25,8 +25,8 @@ function getEventCharacter(event_id, character_id) {
   return dbUtils.select(TABLE, { event_id, character_id }, true);
 }
 
-// Update a specific event-character relationship
-async function updateEventCharacter(event_id, character_id, updates) {
+// Patch a specific event-character relationship
+async function patchEventCharacter(event_id, character_id, updates) {
   return serviceUtils.updateWithChangedFields(
     TABLE,
     { event_id, character_id },
@@ -41,7 +41,7 @@ function removeEventCharacter(event_id, character_id) {
 
 module.exports = {
   addEventCharacter,
-  updateEventCharacter,
+  patchEventCharacter,
   removeEventCharacter,
   getCharactersForEvent,
   getEventsForCharacter,

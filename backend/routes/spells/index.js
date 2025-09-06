@@ -1,34 +1,35 @@
 const express = require('express');
 const router = express.Router();
-const eventsService = require('../../services/entities/spells');
+const spellService = require('../../services/entities/spells');
 
-// Helper: Validate spell data
-function validateSpell(s, isUpdate = false) {
-  const requiredFields = ['id', 'name'];
-  if (!isUpdate) {
-    for (const field of requiredFields) {
-      if (!s[field] || typeof s[field] !== 'string') {
-        return `Missing or invalid required field: ${field}`;
-      }
+// Create a new spell
+router.post('/', async (req, res) => {
+  const s = req.body;
+  try {
+    const result = await spellService.createSpell(s);
+    res.status(201).json(result);
+  } catch (err) {
+    if (err.code === 'DUPLICATE_ID') {
+      return res.status(409).json({ error: err.message });
     }
+    res.status(400).json({ error: err.message });
   }
-  return null;
-}
+});
 
 // Get all spells
 router.get('/', async (req, res) => {
   try {
-    const spells = await eventsService.getAllSpells();
+    const spells = await spellService.getAllSpells();
     res.json(spells);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Get a single event by id
+// Get a single spell by id
 router.get('/:id', async (req, res) => {
   try {
-    const spell = await eventsService.getSpellById(req.params.id);
+    const spell = await spellService.getSpellById(req.params.id);
     if (!spell) {
       return res.status(404).json({ error: 'Spell not found' });
     }
@@ -38,20 +39,14 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create a new spell
-router.post('/', async (req, res) => {
-  const s = req.body;
-  const validationError = validateSpell(s);
-  if (validationError) {
-    return res.status(400).json({ error: validationError });
-  }
+// Get a full-detail spell with all associations
+router.get('/:id/full', async (req, res) => {
   try {
-    const existing = await eventsService.getSpellById(s.id);
-    if (existing) {
-      return res.status(409).json({ error: 'A spell with this id already exists.' });
+    const fullSpell = await spellService.getFullSpellById(req.params.id);
+    if (!fullSpell) {
+      return res.status(404).json({ error: 'Spell not found' });
     }
-    await eventsService.createSpell(s);
-    res.status(201).json({ id: s.id });
+    res.json(fullSpell);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -60,46 +55,31 @@ router.post('/', async (req, res) => {
 // Partially update an existing spell
 router.patch('/:id', async (req, res) => {
   const updates = req.body;
-  const allowed = [
-    'type',
-    'name',
-    'level',
-    'school',
-    'sphere',
-    'casting_time',
-    'range',
-    'components',
-    'duration',
-    'description'
-  ];
-  const fields = Object.keys(updates).filter(key => allowed.includes(key));
-  if (fields.length === 0) {
-    return res.status(400).json({ error: 'No valid fields to update.' });
-  }
   try {
-    await spellsService.patchSpell(req.params.id, updates);
-    const updated = await spellsService.getSpellById(req.params.id);
-    if (!updated) {
+    const result = await spellService.patchSpell(req.params.id, updates);
+    res.json(result);
+  } catch (err) {
+    if (err.code === 'NOT_FOUND') {
       return res.status(404).json({ error: 'Spell not found' });
     }
-    res.json({ updated: req.params.id });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(400).json({ error: err.message });
   }
 });
 
 // Delete a spell
 router.delete('/:id', async (req, res) => {
   try {
-    const existing = await spellsService.getSpellById(req.params.id);
-    if (!existing) {
+    const result = await spellService.deleteSpell(req.params.id);
+    res.json(result);
+  } catch (err) {
+    if (err.code === 'NOT_FOUND') {
       return res.status(404).json({ error: 'Spell not found' });
     }
-    await spellsService.deleteSpell(req.params.id);
-    res.json({ deleted: req.params.id });
-  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+router.use('/:id/spheres', require('./spheres'));
+router.use('/:id/items', require('./items'));
 
 module.exports = router;

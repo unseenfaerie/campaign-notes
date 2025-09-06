@@ -1,5 +1,6 @@
 const request = require('supertest');
-const app = require('../server');
+const app = require('../../../server');
+const entities = require('../../../../common/entities');
 
 describe('Character API', () => {
   // Test data for creating a character
@@ -42,6 +43,7 @@ describe('Character API', () => {
     await request(app).delete(`/api/items/${testItem.id}`);
   });
 
+  // ~CREATE TESTS~
   describe('POST /api/characters', () => {
     it('should create a new character', async () => {
       const res = await request(app)
@@ -52,6 +54,7 @@ describe('Character API', () => {
     });
   });
 
+  // ~READ TESTS~
   describe('GET /api/characters', () => {
     it('should return all characters', async () => {
       const res = await request(app).get('/api/characters');
@@ -84,6 +87,7 @@ describe('Character API', () => {
     });
   });
 
+  // ~UPDATE TESTS~
   describe('PATCH /api/characters/:id', () => {
     it('should update the test character', async () => {
       const res = await request(app)
@@ -96,10 +100,41 @@ describe('Character API', () => {
     });
   });
 
+  // ~DELETE TESTS~
   describe('DELETE /api/characters/:id', () => {
     it('should delete the test character', async () => {
       const res = await request(app).delete(`/api/characters/${testCharacter.id}`);
       expect([200, 404]).toContain(res.statusCode);
     });
   });
+
+  // ~~AUX TESTS~~
+  describe('unknown field test', () => {
+    it('should reject a character with an additional stat', async () => {
+      const fuckedCharacter = {
+        ...testCharacter,
+        comeliness: 22
+      }
+      const res = await request(app)
+        .post('/api/characters')
+        .send(fuckedCharacter);
+      // make sure that the character entity does not include a comeliness field
+      expect(Object.keys(entities.Character)).not.toContain('comeliness');
+      expect([400]).toContain(res.statusCode);
+    });
+  });
+
+  describe('valid id test', () => {
+    it('should reject a character with an invalid id', async () => {
+      const invalidCharacter = {
+        ...testCharacter,
+        id: 'bad Character 1d'
+      }
+      const res = await request(app)
+        .post('/api/characters')
+        .send(invalidCharacter);
+      expect([400]).toContain(res.statusCode);
+    });
+  });
+
 });

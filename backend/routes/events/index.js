@@ -1,22 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const eventsService = require('../../services/entities/events');
+const idUtils = require('../../utils/idUtils');
+const { validateFields } = require('../../../common/validate');
 
-// Helper: Validate event data
-function validateEvent(e, isUpdate = false) {
-  const requiredFields = ['id', 'name'];
-  if (!isUpdate) {
-    for (const field of requiredFields) {
-      if (!e[field] || typeof e[field] !== 'string') {
-        return `Missing or invalid required field: ${field}`;
-      }
-    }
-  }
-  if (e.real_world_date && typeof e.real_world_date !== 'string') {
-    return 'Field real_world_date must be a string or null';
-  }
-  if (e.in_game_time && typeof e.in_game_time !== 'string') {
-    return 'Field in_game_time must be a string or null';
+// Helper: Validate event data using generic validator
+function validateEventEntity(e, isUpdate = false) {
+  const { valid, errors } = validateFields('Event', e, { allowPartial: isUpdate });
+  if (!valid) return errors.join('; ');
+  if (!isUpdate && idUtils.validateIdFormat(e.id) === false) {
+    return 'Field id must use only lowercase and dashes';
   }
   return null;
 }
@@ -44,10 +37,23 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Get a full-detail event with all associations
+router.get('/:id/full', async (req, res) => {
+  try {
+    const fullEvent = await eventsService.getFullEventById(req.params.id);
+    if (!fullEvent) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    res.json(fullEvent);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Create a new event
 router.post('/', async (req, res) => {
   const e = req.body;
-  const validationError = validateEvent(e);
+  const validationError = validateEventEntity(e, false);
   if (validationError) {
     return res.status(400).json({ error: validationError });
   }
@@ -66,26 +72,16 @@ router.post('/', async (req, res) => {
 // Partially update an existing event
 router.patch('/:id', async (req, res) => {
   const updates = req.body;
-  const allowed = [
-    'name',
-    'real_world_date',
-    'in_game_time',
-    'previous_event_id',
-    'next_event_id',
-    'short_description',
-    'long_explanation'
-  ];
-  const fields = Object.keys(updates).filter(key => allowed.includes(key));
-  if (fields.length === 0) {
-    return res.status(400).json({ error: 'No valid fields to update.' });
+  const validationError = validateEventEntity(updates, true);
+  if (validationError) {
+    return res.status(400).json({ error: validationError });
   }
   try {
-    await eventsService.patchEvent(req.params.id, updates);
-    const updated = await eventsService.getEventById(req.params.id);
-    if (!updated) {
+    const result = await eventsService.patchEvent(req.params.id, updates);
+    if (result && result.message === 'record not found') {
       return res.status(404).json({ error: 'Event not found' });
     }
-    res.json({ updated: req.params.id });
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

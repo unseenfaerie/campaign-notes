@@ -1,6 +1,6 @@
 const request = require('supertest');
-const app = require('../server');
-const { validateFields } = require('../../common/validate');
+const app = require('../../../server');
+const { validateFields } = require('../../../../common/validate');
 
 // Test data for associations
 const charId = 'jest-char-1';

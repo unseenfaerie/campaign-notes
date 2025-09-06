@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { validateFields } = require('../../../common/validate');
 const characterService = require('../../services/entities/characters');
+const { validateIdFormat } = require('../../utils/idUtils');
 
 function validateCharacter(c, isUpdate = false) {
     const requiredFields = ['id', 'type', 'name'];
@@ -18,6 +19,9 @@ function validateCharacter(c, isUpdate = false) {
         if (c[stat] !== undefined && c[stat] !== null && typeof c[stat] !== 'number') {
             return `Field ${stat} must be a number or null`;
         }
+    }
+    if (!validateIdFormat(c.id)) {
+        return 'Field id must be a valid string (lowercase-and-dashes-only)';
     }
     if (c.deceased !== undefined && c.deceased !== null && typeof c.deceased !== 'number') {
         return 'Field deceased must be a number (0 or 1) or null';

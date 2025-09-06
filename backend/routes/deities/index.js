@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const deitiesService = require('../../services/entities/deities');
+const validate = require('../../../common/validate');
+const { validateIdFormat } = require('../../utils/idUtils');
 
 // Helper: Validate deity data
 function validateDeity(d, isUpdate = false) {
@@ -25,13 +27,24 @@ function validateDeity(d, isUpdate = false) {
   return null;
 }
 
-// Create a new deity
 router.post('/', async (req, res) => {
   const d = req.body;
-  const validationError = validateDeity(d);
-  if (validationError) {
-    return res.status(400).json({ error: validationError });
+
+  // 1. ID validation
+  if (!d.id || typeof d.id !== 'string' || !validateIdFormat(d.id)) {
+    return res.status(400).json({ error: 'Invalid or missing id format.' });
   }
+
+  // 2. Entity schema validation
+  const { valid, errors } = validate.validateFields('Deity', d);
+  if (!valid) {
+    return res.status(400).json({ error: errors.join(', ') });
+  }
+
+  if (validateDeity(d)) {
+    return res.status(400).json({ error: validateDeity(d) });
+  }
+
   try {
     const existing = await deitiesService.getDeityById(d.id);
     if (existing) {
@@ -39,39 +52,6 @@ router.post('/', async (req, res) => {
     }
     await deitiesService.createDeity(d);
     res.status(201).json({ id: d.id });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Update an existing deity
-router.patch('/:id', async (req, res) => {
-  const d = req.body;
-  if (!Object.keys(d).length) {
-    return res.status(400).json({ error: 'No valid fields to update.' });
-  }
-  try {
-    const result = await deitiesService.patchDeity(req.params.id, d);
-    // Check if deity exists after update
-    const updated = await deitiesService.getDeityById(req.params.id);
-    if (!updated) {
-      return res.status(404).json({ error: 'Deity not found' });
-    }
-    res.json({ updated: req.params.id });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Delete a deity
-router.delete('/:id', async (req, res) => {
-  try {
-    const existing = await deitiesService.getDeityById(req.params.id);
-    if (!existing) {
-      return res.status(404).json({ error: 'Deity not found' });
-    }
-    await deitiesService.deleteDeity(req.params.id);
-    res.json({ deleted: req.params.id });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -99,5 +79,76 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// read a deity with association details
+router.get('/:id/full', async (req, res) => {
+  try {
+    const fullDeity = await deitiesService.getFullDeityById(req.params.id);
+    if (!fullDeity) {
+      return res.status(404).json({ error: 'Deity not found' });
+    }
+    res.json(fullDeity);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update an existing deity
+router.patch('/:id', async (req, res) => {
+  const d = req.body;
+
+  // 1. If id is present in body, validate it
+  if (d.id && (!validateIdFormat(d.id) || typeof d.id !== 'string')) {
+    return res.status(400).json({ error: 'Invalid id format.' });
+  }
+
+  // 2. Entity schema validation (allowPartial)
+  const { valid, errors } = validate.validateFields('Deity', d, { allowPartial: true });
+  if (!valid) {
+    return res.status(400).json({ error: errors.join('; ') });
+  }
+  if (!Object.keys(d).length) {
+    return res.status(400).json({ error: 'No valid fields to update.' });
+  }
+
+  // 3. Business logic validation
+  if (validateDeity(d, true)) {
+    return res.status(400).json({ error: validateDeity(d, true) });
+  }
+
+  try {
+    // Patch the deity and get the changed fields
+    const result = await deitiesService.patchDeity(req.params.id, d);
+
+    // Check if deity exists after update
+    const updated = await deitiesService.getDeityById(req.params.id);
+    if (!updated) {
+      return res.status(404).json({ error: 'Deity not found' });
+    }
+
+    // Return the changed fields (or a message if nothing changed)
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// Delete a deity
+router.delete('/:id', async (req, res) => {
+  try {
+    const existing = await deitiesService.getDeityById(req.params.id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Deity not found' });
+    }
+    await deitiesService.deleteDeity(req.params.id);
+    res.json({ deleted: req.params.id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.use('/:id/characters', require('./characters'));
+router.use('/:id/spheres', require('./spheres'));
 
 module.exports = router;

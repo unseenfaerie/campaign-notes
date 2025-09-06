@@ -69,24 +69,15 @@ function getAllCharacterItemRecords(character_id, item_id) {
 }
 
 function getCharactersForItem(item_id) {
-  return dbUtils.select(TABLE, { item_id }).then(rows => rows.map(r => r.character_id));
+  return dbUtils.select(TABLE, { item_id });
 }
 
-// Update a character-item relationship (custom validation logic)
-async function updateCharacterItem(character_id, item_id, acquired_date, updates) {
-  const allowed = ['relinquished_date', 'short_description'];
-  if ('relinquished_date' in updates && !isValidDateFormat(updates.relinquished_date)) {
-    return { character_id, item_id, acquired_date, message: 'invalid date format, use mmm-dd-yyy (eg mar-19-002 or jun-01-999)' };
-  }
-  const filtered = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)));
-  if (Object.keys(filtered).length === 0) {
-    return { character_id, item_id, acquired_date, message: 'no updates made' };
-  }
+// Patch a character-item relationship
+async function patchCharacterItem(character_id, item_id, acquired_date, updates) {
   return updateWithChangedFields(
     TABLE,
     { character_id, item_id, acquired_date },
-    filtered,
-    allowed
+    updates
   );
 }
 
@@ -105,9 +96,10 @@ function removeAllCharacterItemRecords(character_id) {
   return dbUtils.remove(TABLE, { character_id });
 }
 
+
 module.exports = {
   addCharacterItem,
-  updateCharacterItem,
+  patchCharacterItem,
   removeCharacterItem,
   removeInstanceCharacterItem,
   getItemForCharacter,

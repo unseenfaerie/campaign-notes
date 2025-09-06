@@ -1,23 +1,4 @@
 /**
- * Returns an object with only the fields that have changed between original and updated.
- * @param {Object} original - The original object from the database.
- * @param {Object} updated - The updated object after changes.
- * @returns {Object} - Object with only changed fields and their new values.
- */
-function getChangedFields(original, updated) {
-  const changed = {};
-  for (const key in updated) {
-    if (
-      Object.prototype.hasOwnProperty.call(updated, key) &&
-      original[key] !== updated[key]
-    ) {
-      changed[key] = updated[key];
-    }
-  }
-  return changed;
-}
-
-/**
  * dbHelpers.js
  * 
  * Provides generic CRUD helper functions for interacting with SQLite tables.
@@ -36,10 +17,16 @@ const db = require('../db');
 function insert(table, data) {
   const fields = Object.keys(data);
   const placeholders = fields.map(() => '?').join(', ');
-  const sql = `INSERT OR IGNORE INTO ${table} (${fields.join(', ')}) VALUES (${placeholders})`;
+  const sql = `INSERT INTO ${table} (${fields.join(', ')}) VALUES (${placeholders})`;
   return new Promise((resolve, reject) => {
     db.run(sql, Object.values(data), function (err) {
-      if (err) return reject(err);
+      if (err) {
+        // Check for unique constraint violation (duplicate id or PK)
+        if (err.code === 'SQLITE_CONSTRAINT' && /UNIQUE|PRIMARY KEY/.test(err.message)) {
+          return reject({ code: 'DUPLICATE_ID', message: 'A record with this id or primary key already exists.' });
+        }
+        return reject(err);
+      }
       resolve(data);
     });
   });
@@ -167,6 +154,25 @@ async function getEntityWithHistory(mainTable, joinTable, entityKey, joinKey, en
   }
 
   return { item: entityRows, history: sortedHistory };
+}
+
+/**
+ * Returns an object with only the fields that have changed between original and updated.
+ * @param {Object} original - The original object from the database.
+ * @param {Object} updated - The updated object after changes.
+ * @returns {Object} - Object with only changed fields and their new values.
+ */
+function getChangedFields(original, updated) {
+  const changed = {};
+  for (const key in updated) {
+    if (
+      Object.prototype.hasOwnProperty.call(updated, key) &&
+      original[key] !== updated[key]
+    ) {
+      changed[key] = updated[key];
+    }
+  }
+  return changed;
 }
 
 module.exports = { insert, select, update, remove, selectJoin, getEntityWithHistory, getChangedFields };

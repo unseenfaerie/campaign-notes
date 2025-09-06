@@ -1,4 +1,6 @@
 const dbUtils = require('../../utils/dbUtils');
+const serviceUtils = require('../../utils/serviceUtils');
+const fullEntityService = require('../fullEntityService');
 
 const TABLE = 'items';
 
@@ -14,19 +16,12 @@ function getItemById(id) {
   return dbUtils.select(TABLE, { id }, true);
 }
 
-function updateItem(id, item) {
-  const allowed = ['name', 'short_description', 'long_explanation'];
-  const updates = {};
-  for (const key of allowed) {
-    if (item[key] !== undefined) updates[key] = item[key];
-  }
-  return dbUtils.update(TABLE, { id }, updates);
+async function getFullItemById(id) {
+  return fullEntityService.getFullEntityById('Item', id);
 }
 
 function patchItem(id, updates) {
-  const allowed = ['name', 'short_description', 'long_explanation'];
-  const filtered = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)));
-  return dbUtils.update(TABLE, { id }, filtered);
+  return serviceUtils.updateWithChangedFields(TABLE, { id }, updates);
 }
 
 function deleteItem(id) {
@@ -37,7 +32,7 @@ module.exports = {
   createItem,
   getAllItems,
   getItemById,
-  updateItem,
+  getFullItemById,
   patchItem,
   deleteItem
 };

@@ -55,14 +55,12 @@ function getCharacterOrganization(character_id, organization_id) {
   return dbUtils.select(TABLE, { character_id, organization_id }, true);
 }
 
-// Update a character-organization relationship
-async function updateCharacterOrganization(character_id, organization_id, joined_date, updates) {
-  const allowed = ['left_date', 'short_description', 'long_explanation'];
+// Patch a character-organization relationship
+async function patchCharacterOrganization(character_id, organization_id, joined_date, updates) {
   return updateWithChangedFields(
     TABLE,
     { character_id, organization_id, joined_date },
-    updates,
-    allowed
+    updates
   );
 }
 
@@ -73,7 +71,7 @@ function removeCharacterOrganization(character_id, organization_id) {
 
 module.exports = {
   addCharacterOrganization,
-  updateCharacterOrganization,
+  patchCharacterOrganization,
   removeCharacterOrganization,
   getOrganizationsForCharacter,
   getCharactersForOrganization,

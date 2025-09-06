@@ -1,10 +1,38 @@
-// services/itemSpells.js
-const dbUtils = require('../../utils/dbUtils');
-const TABLE = 'item_spells';
+// services/joinTables/itemSpells.js
+const simpleJoinTableService = require('../simpleJoinTableService');
 
-function addItemSpell(item_id, spell_id) { return dbUtils.insert(TABLE, { item_id, spell_id }); }
-function getSpellsForItem(item_id) { return dbUtils.select(TABLE, { item_id }); }
-function getItemsForSpell(spell_id) { return dbUtils.select(TABLE, { spell_id }); }
-function removeItemSpell(item_id, spell_id) { return dbUtils.remove(TABLE, { item_id, spell_id }); }
+const tableName = 'item_spells';
 
-module.exports = { addItemSpell, getSpellsForItem, getItemsForSpell, removeItemSpell };
+function addItemSpell(item_id, spell_id) {
+  return simpleJoinTableService.createLinkage(tableName, { item_id, spell_id });
+}
+
+function getSpellsForItem(item_id) {
+  return simpleJoinTableService.getLinkagesById(tableName, 'item_id', item_id);
+}
+
+function getItemsForSpell(spell_id) {
+  return simpleJoinTableService.getLinkagesById(tableName, 'spell_id', spell_id);
+}
+
+
+function removeAllItemsForSpell(spell_id) {
+  return simpleJoinTableService.deleteAllLinkages(tableName, { spell_id });
+}
+
+function removeAllSpellsForItem(item_id) {
+  return simpleJoinTableService.deleteAllLinkages(tableName, { item_id });
+}
+
+function removeItemSpell(item_id, spell_id) {
+  return simpleJoinTableService.deleteLinkage(tableName, { item_id, spell_id });
+}
+
+module.exports = {
+  addItemSpell,
+  getSpellsForItem,
+  getItemsForSpell,
+  removeItemSpell,
+  removeAllItemsForSpell,
+  removeAllSpellsForItem
+};
