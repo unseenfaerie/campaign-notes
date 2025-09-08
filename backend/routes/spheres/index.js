@@ -1,24 +1,25 @@
 const express = require('express');
 const router = express.Router();
-const eventsService = require('../../services/entities/spheres');
+const sphereService = require('../../services/entities/spheres');
 
-// Helper: Validate sphere data
-function validateSphere(s, isUpdate = false) {
-  const requiredFields = ['id', 'name'];
-  if (!isUpdate) {
-    for (const field of requiredFields) {
-      if (!s[field] || typeof s[field] !== 'string') {
-        return `Missing or invalid required field: ${field}`;
-      }
+// Create a new sphere
+router.post('/', async (req, res) => {
+  const s = req.body;
+  try {
+    const result = await sphereService.createSphere(s);
+    res.status(201).json(result);
+  } catch (err) {
+    if (err.code === 'DUPLICATE_ID') {
+      return res.status(409).json({ error: err.message });
     }
+    res.status(400).json({ error: err.message });
   }
-  return null;
-}
+});
 
 // Get all spheres
 router.get('/', async (req, res) => {
   try {
-    const spheres = await eventsService.getAllSpheres();
+    const spheres = await sphereService.getAllSpheres();
     res.json(spheres);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -28,7 +29,7 @@ router.get('/', async (req, res) => {
 // Get a single sphere by id
 router.get('/:id', async (req, res) => {
   try {
-    const sphere = await eventsService.getSphereById(req.params.id);
+    const sphere = await sphereService.getSphereById(req.params.id);
     if (!sphere) {
       return res.status(404).json({ error: 'Sphere not found' });
     }
@@ -38,20 +39,14 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create a new sphere
-router.post('/', async (req, res) => {
-  const s = req.body;
-  const validationError = validateSphere(s);
-  if (validationError) {
-    return res.status(400).json({ error: validationError });
-  }
+// Get a full-detail sphere with all associations
+router.get('/:id/full', async (req, res) => {
   try {
-    const existing = await eventsService.getSphereById(s.id);
-    if (existing) {
-      return res.status(409).json({ error: 'A sphere with this id already exists.' });
+    const fullSphere = await sphereService.getFullSphereById(req.params.id);
+    if (!fullSphere) {
+      return res.status(404).json({ error: 'Sphere not found' });
     }
-    await eventsService.addSphere(s);
-    res.status(201).json({ id: s.id });
+    res.json(fullSphere);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -60,39 +55,31 @@ router.post('/', async (req, res) => {
 // Partially update an existing sphere
 router.patch('/:id', async (req, res) => {
   const updates = req.body;
-  const allowed = [
-    'name',
-    'short_description',
-    'long_explanation'
-  ];
-  const fields = Object.keys(updates).filter(key => allowed.includes(key));
-  if (fields.length === 0) {
-    return res.status(400).json({ error: 'No valid fields to update.' });
-  }
   try {
-    await spheresService.patchSphere(req.params.id, updates);
-    const updated = await spheresService.getSphereById(req.params.id);
-    if (!updated) {
+    const result = await sphereService.patchSphere(req.params.id, updates);
+    res.json(result);
+  } catch (err) {
+    if (err.code === 'NOT_FOUND') {
       return res.status(404).json({ error: 'Sphere not found' });
     }
-    res.json({ updated: req.params.id });
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Delete a sphere
+router.delete('/:id', async (req, res) => {
+  try {
+    const result = await sphereService.deleteSphere(req.params.id);
+    res.json(result);
   } catch (err) {
+    if (err.code === 'NOT_FOUND') {
+      return res.status(404).json({ error: 'Sphere not found' });
+    }
     res.status(500).json({ error: err.message });
   }
 });
 
-// Delete a spell
-router.delete('/:id', async (req, res) => {
-  try {
-    const existing = await spheresService.getSphereById(req.params.id);
-    if (!existing) {
-      return res.status(404).json({ error: 'Sphere not found' });
-    }
-    await spheresService.deleteSphere(req.params.id);
-    res.json({ deleted: req.params.id });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+//router.use('/:id/spells', require('./spells'));
+//router.use('/:id/deities', require('./deities'));
 
 module.exports = router;
