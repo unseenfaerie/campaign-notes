@@ -5,6 +5,6 @@ module.exports = {
   ENTITY_VALIDATION_FAILED: 'VALIDATION_FAILED',
   BUSINESS_LOGIC_FAILED: 'BUSINESS_LOGIC_FAILED',
   INVALID_ID: 'INVALID_ID',
-  DB_ERROR: 'DB_ERROR'
+  DB_ERROR: 'DB_ERROR' // catches all sqlite errors not covered here
   // ...add more as needed
 };
