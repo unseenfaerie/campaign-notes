@@ -1,12 +1,14 @@
 // Spells service: business logic layer for spells, delegates to entityDataService for CRUD
-
 const entityDataService = require('../entityDataService');
 const entityName = 'Spell';
+const ERROR_CODES = require('../../../common/errorCodes');
 
 function validateSpellLevel(level) {
   if (level === undefined || level === null) return;
   if (typeof level !== 'number' || !Number.isInteger(level) || level < 0 || level > 9) {
-    throw new Error('Spell level must be an integer between 0 and 9');
+    const err = new Error('Spell level must be an integer between 0 and 9');
+    err.code = ERROR_CODES.BUSINESS_LOGIC_FAILED;
+    throw err;
   }
 }
 
@@ -18,7 +20,9 @@ function validateSpellComponents(components) {
   parts.sort((a, b) => b.localeCompare(a));
   for (const part of parts) {
     if (!validSet.has(part)) {
-      throw new Error('Components must be a comma-separated list made up of V, S, and M');
+      const err = new Error('Components must be a comma-separated list made up of V, S, and M');
+      err.code = ERROR_CODES.BUSINESS_LOGIC_FAILED;
+      throw err;
     }
   }
   return parts.length ? parts.join(', ') : '';
@@ -27,7 +31,9 @@ function validateSpellComponents(components) {
 function validateSpellMaterials(components, materials) {
   if (components.includes('M')) {
     if (!materials || typeof materials !== 'string' || !materials.trim()) {
-      throw new Error('If components include M, materials must be provided and non-empty.');
+      const err = new Error('If components include M, materials must be provided and non-empty.');
+      err.code = ERROR_CODES.BUSINESS_LOGIC_FAILED;
+      throw err;
     }
   }
 }

@@ -1,18 +1,30 @@
 const express = require('express');
 const router = express.Router();
 const spellService = require('../../services/entities/spells');
+const ERROR_CODES = require('../../../common/errorCodes');
+
+function mapErrorToStatus(err) {
+  switch (err.code) {
+    case ERROR_CODES.DUPLICATE_ID:
+      return 409;
+    case ERROR_CODES.NOT_FOUND:
+      return 404;
+    case ERROR_CODES.ENTITY_VALIDATION_FAILED:
+    case ERROR_CODES.BUSINESS_LOGIC_FAILED:
+    case ERROR_CODES.INVALID_ID:
+      return 400;
+    default:
+      return 500;
+  }
+}
 
 // Create a new spell
 router.post('/', async (req, res) => {
-  const s = req.body;
   try {
-    const result = await spellService.createSpell(s);
+    const result = await spellService.createSpell(req.body);
     res.status(201).json(result);
   } catch (err) {
-    if (err.code === 'DUPLICATE_ID') {
-      return res.status(409).json({ error: err.message });
-    }
-    res.status(400).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
@@ -22,7 +34,7 @@ router.get('/', async (req, res) => {
     const spells = await spellService.getAllSpells();
     res.json(spells);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
@@ -30,12 +42,9 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const spell = await spellService.getSpellById(req.params.id);
-    if (!spell) {
-      return res.status(404).json({ error: 'Spell not found' });
-    }
     res.json(spell);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
@@ -43,26 +52,19 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/full', async (req, res) => {
   try {
     const fullSpell = await spellService.getFullSpellById(req.params.id);
-    if (!fullSpell) {
-      return res.status(404).json({ error: 'Spell not found' });
-    }
     res.json(fullSpell);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
 // Partially update an existing spell
 router.patch('/:id', async (req, res) => {
-  const updates = req.body;
   try {
-    const result = await spellService.patchSpell(req.params.id, updates);
+    const result = await spellService.patchSpell(req.params.id, req.body);
     res.json(result);
   } catch (err) {
-    if (err.code === 'NOT_FOUND') {
-      return res.status(404).json({ error: 'Spell not found' });
-    }
-    res.status(400).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
@@ -72,10 +74,7 @@ router.delete('/:id', async (req, res) => {
     const result = await spellService.deleteSpell(req.params.id);
     res.json(result);
   } catch (err) {
-    if (err.code === 'NOT_FOUND') {
-      return res.status(404).json({ error: 'Spell not found' });
-    }
-    res.status(500).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
