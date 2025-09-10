@@ -32,17 +32,34 @@ function patchEventCharacter(linkage, updates) {
   return relationshipJoinTableService.patchLinkage(tableName, linkage, updates);
 }
 
+
 // Delete a specific event-character relationship
 function removeEventCharacter(linkage) {
   // linkage: { event_id, character_id }
   return relationshipJoinTableService.deleteLinkage(tableName, linkage);
 }
 
+// Remove all events from a character
+function removeEventsFromCharacter(character_id) {
+  return relationshipJoinTableService.deleteAllLinkages(tableName, { character_id });
+}
+
+// Remove all characters from an event
+function removeCharactersFromEvent(event_id) {
+  return relationshipJoinTableService.deleteAllLinkages(tableName, { event_id });
+}
+
 module.exports = {
+  // Create
   addEventCharacter,
-  patchEventCharacter,
-  removeEventCharacter,
-  getCharactersForEvent,
+  // Read
   getEventsForCharacter,
-  getEventCharacter
+  getCharactersForEvent,
+  getEventCharacter,
+  // Update
+  patchEventCharacter,
+  // Delete
+  removeEventCharacter,
+  removeEventsFromCharacter,
+  removeCharactersFromEvent
 };

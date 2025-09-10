@@ -1,44 +1,65 @@
 // services/joinTables/eventOrganizations.js
 const relationshipJoinTableService = require('../relationshipJoinTableService');
 
-const tableName = 'event_organizations';
+const TABLE = 'event_organizations';
+const MAIN_ID = 'event_id';
+const RELATED_ID = 'organization_id';
 
-function addEventOrganization(linkage) {
-  // linkage: { event_id, organization_id, short_description, long_explanation }
-  return relationshipJoinTableService.createLinkage(tableName, linkage);
+// Create
+function addEventOrganization(data) {
+  // data: { event_id, organization_id, ...metadata }
+  return relationshipJoinTableService.createLinkage(TABLE, data);
+}
+
+// Read
+function getOrganizationsForEvent(event_id) {
+  // All organizations for an event
+  return relationshipJoinTableService.getLinkagesById(TABLE, MAIN_ID, event_id);
 }
 
 function getEventsForOrganization(organization_id) {
-  return relationshipJoinTableService.getLinkagesById(tableName, 'organization_id', organization_id);
+  // All events for an organization
+  return relationshipJoinTableService.getLinkagesById(TABLE, RELATED_ID, organization_id);
 }
 
-function getOrganizationsForEvent(event_id) {
-  return relationshipJoinTableService.getLinkagesById(tableName, 'event_id', event_id);
+function getEventOrganization(event_id, organization_id) {
+  // Get a specific event-organization link
+  return relationshipJoinTableService.getLinkage(TABLE, { [MAIN_ID]: event_id, [RELATED_ID]: organization_id });
 }
 
-
-function getEventOrganization(linkage) {
-  // linkage: { event_id, organization_id }
-  return relationshipJoinTableService.getLinkage(tableName, linkage);
+// Update
+function patchEventOrganization(event_id, organization_id, updates) {
+  // Patch a specific event-organization link
+  return relationshipJoinTableService.patchLinkage(TABLE, { [MAIN_ID]: event_id, [RELATED_ID]: organization_id }, updates);
 }
 
-
-function patchEventOrganization(linkage, updates) {
-  // linkage: { event_id, organization_id }
-  return relationshipJoinTableService.patchLinkage(tableName, linkage, updates);
+// Delete
+function removeEventOrganization(event_id, organization_id) {
+  // Remove a specific event-organization link
+  return relationshipJoinTableService.deleteLinkage(TABLE, { [MAIN_ID]: event_id, [RELATED_ID]: organization_id });
 }
 
+function removeOrganizationsFromEvent(event_id) {
+  // Remove all organizations from an event
+  return relationshipJoinTableService.deleteAllLinkages(TABLE, { [MAIN_ID]: event_id });
+}
 
-function removeEventOrganization(linkage) {
-  // linkage: { event_id, organization_id }
-  return relationshipJoinTableService.deleteLinkage(tableName, linkage);
+function removeEventsFromOrganization(organization_id) {
+  // Remove all events from an organization
+  return relationshipJoinTableService.deleteAllLinkages(TABLE, { [RELATED_ID]: organization_id });
 }
 
 module.exports = {
+  // Create
   addEventOrganization,
+  // Read
   getOrganizationsForEvent,
-  getEventOrganization,
   getEventsForOrganization,
+  getEventOrganization,
+  // Update
   patchEventOrganization,
-  removeEventOrganization
+  // Delete
+  removeEventOrganization,
+  removeOrganizationsFromEvent,
+  removeEventsFromOrganization
 };
