@@ -3,8 +3,8 @@ const simpleJoinTableService = require('../simpleJoinTableService');
 
 const tableName = 'spell_spheres';
 
-function addSpellSphere(spell_id, sphere_id) {
-  return simpleJoinTableService.createLinkage(tableName, { spell_id, sphere_id });
+function addSpellSphere(linkage) {
+  return simpleJoinTableService.createLinkage(tableName, linkage);
 }
 
 function getSpheresForSpell(spell_id) {

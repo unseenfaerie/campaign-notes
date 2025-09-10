@@ -5,7 +5,9 @@
  * Each function is designed to be reusable across different service layer modules.
  */
 
+
 const db = require('../db');
+const ERROR_CODES = require('../../common/errorCodes');
 
 /**
  * Inserts a new record into the specified table.
@@ -23,9 +25,14 @@ function insert(table, data) {
       if (err) {
         // Check for unique constraint violation (duplicate id or PK)
         if (err.code === 'SQLITE_CONSTRAINT' && /UNIQUE|PRIMARY KEY/.test(err.message)) {
-          return reject({ code: 'DUPLICATE_ID', message: 'A record with this id or primary key already exists.' });
+          const error = new Error('A record with this id or primary key already exists.');
+          error.code = ERROR_CODES.DUPLICATE_ID;
+          return reject(error);
         }
-        return reject(err);
+        // Other DB errors
+        const error = new Error(err.message || 'Database error');
+        error.code = err.code || ERROR_CODES.DB_ERROR;
+        return reject(error);
       }
       resolve(data);
     });
@@ -46,8 +53,21 @@ function select(table, where = {}, single = false) {
   const sql = `SELECT * FROM ${table} ${clause}`;
   return new Promise((resolve, reject) => {
     const cb = (err, rows) => {
-      if (err) return reject(err);
-      resolve(single ? (rows[0] || null) : (rows || []));
+      if (err) {
+        const error = new Error(err.message || 'Database error');
+        error.code = err.code || ERROR_CODES.DB_ERROR;
+        return reject(error);
+      }
+      if (single) {
+        const result = rows[0] || null;
+        if (result === null) {
+          const error = new Error('Record not found');
+          error.code = ERROR_CODES.NOT_FOUND;
+          return reject(error);
+        }
+        return resolve(result);
+      }
+      resolve(rows || []);
     };
     if (single) db.get(sql, Object.values(where), (err, row) => cb(err, [row]));
     else db.all(sql, Object.values(where), cb);
@@ -71,7 +91,32 @@ function update(table, where, updates) {
   const sql = `UPDATE ${table} SET ${setClause} WHERE ${whereClause}`;
   return new Promise((resolve, reject) => {
     db.run(sql, [...updateFields.map(f => updates[f]), ...whereFields.map(f => where[f])], function (err) {
-      if (err) return reject(err);
+      if (err) {
+        const error = new Error(err.message || 'Database error');
+        error.code = err.code || ERROR_CODES.DB_ERROR;
+        return reject(error);
+      }
+      // this.changes === 0: could be not found, or no changes made
+      if (this.changes === 0) {
+        // To distinguish, check if the record exists
+        select(table, where, true)
+          .then(found => {
+            if (!found) {
+              const error = new Error('Record not found');
+              error.code = ERROR_CODES.NOT_FOUND;
+              return reject(error);
+            } else {
+              // Record exists, but no changes made
+              return resolve({ ...where, message: "no changes made" });
+            }
+          })
+          .catch(selectErr => {
+            const error = new Error(selectErr.message || 'Database error');
+            error.code = selectErr.code || ERROR_CODES.DB_ERROR;
+            return reject(error);
+          });
+        return;
+      }
       resolve({ ...where });
     });
   });
@@ -90,7 +135,16 @@ function remove(table, where) {
   const sql = `DELETE FROM ${table} WHERE ${clause}`;
   return new Promise((resolve, reject) => {
     db.run(sql, Object.values(where), function (err) {
-      if (err) return reject(err);
+      if (err) {
+        const error = new Error(err.message || 'Database error');
+        error.code = err.code || ERROR_CODES.DB_ERROR;
+        return reject(error);
+      }
+      if (this.changes === 0) {
+        const error = new Error('Record not found');
+        error.code = ERROR_CODES.NOT_FOUND;
+        return reject(error);
+      }
       resolve({ ...where });
     });
   });
@@ -116,7 +170,11 @@ function selectJoin(joinTable, mainTable, joinKey, where, joinFields = [], mainF
     ].join(', ');
     const sql = `SELECT ${fields} FROM ${joinTable} JOIN ${mainTable} ON ${joinTable}.${joinKey} = ${mainTable}.id WHERE ${whereClause}`;
     db.all(sql, whereKeys.map(k => where[k]), (err, rows) => {
-      if (err) return reject(err);
+      if (err) {
+        const error = new Error(err.message || 'Database error');
+        error.code = err.code || 'DB_ERROR';
+        return reject(error);
+      }
       resolve(rows || []);
     });
   });
@@ -136,17 +194,32 @@ function selectJoin(joinTable, mainTable, joinKey, where, joinFields = [], mainF
  */
 async function getEntityWithHistory(mainTable, joinTable, entityKey, joinKey, entityId, historyWhere = {}, historySortField, ascending = true) {
   // Get entity details
-  const entityRows = await select(mainTable, { [entityKey]: entityId }, true);
-  if (!entityRows) return null;
+  let entityRows;
+  try {
+    entityRows = await select(mainTable, { [entityKey]: entityId }, true);
+  } catch (err) {
+    if (err.code === ERROR_CODES.NOT_FOUND) {
+      // propagate as not found
+      throw err;
+    }
+    const error = new Error(err.message || 'Database error');
+    error.code = err.code || ERROR_CODES.DB_ERROR;
+    throw error;
+  }
 
   // Build where clause for history
-  const where = { ...historyWhere, [joinKey]: entityId };
-  const history = await select(joinTable, where);
+  let history;
+  try {
+    history = await select(joinTable, { ...historyWhere, [joinKey]: entityId });
+  } catch (err) {
+    const error = new Error(err.message || 'Database error');
+    error.code = err.code || ERROR_CODES.DB_ERROR;
+    throw error;
+  }
 
   // Optionally sort history
   let sortedHistory = history;
   if (historySortField) {
-    // You may want to use your loreDateToSortable here if it's a date field
     sortedHistory = history.sort((a, b) => {
       if (a[historySortField] === b[historySortField]) return 0;
       return (a[historySortField] > b[historySortField] ? 1 : -1) * (ascending ? 1 : -1);

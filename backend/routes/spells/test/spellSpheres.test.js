@@ -79,12 +79,12 @@ describe('Spell-Sphere API', () => {
   describe('valid sphere id test', () => {
     it('should reject an sphere association with an invalid id', async () => {
       const invalidSphereAss = {
-        sphere_id: 'bad $phere 1d'
+        sphere_id: 'bad-pher-d'
       };
       const res = await request(app)
         .post(`/api/spells/${testSpell.id}/spheres`)
         .send(invalidSphereAss);
-      expect([400]).toContain(res.statusCode);
+      expect([404]).toContain(res.statusCode);
     });
   });
 

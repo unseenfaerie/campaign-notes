@@ -5,6 +5,7 @@ const serviceUtils = require('../utils/serviceUtils');
 const fullEntityService = require('./fullEntityService');
 const { validateIdFormat } = require('../utils/idUtils');
 const { validateFields } = require('../../common/validate');
+const ERROR_CODES = require('../../common/errorCodes');
 
 function getTable(entityType) {
   const table = entityTableMap[entityType];
@@ -12,16 +13,20 @@ function getTable(entityType) {
   return table;
 }
 
-
 async function createEntity(entityType, data) {
   // ID format validation (for main entities)
   if (data.id !== undefined && !validateIdFormat(data.id)) {
-    throw new Error('Invalid or missing id: must be lowercase letters and dashes only');
+    const err = new Error('Invalid or missing id: must be lowercase letters and dashes only');
+    err.code = ERROR_CODES.INVALID_ID;
+    throw err;
   }
-  // Schema validation
+  // Schema/entity validation
   const { valid, errors, validated } = validateFields(entityType, data);
   if (!valid) {
-    throw new Error('Validation failed: ' + errors.join('; '));
+    const err = new Error('Validation failed: ' + errors.join('; '));
+    err.code = ERROR_CODES.ENTITY_VALIDATION_FAILED;
+    err.details = errors;
+    throw err;
   }
   await dbUtils.insert(getTable(entityType), validated);
   return { id: validated.id };
@@ -41,30 +46,20 @@ async function patchEntity(entityType, id, updates) {
   // Allow partial validation for patch
   const { valid, errors, validated } = validateFields(entityType, updates, { allowPartial: true });
   if (!valid) {
-    throw new Error('Validation failed: ' + errors.join('; '));
-  }
-  const result = await serviceUtils.updateWithChangedFields(getTable(entityType), { id }, validated);
-  if (result && result.message === 'record not found') {
-    const err = new Error('Record not found');
-    err.code = 'NOT_FOUND';
+    const err = new Error('Validation failed: ' + errors.join('; '));
+    err.code = ERROR_CODES.ENTITY_VALIDATION_FAILED;
+    err.details = errors;
     throw err;
   }
-  return result;
+  // Let dbUtils/serviceUtils handle not found and no changes made
+  return serviceUtils.updateWithChangedFields(getTable(entityType), { id }, validated);
 }
 
 
 async function deleteEntity(entityType, id) {
-  // Try to delete, then check if any row was actually deleted
+  // Let dbUtils handle not found and no changes made
   const table = getTable(entityType);
-  // First, check if the record exists
-  const existing = await dbUtils.select(table, { id }, true);
-  if (!existing) {
-    const err = new Error('Record not found');
-    err.code = 'NOT_FOUND';
-    throw err;
-  }
-  await dbUtils.remove(table, { id });
-  return { deleted: { id } };
+  return dbUtils.remove(table, { id });
 }
 
 function getFullEntity(entityType, id) {

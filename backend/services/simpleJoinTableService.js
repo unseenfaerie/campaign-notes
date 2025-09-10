@@ -3,7 +3,7 @@
 
 const dbUtils = require('../utils/dbUtils');
 const { entityRegistry, entityTableMap } = require('../../common/entityRegistry');
-const entities = require('../../common/entities');
+const ERROR_CODES = require('../../common/errorCodes')
 
 /**
  * Find the registry entry for a given join table name (e.g. 'spell_spheres')
@@ -28,8 +28,18 @@ function getSimpleJoinTableInfo(joinTable) {
 function createLinkage(joinTable, ids) {
   const info = getSimpleJoinTableInfo(joinTable);
   // Validate required fields
+  const allowedFields = [info.mainIdField, info.relatedIdField];
   if (!ids[info.mainIdField] || !ids[info.relatedIdField]) {
-    throw new Error(`Missing required linkage fields: ${info.mainIdField}, ${info.relatedIdField}`);
+    const err = new Error(`Missing required linkage fields: ${info.mainIdField}, ${info.relatedIdField}`);
+    err.code = ERROR_CODES.ENTITY_VALIDATION_FAILED;
+    throw err;
+  }
+  const extraFields = Object.keys(ids).filter(key => !allowedFields.includes(key));
+  if (extraFields.length > 0) {
+    const err = new Error(`Unexpected fields: ${extraFields.join(', ')}`);
+    err.code = ERROR_CODES.ENTITY_VALIDATION_FAILED;
+    err.details = { extraFields, received: ids };
+    throw err;
   }
 
   // Use registry and table map for foreign key checks
@@ -43,25 +53,33 @@ function createLinkage(joinTable, ids) {
   }
   const relatedEntity = info.relatedEntity;
   if (!mainEntity || !relatedEntity) {
-    throw new Error(`Could not resolve main or related entity for join table: ${joinTable}`);
+    const err = new Error(`Could not resolve main or related entity for join table: ${joinTable}`);
+    err.code = ERROR_CODES.ENTITY_VALIDATION_FAILED;
+    throw err;
   }
   const mainTable = entityTableMap[mainEntity];
   const relatedTable = entityTableMap[relatedEntity];
   if (!mainTable || !relatedTable) {
-    throw new Error(`Could not resolve table names for entities: ${mainEntity}, ${relatedEntity}`);
+    const err = new Error(`Could not resolve table names for entities: ${mainEntity}, ${relatedEntity}`);
+    err.code = ERROR_CODES.ENTITY_VALIDATION_FAILED;
+    throw err;
   }
 
   // Check main entity existence
   return dbUtils.select(mainTable, { id: ids[info.mainIdField] }, true)
     .then(mainRow => {
       if (!mainRow) {
-        throw new Error(`Referenced ${mainEntity} (${ids[info.mainIdField]}) does not exist.`);
+        const err = new Error(`Referenced ${mainEntity} (${ids[info.mainIdField]}) does not exist.`);
+        err.code = ERROR_CODES.NOT_FOUND;
+        throw err;
       }
       return dbUtils.select(relatedTable, { id: ids[info.relatedIdField] }, true);
     })
     .then(relatedRow => {
       if (!relatedRow) {
-        throw new Error(`Referenced ${relatedEntity} (${ids[info.relatedIdField]}) does not exist.`);
+        const err = new Error(`Referenced ${relatedEntity} (${ids[info.relatedIdField]}) does not exist.`);
+        err.code = ERROR_CODES.NOT_FOUND;
+        throw err;
       }
       return dbUtils.insert(joinTable, ids);
     });
@@ -94,13 +112,17 @@ function getLinkagesById(joinTable, idField, idValue) {
 function deleteLinkage(joinTable, ids) {
   const info = getSimpleJoinTableInfo(joinTable);
   if (!ids[info.mainIdField] || !ids[info.relatedIdField]) {
-    throw new Error(`Missing required linkage fields: ${info.mainIdField}, ${info.relatedIdField}`);
+    const err = new Error(`Missing required linkage fields: ${info.mainIdField}, ${info.relatedIdField}`);
+    err.code = ERROR_CODES.ENTITY_VALIDATION_FAILED;
+    throw err;
   }
   // Check if linkage exists first
   return dbUtils.select(joinTable, ids, true)
     .then(linkage => {
       if (!linkage) {
-        throw new Error(`Linkage does not exist in ${joinTable}: ${JSON.stringify(ids)}`);
+        const err = new Error(`Linkage does not exist in ${joinTable}: ${JSON.stringify(ids)}`);
+        err.code = ERROR_CODES.NOT_FOUND;
+        throw err;
       }
       return dbUtils.remove(joinTable, ids);
     })

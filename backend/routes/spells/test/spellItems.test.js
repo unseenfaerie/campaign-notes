@@ -39,6 +39,14 @@ describe('Spell-Item API', () => {
     item_id: 'slick-ring'
   };
 
+  const testItemAssocII = {
+    item_id: 'smooth-ring'
+  };
+
+  const testItemAssocIII = {
+    item_id: 'clear-ring'
+  };
+
   afterAll(async () => {
     // Clean up test spell and items
     await request(app).delete(`/api/spells/${testSpell.id}`);
@@ -87,24 +95,18 @@ describe('Spell-Item API', () => {
 
   describe('DELETE /api/spells/:id/items', () => {
     it('should delete all associations between the test spell and items', async () => {
+      const itemAssIIRes = await request(app)
+        .post(`/api/spells/${testSpell.id}/items`)
+        .send(testItemAssocII);
+      const itemAssIIIRes = await request(app)
+        .post(`/api/spells/${testSpell.id}/items`)
+        .send(testItemAssocIII);
       const res = await request(app).delete(`/api/spells/${testSpell.id}/items`);
       expect([200, 404]).toContain(res.statusCode);
     });
   });
 
   // ~~BUSINESS LOGIC TESTS~~
-  describe('must provide materials with M component', () => {
-    it('should reject a spell with M component but no materials', async () => {
-      const spellWithM = {
-        ...testSpell,
-        components: ['M']
-      };
-      const res = await request(app)
-        .post('/api/spells')
-        .send(spellWithM);
-      expect([400]).toContain(res.statusCode);
-    });
-  });
 
   // ~~AUX TESTS~~
   describe('unknown field test', () => {
@@ -125,12 +127,12 @@ describe('Spell-Item API', () => {
   describe('valid item id test', () => {
     it('should reject an item association with an invalid id', async () => {
       const invalidItemAss = {
-        item_id: 'bad Item 1d'
+        item_id: 'doesnt-exist'
       };
       const res = await request(app)
         .post(`/api/spells/${testSpell.id}/items`)
         .send(invalidItemAss);
-      expect([400]).toContain(res.statusCode);
+      expect([404]).toContain(res.statusCode);
     });
   });
 

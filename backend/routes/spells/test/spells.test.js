@@ -117,7 +117,7 @@ describe('Spell API', () => {
     it('should reject a spell with M component but no materials', async () => {
       const spellWithM = {
         ...testSpell,
-        components: ['M']
+        components: 'M'
       };
       const res = await request(app)
         .post('/api/spells')
