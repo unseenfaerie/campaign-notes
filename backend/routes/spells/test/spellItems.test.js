@@ -127,12 +127,12 @@ describe('Spell-Item API', () => {
   describe('valid item id test', () => {
     it('should reject an item association with an invalid id', async () => {
       const invalidItemAss = {
-        item_id: 'bad Item 1d'
+        item_id: 'doesnt-exist'
       };
       const res = await request(app)
         .post(`/api/spells/${testSpell.id}/items`)
         .send(invalidItemAss);
-      expect([400]).toContain(res.statusCode);
+      expect([404]).toContain(res.statusCode);
     });
   });
 
