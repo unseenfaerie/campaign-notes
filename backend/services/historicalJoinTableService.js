@@ -68,6 +68,17 @@ function getLinkagesById(joinTable, idField, idValue) {
 }
 
 /**
+ * Get all linkages matching an arbitrary set of fields (e.g., both entity ids for a pair)
+ */
+function getLinkagesByFields(joinTable, fields) {
+  getHistoricalJoinTableInfo(joinTable); // throws if not valid
+  if (!fields || typeof fields !== 'object' || Object.keys(fields).length === 0) {
+    return dbUtils.select(joinTable);
+  }
+  return dbUtils.select(joinTable, fields);
+}
+
+/**
  * Get a specific linkage (by all PKs)
  */
 function getLinkage(joinTable, ids) {
@@ -133,6 +144,7 @@ async function deleteAllLinkages(joinTable, where) {
 module.exports = {
   createLinkage,
   getLinkagesById,
+  getLinkagesByFields,
   getLinkage,
   patchLinkage,
   deleteLinkage,
