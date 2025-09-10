@@ -1,55 +1,79 @@
 // services/characterRelationships.js
 // Centralized logic for managing character-to-character relationships
-const dbUtils = require('../../utils/dbUtils');
-const serviceUtils = require('../../utils/serviceUtils');
+const historicalJoinTableService = require('../historicalJoinTableService');
 
 const TABLE = 'character_relationships';
+const MAIN_ID = 'character_id';
+const RELATED_ID = 'related_id';
+const DATE_KEY = 'established_date';
 
-// Create a new character-character relationship
-function addCharacterRelationship(character_id, related_id, relationship_type, short_description = '', long_explanation = '') {
-  return dbUtils.insert(TABLE, { character_id, related_id, relationship_type, short_description, long_explanation });
+// Create
+function addCharacterRelationship(data) {
+  // data: { character_id, related_id, established_date, ...metadata }
+  return historicalJoinTableService.createLinkage(TABLE, data);
 }
 
-// Patch an existing character-character relationship
-async function patchCharacterRelationship(character_id, related_id, updates) {
-  return serviceUtils.updateWithChangedFields(
-    TABLE,
-    { character_id, related_id },
-    updates
-  );
+// Read
+function getRelationshipsForCharacter(character_id) {
+  // All relationships (all history) for a character
+  return historicalJoinTableService.getLinkagesById(TABLE, MAIN_ID, character_id);
 }
 
-// Delete a character-character relationship
-function removeCharacterRelationship(character_id, related_id) {
-  return dbUtils.remove(TABLE, { character_id, related_id });
+function getCharacterRelationshipHistory(character_id, related_id) {
+  // All history for a character-character pair
+  return historicalJoinTableService.getLinkagesByFields(TABLE, { [MAIN_ID]: character_id, [RELATED_ID]: related_id });
 }
 
-// Get all relationships for a character (as either character_id or related_id)
-async function getRelationshipsForCharacter(character_id) {
-  // Get relationships where character is the source
-  const asSource = await dbUtils.select(TABLE, { character_id });
-  // Get relationships where character is the target
-  const asTarget = await dbUtils.select(TABLE, { related_id: character_id });
-  // Merge and deduplicate (in case of self-relationships)
-  const all = [...asSource, ...asTarget];
-  const seen = new Set();
-  return all.filter(r => {
-    const key = `${r.character_id}|${r.related_id}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+function getCharacterRelationshipInstance(character_id, related_id, established_date) {
+  // Specific instance
+  return historicalJoinTableService.getLinkage(TABLE, {
+    [MAIN_ID]: character_id,
+    [RELATED_ID]: related_id,
+    [DATE_KEY]: established_date
   });
 }
 
-// Get a specific character-character relationship
-function getCharacterRelationship(character_id, related_id) {
-  return dbUtils.select(TABLE, { character_id, related_id }, true);
+// Patch
+function patchCharacterRelationship(character_id, related_id, established_date, updates) {
+  // Patch a specific instance
+  return historicalJoinTableService.patchLinkage(TABLE, {
+    [MAIN_ID]: character_id,
+    [RELATED_ID]: related_id,
+    [DATE_KEY]: established_date
+  }, updates);
+}
+
+// Delete
+function removeCharacterRelationshipInstance(character_id, related_id, established_date) {
+  // Remove a specific instance
+  return historicalJoinTableService.deleteLinkage(TABLE, {
+    [MAIN_ID]: character_id,
+    [RELATED_ID]: related_id,
+    [DATE_KEY]: established_date
+  });
+}
+
+function removeAllRelationshipsForCharacter(character_id) {
+  // Remove all relationships for a character
+  return historicalJoinTableService.deleteAllLinkages(TABLE, { [MAIN_ID]: character_id });
+}
+
+function removeAllHistoryForCharacterRelationship(character_id, related_id) {
+  // Remove all history for a character-character pair
+  return historicalJoinTableService.deleteAllLinkages(TABLE, { [MAIN_ID]: character_id, [RELATED_ID]: related_id });
 }
 
 module.exports = {
+  // Create
   addCharacterRelationship,
-  patchCharacterRelationship,
-  removeCharacterRelationship,
+  // Read
   getRelationshipsForCharacter,
-  getCharacterRelationship
+  getCharacterRelationshipHistory,
+  getCharacterRelationshipInstance,
+  // Patch
+  patchCharacterRelationship,
+  // Delete
+  removeCharacterRelationshipInstance,
+  removeAllRelationshipsForCharacter,
+  removeAllHistoryForCharacterRelationship
 };

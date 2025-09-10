@@ -1,113 +1,89 @@
 const historicalJoinTableService = require('../historicalJoinTableService');
-const dbUtils = require('../../utils/dbUtils');
 
-// Custom logic: get all item IDs for a character (returns only IDs)
-function getItemIdsForCharacter(character_id) {
-  return historicalJoinTableService.getLinkagesById('character_items', 'character_id', character_id)
-    .then(rows => rows.map(r => r.item_id));
+const TABLE = 'character_items';
+const MAIN_ID = 'character_id';
+const RELATED_ID = 'item_id';
+const DATE_KEY = 'acquired_date';
+
+// Create
+function addCharacterItem(data) {
+  // data: { character_id, item_id, acquired_date, ...metadata }
+  return historicalJoinTableService.createLinkage(TABLE, data);
 }
 
-// Custom logic: get all unique item IDs for a character
-function getUniqueItemIdsForCharacter(character_id) {
-  return historicalJoinTableService.getLinkagesById('character_items', 'character_id', character_id)
-    .then(rows => {
-      const uniqueIds = new Set(rows.map(r => r.item_id));
-      return Array.from(uniqueIds);
-    });
-}
-
-// Custom logic: get all items for a character (with join table metadata)
-
-function getItemForCharacter(character_id, item_id) {
-  return dbUtils.getEntityWithHistory(
-    'items',
-    'character_items',
-    'id',
-    'item_id',
-    item_id,
-    { character_id },
-    'acquired_date',
-    true
-  );
-}
-
-// Custom logic: get all items (with history) for a character
-async function getAllItemsWithHistoryForCharacter(character_id) {
-  const itemIds = await getUniqueItemIdsForCharacter(character_id);
-  const results = await Promise.all(itemIds.map(item_id =>
-    dbUtils.getEntityWithHistory(
-      'items',
-      'character_items',
-      'id',
-      'item_id',
-      item_id,
-      { character_id },
-      'acquired_date',
-      true
-    )
-  ));
-  return results.filter(Boolean);
-}
-
-// CRUD wrappers using the generic historicalJoinTableService
-function addCharacterItem(character_id, item_id, acquired_date, relinquished_date, short_description = '') {
-  return historicalJoinTableService.createLinkage('character_items', {
-    character_id,
-    item_id,
-    acquired_date,
-    relinquished_date,
-    short_description
-  });
-}
-
-function getCharacterItem(character_id, item_id, acquired_date) {
-  return historicalJoinTableService.getLinkage('character_items', { character_id, item_id, acquired_date });
-}
-
-function getAllCharacterItemRecords(character_id, item_id) {
-  return historicalJoinTableService.getLinkagesById('character_items', 'character_id', character_id)
-    .then(rows => rows.filter(r => r.item_id === item_id));
+// Read
+function getItemsForCharacter(character_id) {
+  // All items (all history) for a character
+  return historicalJoinTableService.getLinkagesById(TABLE, MAIN_ID, character_id);
 }
 
 function getCharactersForItem(item_id) {
-  return historicalJoinTableService.getLinkagesById('character_items', 'item_id', item_id);
+  // All characters (all history) for an item
+  return historicalJoinTableService.getLinkagesById(TABLE, RELATED_ID, item_id);
 }
 
+function getCharacterItemHistory(character_id, item_id) {
+  // All history for a character-item pair
+  return historicalJoinTableService.getLinkagesByFields(TABLE, { [MAIN_ID]: character_id, [RELATED_ID]: item_id });
+}
+
+function getCharacterItemInstance(character_id, item_id, acquired_date) {
+  // Specific instance
+  return historicalJoinTableService.getLinkage(TABLE, {
+    [MAIN_ID]: character_id,
+    [RELATED_ID]: item_id,
+    [DATE_KEY]: acquired_date
+  });
+}
+
+// Patch
 function patchCharacterItem(character_id, item_id, acquired_date, updates) {
-  return historicalJoinTableService.patchLinkage('character_items', { character_id, item_id, acquired_date }, updates);
+  // Patch a specific instance
+  return historicalJoinTableService.patchLinkage(TABLE, {
+    [MAIN_ID]: character_id,
+    [RELATED_ID]: item_id,
+    [DATE_KEY]: acquired_date
+  }, updates);
 }
 
-function removeInstanceCharacterItem(character_id, item_id, acquired_date) {
-  return historicalJoinTableService.deleteLinkage('character_items', { character_id, item_id, acquired_date });
+// Delete
+function removeCharacterItemInstance(character_id, item_id, acquired_date) {
+  // Remove a specific instance
+  return historicalJoinTableService.deleteLinkage(TABLE, {
+    [MAIN_ID]: character_id,
+    [RELATED_ID]: item_id,
+    [DATE_KEY]: acquired_date
+  });
 }
 
-function removeCharacterItem(character_id, item_id) {
-  // Remove all records for a character-item pair
-  return historicalJoinTableService.deleteAllLinkages('character_items', { character_id, item_id });
+function removeAllItemsForCharacter(character_id) {
+  // Remove all items for a character
+  return historicalJoinTableService.deleteAllLinkages(TABLE, { [MAIN_ID]: character_id });
 }
 
-function removeAllCharacterItemRecords(character_id) {
-  // Remove ALL item relationships for this character
-  return historicalJoinTableService.deleteAllLinkages('character_items', { character_id });
+function removeAllCharactersForItem(item_id) {
+  // Remove all characters for an item
+  return historicalJoinTableService.deleteAllLinkages(TABLE, { [RELATED_ID]: item_id });
 }
 
-function removeAllItemCharacterRecords(item_id) {
-  // Remove ALL character relationships for this item
-  return historicalJoinTableService.deleteAllLinkages('character_items', { item_id });
+function removeAllHistoryForCharacterItem(character_id, item_id) {
+  // Remove all history for a character-item pair
+  return historicalJoinTableService.deleteAllLinkages(TABLE, { [MAIN_ID]: character_id, [RELATED_ID]: item_id });
 }
 
 module.exports = {
+  // Create
   addCharacterItem,
+  // Read
+  getItemsForCharacter,
+  getCharactersForItem,
+  getCharacterItemHistory,
+  getCharacterItemInstance,
+  // Patch
   patchCharacterItem,
-  removeCharacterItem,
-  removeInstanceCharacterItem,
-  getItemForCharacter,
-  getCharacterItem,
-  getAllCharacterItemRecords,
-  getItemIdsForCharacter,
-  removeAllCharacterItemRecords,
-  removeAllItemCharacterRecords,
-  getAllItemsWithHistoryForCharacter,
-  getUniqueItemIdsForCharacter,
-  getCharactersForItem
+  // Delete
+  removeCharacterItemInstance,
+  removeAllItemsForCharacter,
+  removeAllCharactersForItem,
+  removeAllHistoryForCharacterItem
 };

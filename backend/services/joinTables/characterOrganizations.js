@@ -1,85 +1,93 @@
 // services/characterOrganizations.js
 // Centralized logic for managing character-organization relationships
-const dbUtils = require('../../utils/dbUtils');
-const { updateWithChangedFields } = require('../../utils/serviceUtils');
+const historicalJoinTableService = require('../historicalJoinTableService');
 
 const TABLE = 'character_organizations';
+const MAIN_ID = 'character_id';
+const RELATED_ID = 'organization_id';
+const DATE_KEY = 'joined_date';
 
-// Add a character-organization relationship
-function addCharacterOrganization(character_id, organization_id, joined_date = '', left_date = '', short_description = '', long_explanation = '') {
-  return dbUtils.insert(TABLE, { character_id, organization_id, joined_date, left_date, short_description, long_explanation });
+// Create
+function addCharacterOrganization(data) {
+  // data: { character_id, organization_id, joined_date, ...metadata }
+  return historicalJoinTableService.createLinkage(TABLE, data);
 }
 
-// Get all organization IDs for a character (custom, returns only IDs)
-function getOrganizationIdsForCharacter(character_id) {
-  return dbUtils.select(TABLE, { character_id }).then(rows => rows.map(r => r.organization_id));
-}
 
-// Get all records for a character-organization pair (all joinings)
-function getAllCharacterOrganizationRecords(character_id, organization_id) {
-  return dbUtils.select(TABLE, { character_id, organization_id });
-}
 
-// Get a specific character-organization relationship by joined_date
-function getCharacterOrganizationByDate(character_id, organization_id, joined_date) {
-  return dbUtils.select(TABLE, { character_id, organization_id, joined_date }, true);
-}
-
-// Remove a single instance of organization membership from a character
-function removeInstanceCharacterOrganization(character_id, organization_id, joined_date) {
-  return dbUtils.remove(TABLE, { character_id, organization_id, joined_date });
-}
-
-// Remove ALL organization relationships for this character and organization
-function removeCharacterOrganizationRecords(character_id, organization_id) {
-  return dbUtils.remove(TABLE, { character_id, organization_id });
-}
-
-// Remove ALL organization relationships for this character
-function removeAllCharacterOrganizationRecords(character_id) {
-  return dbUtils.remove(TABLE, { character_id });
-}
-
-// Get all organizations for a character (join table only)
+// Read
 function getOrganizationsForCharacter(character_id) {
-  return dbUtils.select(TABLE, { character_id });
+  // All organizations (all history) for a character
+  return historicalJoinTableService.getLinkagesById(TABLE, MAIN_ID, character_id);
 }
 
-// Get all characters for an organization (join table only)
 function getCharactersForOrganization(organization_id) {
-  return dbUtils.select(TABLE, { organization_id });
+  // All characters (all history) for an organization
+  return historicalJoinTableService.getLinkagesById(TABLE, RELATED_ID, organization_id);
 }
 
-// Get a specific character-organization relationship
-function getCharacterOrganization(character_id, organization_id) {
-  return dbUtils.select(TABLE, { character_id, organization_id }, true);
+function getCharacterOrganizationHistory(character_id, organization_id) {
+  // All history for a character-organization pair
+  return historicalJoinTableService.getLinkagesByFields(TABLE, { [MAIN_ID]: character_id, [RELATED_ID]: organization_id });
 }
 
-// Patch a character-organization relationship
-async function patchCharacterOrganization(character_id, organization_id, joined_date, updates) {
-  return updateWithChangedFields(
-    TABLE,
-    { character_id, organization_id, joined_date },
-    updates
-  );
+function getCharacterOrganizationInstance(character_id, organization_id, joined_date) {
+  // Specific instance
+  return historicalJoinTableService.getLinkage(TABLE, {
+    [MAIN_ID]: character_id,
+    [RELATED_ID]: organization_id,
+    [DATE_KEY]: joined_date
+  });
 }
 
-// Remove all records for a character-organization pair (alias for removeCharacterOrganizationRecords)
-function removeCharacterOrganization(character_id, organization_id) {
-  return removeCharacterOrganizationRecords(character_id, organization_id);
+// Patch
+function patchCharacterOrganization(character_id, organization_id, joined_date, updates) {
+  // Patch a specific instance
+  return historicalJoinTableService.patchLinkage(TABLE, {
+    [MAIN_ID]: character_id,
+    [RELATED_ID]: organization_id,
+    [DATE_KEY]: joined_date
+  }, updates);
+}
+
+// Delete
+function removeCharacterOrganizationInstance(character_id, organization_id, joined_date) {
+  // Remove a specific instance
+  return historicalJoinTableService.deleteLinkage(TABLE, {
+    [MAIN_ID]: character_id,
+    [RELATED_ID]: organization_id,
+    [DATE_KEY]: joined_date
+  });
+}
+
+function removeAllOrganizationsForCharacter(character_id) {
+  // Remove all organizations for a character
+  return historicalJoinTableService.deleteAllLinkages(TABLE, { [MAIN_ID]: character_id });
+}
+
+function removeAllCharactersForOrganization(organization_id) {
+  // Remove all characters for an organization
+  return historicalJoinTableService.deleteAllLinkages(TABLE, { [RELATED_ID]: organization_id });
+}
+
+function removeAllHistoryForCharacterOrganization(character_id, organization_id) {
+  // Remove all history for a character-organization pair
+  return historicalJoinTableService.deleteAllLinkages(TABLE, { [MAIN_ID]: character_id, [RELATED_ID]: organization_id });
 }
 
 module.exports = {
+  // Create
   addCharacterOrganization,
-  patchCharacterOrganization,
-  removeCharacterOrganization,
+  // Read
   getOrganizationsForCharacter,
   getCharactersForOrganization,
-  getCharacterOrganization,
-  getOrganizationIdsForCharacter,
-  getAllCharacterOrganizationRecords,
-  getCharacterOrganizationByDate,
-  removeInstanceCharacterOrganization,
-  removeCharacterOrganizationRecords,
-  removeAllCharacterOrganizationRecords
+  getCharacterOrganizationHistory,
+  getCharacterOrganizationInstance,
+  // Patch
+  patchCharacterOrganization,
+  // Delete
+  removeCharacterOrganizationInstance,
+  removeAllOrganizationsForCharacter,
+  removeAllCharactersForOrganization,
+  removeAllHistoryForCharacterOrganization
 };

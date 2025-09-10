@@ -1,61 +1,89 @@
 // services/characterPlaces.js
-// Centralized logic for managing character-place relationships
-const dbUtils = require('../../utils/dbUtils');
-const serviceUtils = require('../../utils/serviceUtils');
-
+// Centralized logic for managing character-place relationships (historical)
 const TABLE = 'character_places';
+const MAIN_ID = 'character_id';
+const RELATED_ID = 'place_id';
+const DATE_KEY = 'arrived_date';
 
-// Add a character-place relationship
-function addCharacterPlace(character_id, place_id, arrived_date = '', left_date = '', short_description = '', long_explanation = '') {
-  return dbUtils.insert(TABLE, { character_id, place_id, arrived_date, left_date, short_description, long_explanation });
+// Create
+function addCharacterPlace(data) {
+  // data: { character_id, place_id, arrived_date, ...metadata }
+  return historicalJoinTableService.createLinkage(TABLE, data);
 }
 
-// Get all places for a character
+// Read
 function getPlacesForCharacter(character_id) {
-  return dbUtils.select(TABLE, { character_id });
+  // All places (all history) for a character
+  return historicalJoinTableService.getLinkagesById(TABLE, MAIN_ID, character_id);
 }
 
-// Get all characters for a place
 function getCharactersForPlace(place_id) {
-  return dbUtils.select(TABLE, { place_id });
+  // All characters (all history) for a place
+  return historicalJoinTableService.getLinkagesById(TABLE, RELATED_ID, place_id);
 }
 
-// Get a specific character-place relationship
-function getCharacterPlace(character_id, place_id, arrived_date) {
-  return dbUtils.select(TABLE, { character_id, place_id, arrived_date }, true);
+function getCharacterPlaceHistory(character_id, place_id) {
+  // All history for a character-place pair
+  return historicalJoinTableService.getLinkagesByFields(TABLE, { [MAIN_ID]: character_id, [RELATED_ID]: place_id });
 }
 
-// Patch a character-place relationship
-async function patchCharacterPlace(character_id, place_id, arrived_date, updates) {
-  return serviceUtils.updateWithChangedFields(
-    TABLE,
-    { character_id, place_id, arrived_date },
-    updates
-  );
+function getCharacterPlaceInstance(character_id, place_id, arrived_date) {
+  // Specific instance
+  return historicalJoinTableService.getLinkage(TABLE, {
+    [MAIN_ID]: character_id,
+    [RELATED_ID]: place_id,
+    [DATE_KEY]: arrived_date
+  });
 }
 
-// Remove a character-place relationship
-function removeCharacterPlace(character_id, place_id, arrived_date) {
-  return dbUtils.remove(TABLE, { character_id, place_id, arrived_date });
+// Patch
+function patchCharacterPlace(character_id, place_id, arrived_date, updates) {
+  // Patch a specific instance
+  return historicalJoinTableService.patchLinkage(TABLE, {
+    [MAIN_ID]: character_id,
+    [RELATED_ID]: place_id,
+    [DATE_KEY]: arrived_date
+  }, updates);
 }
 
-// Remove all records for a character-place pair
-function removeAllCharacterPlaceRecords(character_id, place_id) {
-  return dbUtils.remove(TABLE, { character_id, place_id });
+// Delete
+function removeCharacterPlaceInstance(character_id, place_id, arrived_date) {
+  // Remove a specific instance
+  return historicalJoinTableService.deleteLinkage(TABLE, {
+    [MAIN_ID]: character_id,
+    [RELATED_ID]: place_id,
+    [DATE_KEY]: arrived_date
+  });
 }
 
-// Remove ALL place relationships for this character
-function removeAllCharacterPlaces(character_id) {
-  return dbUtils.remove(TABLE, { character_id });
+function removeAllPlacesForCharacter(character_id) {
+  // Remove all places for a character
+  return historicalJoinTableService.deleteAllLinkages(TABLE, { [MAIN_ID]: character_id });
+}
+
+function removeAllCharactersForPlace(place_id) {
+  // Remove all characters for a place
+  return historicalJoinTableService.deleteAllLinkages(TABLE, { [RELATED_ID]: place_id });
+}
+
+function removeAllHistoryForCharacterPlace(character_id, place_id) {
+  // Remove all history for a character-place pair
+  return historicalJoinTableService.deleteAllLinkages(TABLE, { [MAIN_ID]: character_id, [RELATED_ID]: place_id });
 }
 
 module.exports = {
+  // Create
   addCharacterPlace,
-  patchCharacterPlace,
-  removeCharacterPlace,
-  removeAllCharacterPlaceRecords,
-  removeAllCharacterPlaces,
+  // Read
   getPlacesForCharacter,
   getCharactersForPlace,
-  getCharacterPlace
+  getCharacterPlaceHistory,
+  getCharacterPlaceInstance,
+  // Patch
+  patchCharacterPlace,
+  // Delete
+  removeCharacterPlaceInstance,
+  removeAllPlacesForCharacter,
+  removeAllCharactersForPlace,
+  removeAllHistoryForCharacterPlace
 };

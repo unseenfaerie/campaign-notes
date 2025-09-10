@@ -14,19 +14,22 @@ function addCharacterDeity(data) {
 }
 
 function getDeitiesForCharacter(character_id) {
-  // All deities (all tenures) for a character
+  // All deities (all history) for a character
   return historicalJoinTableService.getLinkagesById(TABLE, MAIN_ID, character_id);
 }
 
 function getCharactersForDeity(deity_id) {
-  // All characters (all tenures) for a deity
+  // All characters (all history) for a deity
   return historicalJoinTableService.getLinkagesById(TABLE, RELATED_ID, deity_id);
 }
 
-function getCharacterDeityTenures(character_id, deity_id) {
-  // All tenures for a character-deity pair
-  return historicalJoinTableService.getLinkagesById(TABLE, null, null) // fallback below
-    .then(rows => rows.filter(row => row.character_id === character_id && row.deity_id === deity_id));
+function getCharacterDeityHistory(character_id, deity_id) {
+  // All history for a character-deity pair
+  return historicalJoinTableService.getLinkagesByFields(TABLE, { [MAIN_ID]: character_id, [RELATED_ID]: deity_id });
+}
+function removeAllCharactersForDeity(deity_id) {
+  // Remove all characters for a deity
+  return historicalJoinTableService.deleteAllLinkages(TABLE, { [RELATED_ID]: deity_id });
 }
 
 function getCharacterDeityInstance(character_id, deity_id, adopted_date) {
@@ -61,19 +64,24 @@ function removeAllDeitiesForCharacter(character_id) {
   return historicalJoinTableService.deleteAllLinkages(TABLE, { [MAIN_ID]: character_id });
 }
 
-function removeAllTenuresForCharacterDeity(character_id, deity_id) {
-  // Remove all tenures for a character-deity pair
+function removeAllHistoryForCharacterDeity(character_id, deity_id) {
+  // Remove all history for a character-deity pair
   return historicalJoinTableService.deleteAllLinkages(TABLE, { [MAIN_ID]: character_id, [RELATED_ID]: deity_id });
 }
 
 module.exports = {
+  // Create
   addCharacterDeity,
+  // Read
   getDeitiesForCharacter,
   getCharactersForDeity,
-  getCharacterDeityTenures,
+  getCharacterDeityHistory,
   getCharacterDeityInstance,
+  // Patch
   patchCharacterDeity,
+  // Delete
   removeCharacterDeityInstance,
   removeAllDeitiesForCharacter,
-  removeAllTenuresForCharacterDeity,
+  removeAllCharactersForDeity,
+  removeAllHistoryForCharacterDeity,
 };
