@@ -6,7 +6,7 @@ const sphereService = require('../../services/entities/spheres');
 router.post('/', async (req, res) => {
   const s = req.body;
   try {
-    const result = await sphereService.createSphere(s);
+    const result = await sphereService.addSphere(s);
     res.status(201).json(result);
   } catch (err) {
     if (err.code === 'DUPLICATE_ID') {

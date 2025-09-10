@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router({ mergeParams: true });
 const characterDeities = require('../../services/joinTables/characterDeities');
 const { mapErrorToStatus } = require('../../utils/errorUtils');
-const { validateFields } = require('../../../../common/validate');
+const { validateFields } = require('../../../common/validate');
 
 // Add a deity tenure to a character
 router.post('/', async (req, res) => {
