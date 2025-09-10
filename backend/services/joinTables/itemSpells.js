@@ -3,8 +3,9 @@ const simpleJoinTableService = require('../simpleJoinTableService');
 
 const tableName = 'item_spells';
 
-function addItemSpell(item_id, spell_id) {
-  return simpleJoinTableService.createLinkage(tableName, { item_id, spell_id });
+function addItemSpell(linkage) {
+  // linkage should be an object with item_id, spell_id, and possibly extra fields
+  return simpleJoinTableService.createLinkage(tableName, linkage);
 }
 
 function getSpellsForItem(item_id) {
