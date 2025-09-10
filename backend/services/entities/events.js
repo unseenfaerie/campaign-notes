@@ -1,42 +1,34 @@
-const dbUtils = require('../../utils/dbUtils');
-const serviceUtils = require('../../utils/serviceUtils');
+const entityDataService = require('../../entityDataService');
 const fullEntityService = require('../fullEntityService');
 
-const TABLE = 'events';
-
 function createEvent(event) {
-  return dbUtils.insert(TABLE, event);
+  return entityDataService.createEntity('Event', event);
 }
 
 function getAllEvents() {
-  return dbUtils.select(TABLE);
+  return entityDataService.getAllEntities('Event');
 }
 
 function getEventById(id) {
-  return dbUtils.select(TABLE, { id }, true);
+  return entityDataService.getEntityById('Event', id);
 }
 
-async function getFullEventById(id) {
+function getFullEventById(id) {
   return fullEntityService.getFullEntityById('Event', id);
 }
 
-function updateEvent(id, event) {
-  return dbUtils.update(TABLE, { id }, event);
-}
-
 function patchEvent(id, updates) {
-  return serviceUtils.updateWithChangedFields(TABLE, { id }, updates);
+  return entityDataService.patchEntity('Event', id, updates);
 }
 
 function deleteEvent(id) {
-  return dbUtils.remove(TABLE, { id });
+  return entityDataService.deleteEntity('Event', id);
 }
 
 module.exports = {
   createEvent,
   getAllEvents,
   getEventById,
-  updateEvent,
   patchEvent,
   deleteEvent,
   getFullEventById
