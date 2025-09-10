@@ -1,8 +1,8 @@
 const entityDataService = require('../../entityDataService');
 const fullEntityService = require('../fullEntityService');
 
-function createSphere(data) {
-  return entityDataService.createEntity('Sphere', data);
+function createSphere(sphere) {
+  return entityDataService.createEntity('Sphere', sphere);
 }
 function getAllSpheres() {
   return entityDataService.getAllEntities('Sphere');
