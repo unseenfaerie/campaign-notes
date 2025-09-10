@@ -1,23 +1,38 @@
 // services/joinTables/eventOrganizations.js
-const dbUtils = require('../../utils/dbUtils');
-const { updateWithChangedFields } = require('../../utils/serviceUtils');
-const TABLE = 'event_organizations';
+const relationshipJoinTableService = require('../relationshipJoinTableService');
 
-function addEventOrganization(event_id, organization_id, short_description, long_explanation) {
-  return dbUtils.insert(TABLE, { event_id, organization_id, short_description, long_explanation });
+const tableName = 'event_organizations';
+
+function addEventOrganization(linkage) {
+  // linkage: { event_id, organization_id, short_description, long_explanation }
+  return relationshipJoinTableService.createLinkage(tableName, linkage);
 }
 
-function getEventsForOrganization(organization_id) { return dbUtils.select(TABLE, { organization_id }); }
-
-function getOrganizationsForEvent(event_id) { return dbUtils.select(TABLE, { event_id }); }
-
-function getEventOrganization(event_id, organization_id) { return dbUtils.select(TABLE, { event_id, organization_id }, true); }
-
-function patchEventOrganization(event_id, organization_id, updates) {
-  return updateWithChangedFields(TABLE, { event_id, organization_id }, updates);
+function getEventsForOrganization(organization_id) {
+  return relationshipJoinTableService.getLinkagesById(tableName, 'organization_id', organization_id);
 }
 
-function removeEventOrganization(event_id, organization_id) { return dbUtils.remove(TABLE, { event_id, organization_id }); }
+function getOrganizationsForEvent(event_id) {
+  return relationshipJoinTableService.getLinkagesById(tableName, 'event_id', event_id);
+}
+
+
+function getEventOrganization(linkage) {
+  // linkage: { event_id, organization_id }
+  return relationshipJoinTableService.getLinkage(tableName, linkage);
+}
+
+
+function patchEventOrganization(linkage, updates) {
+  // linkage: { event_id, organization_id }
+  return relationshipJoinTableService.patchLinkage(tableName, linkage, updates);
+}
+
+
+function removeEventOrganization(linkage) {
+  // linkage: { event_id, organization_id }
+  return relationshipJoinTableService.deleteLinkage(tableName, linkage);
+}
 
 module.exports = {
   addEventOrganization,
