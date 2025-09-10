@@ -1,31 +1,28 @@
-const dbUtils = require('../../utils/dbUtils');
-const { updateWithChangedFields } = require('../../utils/serviceUtils');
+const entityDataService = require('../../entityDataService');
 const fullEntityService = require('../fullEntityService');
 
-const TABLE = 'deities';
-
 function createDeity(deity) {
-  return dbUtils.insert(TABLE, deity);
+  return entityDataService.createEntity('Deity', deity);
 }
 
 function getAllDeities() {
-  return dbUtils.select(TABLE);
+  return entityDataService.getAllEntities('Deity');
 }
 
 function getDeityById(id) {
-  return dbUtils.select(TABLE, { id }, true);
+  return entityDataService.getEntityById('Deity', id);
 }
 
-async function getFullDeityById(id) {
+function getFullDeityById(id) {
   return fullEntityService.getFullEntityById('Deity', id);
 }
 
-async function patchDeity(id, updates) {
-  return updateWithChangedFields(TABLE, { id }, updates);
+function patchDeity(id, updates) {
+  return entityDataService.patchEntity('Deity', id, updates);
 }
 
 function deleteDeity(id) {
-  return dbUtils.remove(TABLE, { id });
+  return entityDataService.deleteEntity('Deity', id);
 }
 
 module.exports = {
