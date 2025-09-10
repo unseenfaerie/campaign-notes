@@ -1,24 +1,16 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
 const itemSpellsService = require('../../services/joinTables/itemSpells');
+const { mapErrorToStatus } = require('../../utils/errorUtils');
 
 router.post('/', async (req, res) => {
-  const spell_id = req.params.id;
-  const { item_id, ...rest } = req.body;
-  if (!item_id) {
-    return res.status(400).json({ error: 'item_id is required' });
-  }
-  if (Object.keys(rest).length > 0) {
-    return res.status(400).json({ error: 'Only item_id is allowed in the request body.' });
-  }
+  // Pass the full linkage object, including spell_id from params and all fields from body
+  const linkage = { ...req.body, spell_id: req.params.id };
   try {
-    const result = await itemSpellsService.addItemSpell(item_id, spell_id);
+    const result = await itemSpellsService.addItemSpell(linkage);
     res.status(201).json(result);
   } catch (err) {
-    if (err.code === 'DUPLICATE_ID') {
-      return res.status(409).json({ error: 'This item-spell relationship already exists.' });
-    }
-    res.status(400).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
@@ -28,7 +20,7 @@ router.get('/', async (req, res) => {
     const linkages = await itemSpellsService.getItemsForSpell(spell_id);
     res.json(linkages);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
@@ -38,7 +30,7 @@ router.delete('/', async (req, res) => {
     const result = await itemSpellsService.removeAllItemsForSpell(spell_id);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
@@ -49,7 +41,7 @@ router.delete('/:itemId', async (req, res) => {
     const result = await itemSpellsService.removeItemSpell(item_id, spell_id);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
