@@ -42,7 +42,14 @@ const testDeityII = {
 const testDeityAssoc = {
   deity_id: 'jestar-ascended',
   adopted_date: 'jan-09-198',
+  dissolution_date: 'feb-13-199',
   short_description: 'Mario discovers the dark powers offered by Jestar.'
+}
+
+const testDeityAssocI = {
+  deity_id: 'jestar-ascended',
+  adopted_date: 'feb-14-199',
+  short_description: 'Mario formally adopts Jestar as his patron.'
 }
 
 const testDeityAssocII = {
@@ -73,6 +80,9 @@ describe('Character/Deity API', () => {
       const res = await request(app)
         .post(`/api/characters/${testCharacter.id}/deities`)
         .send(testDeityAssoc);
+      const resI = await request(app)
+        .post(`/api/characters/${testCharacter.id}/deities`)
+        .send(testDeityAssocI);
       const resII = await request(app)
         .post(`/api/characters/${testCharacter.id}/deities`)
         .send(testDeityAssocII);
@@ -114,6 +124,7 @@ describe('Character/Deity API', () => {
       const res = await request(app)
         .patch(`/api/characters/${testCharacter.id}/deities/${testDeity.id}/${testDeityAssoc.adopted_date}`)
         .send({ short_description: 'Jestar seduced Mario to the dark side.' });
+      expect(res.error.message).toBeUndefined();
       expect([200]).toContain(res.statusCode);
     });
   });

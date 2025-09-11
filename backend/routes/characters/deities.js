@@ -2,15 +2,12 @@ const express = require('express');
 const router = express.Router({ mergeParams: true });
 const characterDeities = require('../../services/joinTables/characterDeities');
 const { mapErrorToStatus } = require('../../utils/errorUtils');
-const { validateFields } = require('../../../common/validate');
 
 // Add a deity tenure to a character
 router.post('/', async (req, res) => {
   const character_id = req.params.id;
   try {
-    const { valid, errors, validated } = validateFields('CharacterDeity', { character_id, ...req.body });
-    if (!valid) return res.status(400).json({ errors });
-    const result = await characterDeities.addCharacterDeity(validated);
+    const result = await characterDeities.addCharacterDeity({ character_id, ...req.body });
     res.status(201).json(result);
   } catch (err) {
     res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
@@ -33,7 +30,7 @@ router.get('/:deityId', async (req, res) => {
   const character_id = req.params.id;
   const deity_id = req.params.deityId;
   try {
-    const tenures = await characterDeities.getCharacterDeityTenures(character_id, deity_id);
+    const tenures = await characterDeities.getCharacterDeityHistory(character_id, deity_id);
     res.json(tenures);
   } catch (err) {
     res.status(mapErrorToStatus(err)).json({ error: err.message });
@@ -58,10 +55,8 @@ router.patch('/:deityId/:adoptedDate', async (req, res) => {
   const character_id = req.params.id;
   const deity_id = req.params.deityId;
   const adopted_date = req.params.adoptedDate;
-  const { valid, errors, validated } = validateFields('CharacterDeity', req.body, { allowPartial: true });
-  if (!valid) return res.status(400).json({ errors });
   try {
-    const result = await characterDeities.patchCharacterDeity(character_id, deity_id, adopted_date, validated);
+    const result = await characterDeities.patchCharacterDeity(character_id, deity_id, adopted_date, req.body);
     res.json(result);
   } catch (err) {
     res.status(mapErrorToStatus(err)).json({ error: err.message });
@@ -86,7 +81,7 @@ router.delete('/:deityId', async (req, res) => {
   const character_id = req.params.id;
   const deity_id = req.params.deityId;
   try {
-    const result = await characterDeities.removeAllTenuresForCharacterDeity(character_id, deity_id);
+    const result = await characterDeities.removeAllHistoryForCharacterDeity(character_id, deity_id);
     res.json(result);
   } catch (err) {
     res.status(mapErrorToStatus(err)).json({ error: err.message });
