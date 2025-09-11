@@ -1,49 +1,87 @@
+
 // services/characterDeities.js
-// Centralized logic for managing character-deity relationships
-const dbUtils = require('../../utils/dbUtils');
-const serviceUtils = require('../../utils/serviceUtils');
+// Thin wrapper for managing character-deity relationships using historicalJoinTableService
+const historicalJoinTableService = require('../historicalJoinTableService');
 
 const TABLE = 'character_deities';
+const MAIN_ID = 'character_id';
+const RELATED_ID = 'deity_id';
+const DATE_KEY = 'adopted_date';
 
-// Add a character-deity relationship
-function addCharacterDeity(character_id, deity_id, short_description = '', long_explanation = '') {
-  return dbUtils.insert(TABLE, { character_id, deity_id, short_description, long_explanation });
+function addCharacterDeity(data) {
+  // data should include character_id, deity_id, adopted_date, and any metadata fields
+  return historicalJoinTableService.createLinkage(TABLE, data);
 }
 
-// Get all deities for a character (join table only)
 function getDeitiesForCharacter(character_id) {
-  return dbUtils.select(TABLE, { character_id });
+  // All deities (all history) for a character
+  return historicalJoinTableService.getLinkagesById(TABLE, MAIN_ID, character_id);
 }
 
-// Get all characters for a deity (join table only)
 function getCharactersForDeity(deity_id) {
-  return dbUtils.select(TABLE, { deity_id });
+  // All characters (all history) for a deity
+  return historicalJoinTableService.getLinkagesById(TABLE, RELATED_ID, deity_id);
 }
 
-// Get a specific character-deity relationship (with join table metadata)
-function getCharacterDeity(character_id, deity_id) {
-  return dbUtils.select(TABLE, { character_id, deity_id }, true);
+function getCharacterDeityHistory(character_id, deity_id) {
+  // All history for a character-deity pair
+  return historicalJoinTableService.getLinkagesByFields(TABLE, { [MAIN_ID]: character_id, [RELATED_ID]: deity_id });
+}
+function removeAllCharactersForDeity(deity_id) {
+  // Remove all characters for a deity
+  return historicalJoinTableService.deleteAllLinkages(TABLE, { [RELATED_ID]: deity_id });
 }
 
-// Patch a character-deity relationship
-async function patchCharacterDeity(character_id, deity_id, updates) {
-  return serviceUtils.updateWithChangedFields(
-    TABLE,
-    { character_id, deity_id },
-    updates
-  );
+function getCharacterDeityInstance(character_id, deity_id, adopted_date) {
+  // Specific tenure
+  return historicalJoinTableService.getLinkage(TABLE, {
+    [MAIN_ID]: character_id,
+    [RELATED_ID]: deity_id,
+    [DATE_KEY]: adopted_date
+  });
 }
 
-// Remove a character-deity relationship
-function removeCharacterDeity(character_id, deity_id) {
-  return dbUtils.remove(TABLE, { character_id, deity_id });
+function patchCharacterDeity(character_id, deity_id, adopted_date, updates) {
+  // Patch a specific tenure
+  return historicalJoinTableService.patchLinkage(TABLE, {
+    [MAIN_ID]: character_id,
+    [RELATED_ID]: deity_id,
+    [DATE_KEY]: adopted_date
+  }, updates);
+}
+
+function removeCharacterDeityInstance(character_id, deity_id, adopted_date) {
+  // Remove a specific tenure
+  return historicalJoinTableService.deleteLinkage(TABLE, {
+    [MAIN_ID]: character_id,
+    [RELATED_ID]: deity_id,
+    [DATE_KEY]: adopted_date
+  });
+}
+
+function removeAllDeitiesForCharacter(character_id) {
+  // Remove all deities for a character
+  return historicalJoinTableService.deleteAllLinkages(TABLE, { [MAIN_ID]: character_id });
+}
+
+function removeAllHistoryForCharacterDeity(character_id, deity_id) {
+  // Remove all history for a character-deity pair
+  return historicalJoinTableService.deleteAllLinkages(TABLE, { [MAIN_ID]: character_id, [RELATED_ID]: deity_id });
 }
 
 module.exports = {
+  // Create
   addCharacterDeity,
-  patchCharacterDeity,
-  removeCharacterDeity,
+  // Read
   getDeitiesForCharacter,
   getCharactersForDeity,
-  getCharacterDeity
+  getCharacterDeityHistory,
+  getCharacterDeityInstance,
+  // Patch
+  patchCharacterDeity,
+  // Delete
+  removeCharacterDeityInstance,
+  removeAllDeitiesForCharacter,
+  removeAllCharactersForDeity,
+  removeAllHistoryForCharacterDeity,
 };

@@ -1,10 +1,39 @@
 // services/deitySpheres.js
-const dbUtils = require('../../utils/dbUtils');
-const TABLE = 'deity_spheres';
+const simpleJoinTableService = require('../simpleJoinTableService');
 
-function addDeitySphere(deity_id, sphere_id) { return dbUtils.insert(TABLE, { deity_id, sphere_id }); }
-function getSpheresForDeity(deity_id) { return dbUtils.select(TABLE, { deity_id }); }
-function getDeitiesForSphere(sphere_id) { return dbUtils.select(TABLE, { sphere_id }); }
-function removeDeitySphere(deity_id, sphere_id) { return dbUtils.remove(TABLE, { deity_id, sphere_id }); }
+const tableName = 'deity_spheres';
 
-module.exports = { addDeitySphere, getSpheresForDeity, getDeitiesForSphere, removeDeitySphere };
+function addDeitySphere(linkage) {
+  // linkage: { deity_id, sphere_id }
+  return simpleJoinTableService.createLinkage(tableName, linkage);
+}
+
+function getSpheresForDeity(deity_id) {
+  return simpleJoinTableService.getLinkagesById(tableName, 'deity_id', deity_id);
+}
+
+function getDeitiesForSphere(sphere_id) {
+  return simpleJoinTableService.getLinkagesById(tableName, 'sphere_id', sphere_id);
+}
+
+function removeAllSpheresForDeity(deity_id) {
+  return simpleJoinTableService.deleteAllLinkages(tableName, { deity_id });
+}
+
+function removeAllDeitiesForSphere(sphere_id) {
+  return simpleJoinTableService.deleteAllLinkages(tableName, { sphere_id });
+}
+
+function removeDeitySphere(linkage) {
+  // linkage: { deity_id, sphere_id }
+  return simpleJoinTableService.deleteLinkage(tableName, linkage);
+}
+
+module.exports = {
+  addDeitySphere,
+  getSpheresForDeity,
+  getDeitiesForSphere,
+  removeDeitySphere,
+  removeAllSpheresForDeity,
+  removeAllDeitiesForSphere
+};

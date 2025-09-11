@@ -1,35 +1,33 @@
-const dbUtils = require('../../utils/dbUtils');
-const serviceUtils = require('../../utils/serviceUtils');
+const entityDataService = require('../entityDataService');
+const fullEntityService = require('../fullEntityService');
 
-const TABLE = 'spheres';
-
-function addSphere(data) {
-  return dbUtils.insert(TABLE, data);
+function createSphere(sphere) {
+  return entityDataService.createEntity('Sphere', sphere);
 }
 function getAllSpheres() {
-  return dbUtils.select(TABLE);
+  return entityDataService.getAllEntities('Sphere');
 }
 function getSphereById(id) {
-  return dbUtils.select(TABLE, { id }, true);
+  return entityDataService.getEntityById('Sphere', id);
 }
 
-async function getFullSphereById(id) {
+function getFullSphereById(id) {
   return fullEntityService.getFullEntityById('Sphere', id);
 }
 
 function patchSphere(id, updates) {
-  return serviceUtils.updateWithChangedFields(TABLE, { id }, updates);
+  return entityDataService.patchEntity('Sphere', id, updates);
 }
 
-function removeSphere(id) {
-  return dbUtils.remove(TABLE, { id });
+function deleteSphere(id) {
+  return entityDataService.deleteEntity('Sphere', id);
 }
 
 module.exports = {
-  addSphere,
+  createSphere,
   getAllSpheres,
   getSphereById,
   getFullSphereById,
   patchSphere,
-  removeSphere
+  deleteSphere
 };

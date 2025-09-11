@@ -1,125 +1,156 @@
 const request = require('supertest');
 const app = require('../../../server');
-const { validateFields } = require('../../../../common/validate');
 
-// Test data for associations
-const charId = 'jest-char-1';
-const deityId = 'jest-deity-1';
-
-// Test data object for character (minimum required fields per entities.js)
+// ~TEST DATA~
 const testCharacter = {
-  id: charId,
+  id: 'mario-luigicus',
   type: 'pc',
-  name: 'Jest Character',
+  name: 'Mario Luigicus',
+  class: 'Wizard',
+  level: '6',
+  alignment: 'Neutral Evil',
+  strength: 9,
+  dexterity: 12,
+  constitution: 14,
+  intelligence: 18,
+  wisdom: 7,
+  charisma: 8,
+  total_health: 30,
   deceased: 0,
-  short_description: 'Test character'
+  short_description: 'Mario seeks a patron.',
+  long_explanation: 'Created by Jest for API testing.'
 };
 
-// Test data object for deity
 const testDeity = {
-  id: deityId,
-  name: 'Jest Deity',
-  pantheon: 'Test Pantheon',
-  alignment: 'Neutral',
-  short_description: 'Test deity',
-  long_explanation: 'For Jest association tests.'
+  id: 'jestar-ascended',
+  name: 'Jestar the Ascended',
+  pantheon: 'Main Human',
+  alignment: 'True Neutral',
+  short_description: 'Once a mortal, now a god.',
+  long_explanation: 'Created by Jest for API testing, Jestar has exceeded all bounds. Now he embodies the peak of all magical power.'
 };
 
-// Test data object for character-deity association
-const testCharacterDeity = {
-  character_id: charId,
-  deity_id: deityId,
-  short_description: 'Associated for testing',
-  long_explanation: 'Jest test deity.'
+const testDeityII = {
+  id: 'testax',
+  name: 'Testax',
+  pantheon: 'Main Human',
+  alignment: 'Neutral Evil',
+  short_description: 'Testax, god of Automated Testing',
+  long_explanation: 'Created by Jestar the Ascended to watch over the realm of automated tests.'
 };
 
-// Helper to create a test deity
-async function ensureTestDeity() {
-  await request(app)
-    .post('/api/deities')
-    .send(testDeity);
+const testDeityAssoc = {
+  deity_id: 'jestar-ascended',
+  adopted_date: 'jan-09-198',
+  dissolution_date: 'feb-13-199',
+  short_description: 'Mario discovers the dark powers offered by Jestar.'
 }
 
-// Helper to create a test character
-async function ensureTestCharacter() {
-  await request(app)
-    .post('/api/characters')
-    .send(testCharacter);
+const testDeityAssocI = {
+  deity_id: 'jestar-ascended',
+  adopted_date: 'feb-14-199',
+  short_description: 'Mario formally adopts Jestar as his patron.'
 }
 
+const testDeityAssocII = {
+  deity_id: 'testax',
+  adopted_date: 'jun-20-200',
+  short_description: 'Mario learns of Testax and delves into his holy texts.'
+}
 
-describe('Character-Deity Associations API', () => {
+describe('Character/Deity API', () => {
+
+  // ~SETUP & TEARDOWN~
   beforeAll(async () => {
-    await ensureTestCharacter();
-    await ensureTestDeity();
+    await request(app).post(`/api/characters/`).send(testCharacter);
+    await request(app).post(`/api/deities/`).send(testDeity);
+    await request(app).post(`/api/deities/`).send(testDeityII);
   });
 
   afterAll(async () => {
-    // Clean up association, deity, and character
-    await request(app).delete(`/api/characters/${charId}/deities/${deityId}`);
-    await request(app).delete(`/api/deities/${deityId}`);
-    await request(app).delete(`/api/characters/${charId}`);
+    await request(app).delete(`/api/characters/${testCharacter.id}/deities`);
+    await request(app).delete(`/api/deities/${testDeity.id}`);
+    await request(app).delete(`/api/deities/${testDeityII.id}`);
+    await request(app).delete(`/api/characters/${testCharacter.id}`);
   });
 
-
-
-  it('should validate testCharacter against the schema', () => {
-    const { valid, errors } = validateFields('Character', testCharacter);
-    expect(valid).toBe(true);
-    expect(errors).toEqual([]);
+  // ~CREATE TESTS~
+  describe('POST /api/characters/:id/deities', () => {
+    it('should associate an deity to a character', async () => {
+      const res = await request(app)
+        .post(`/api/characters/${testCharacter.id}/deities`)
+        .send(testDeityAssoc);
+      const resI = await request(app)
+        .post(`/api/characters/${testCharacter.id}/deities`)
+        .send(testDeityAssocI);
+      const resII = await request(app)
+        .post(`/api/characters/${testCharacter.id}/deities`)
+        .send(testDeityAssocII);
+      expect([201, 409]).toContain(res.statusCode); // 409 if already exists
+      expect(res.body).toBeDefined();
+    });
   });
 
-  it('should validate testDeity against the schema', () => {
-    const { valid, errors } = validateFields('Deity', testDeity);
-    expect(valid).toBe(true);
-    expect(errors).toEqual([]);
+  // ~READ TESTS~
+  describe('GET /api/characters/:id/deities', () => {
+    it('should get all deities for the character', async () => {
+      const res = await request(app)
+        .get(`/api/characters/${testCharacter.id}/deities`);
+      expect([200, 404]).toContain(res.statusCode);
+      expect(Array.isArray(res.body) || res.body.error).toBeTruthy();
+    });
   });
 
-  it('should validate testCharacterDeity against the schema', () => {
-    const { valid, errors } = validateFields('CharacterDeity', testCharacterDeity);
-    expect(valid).toBe(true);
-    expect(errors).toEqual([]);
+  describe('GET /api/characters/:id/deities/:deityId', () => {
+    it('should get all tenures with a particular deity for the character', async () => {
+      const res = await request(app)
+        .get(`/api/characters/${testCharacter.id}/deities/${testDeity.id}`);
+      expect([200, 404]).toContain(res.statusCode);
+      expect(Array.isArray(res.body) || res.body.error).toBeTruthy();
+    });
   });
 
-  it('should add a deity to a character', async () => {
-    const res = await request(app)
-      .post(`/api/characters/${charId}/deities`)
-      .send({
-        deity_id: testCharacterDeity.deity_id,
-        short_description: testCharacterDeity.short_description,
-        long_explanation: testCharacterDeity.long_explanation
-      });
-    expect([201, 409]).toContain(res.statusCode);
-    expect(res.body).toBeDefined();
+  describe('GET /api/characters/:id/deities/:deityId/:adoptedDate', () => {
+    it('should get a specific tenure with a particular deity for the character', async () => {
+      const res = await request(app)
+        .get(`/api/characters/${testCharacter.id}/deities/${testDeity.id}/${testDeityAssoc.adopted_date}`);
+      expect([200, 404]).toContain(res.statusCode);
+    });
   });
 
-  it('should get all deities for the character', async () => {
-    const res = await request(app).get(`/api/characters/${charId}/deities`);
-    expect([200, 404]).toContain(res.statusCode);
-    expect(Array.isArray(res.body) || res.body.error).toBeTruthy();
+  // ~UPDATE TESTS~
+  describe('PATCH /api/characters/:id/deities/:deityId/:adoptedDate', () => {
+    it('should update a deity relationship for this character', async () => {
+      const res = await request(app)
+        .patch(`/api/characters/${testCharacter.id}/deities/${testDeity.id}/${testDeityAssoc.adopted_date}`)
+        .send({ short_description: 'Jestar seduced Mario to the dark side.' });
+      expect(res.error.message).toBeUndefined();
+      expect([200]).toContain(res.statusCode);
+    });
   });
 
-  it('should get a specific character-deity relationship', async () => {
-    const res = await request(app).get(`/api/characters/${charId}/deities/${deityId}`);
-    expect([200, 404]).toContain(res.statusCode);
-    if (res.statusCode === 200) {
-      expect(res.body.deity_id).toBe(deityId);
-      expect(res.body.character_id).toBe(charId);
-    }
+  // ~DELETE TESTS~
+  describe('DELETE /api/characters/:id/deities/:deityId/:adoptedDate', () => {
+    it('should remove all instances of a deity relationship for this character', async () => {
+      const res = await request(app)
+        .delete(`/api/characters/${testCharacter.id}/deities/${testDeity.id}/${testDeityAssoc.adopted_date}`);
+      expect([200]).toContain(res.statusCode);
+    });
   });
 
-  it('should update a character-deity association', async () => {
-    const res = await request(app)
-      .patch(`/api/characters/${charId}/deities/${deityId}`)
-      .send({ short_description: 'Updated deity description' });
-    expect([200, 404]).toContain(res.statusCode);
-    if (res.statusCode === 200) {
-      expect(res.body.short_description).toBe('Updated deity description');
-    }
+  describe('DELETE /api/characters/:id/deities/:deityId', () => {
+    it('should remove all instances of a deity relationship for this character', async () => {
+      const res = await request(app)
+        .delete(`/api/characters/${testCharacter.id}/deities/${testDeity.id}`);
+      expect([200]).toContain(res.statusCode);
+    });
   });
 
-  it('should remove a deity from a character', async () => {
-    const res = await request(app).delete(`/api/characters/${charId}/deities/${deityId}`);
-    expect([200, 404]).toContain(res.statusCode);
+  describe('DELETE /api/characters/:id/deities', () => {
+    it('should remove all instances of all deity relationships for this character', async () => {
+      const res = await request(app)
+        .delete(`/api/characters/${testCharacter.id}/deities`);
+      expect([200]).toContain(res.statusCode);
+    });
   });
 });

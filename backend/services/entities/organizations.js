@@ -1,31 +1,28 @@
-const dbUtils = require('../../utils/dbUtils');
-const serviceUtils = require('../../utils/serviceUtils');
+const entityDataService = require('../entityDataService');
 const fullEntityService = require('../fullEntityService');
 
-const TABLE = 'organizations';
-
 function createOrganization(org) {
-  return dbUtils.insert(TABLE, org);
+  return entityDataService.createEntity('Organization', org);
 }
 
 function getAllOrganizations() {
-  return dbUtils.select(TABLE);
+  return entityDataService.getAllEntities('Organization');
 }
 
 function getOrganizationById(id) {
-  return dbUtils.select(TABLE, { id }, true);
+  return entityDataService.getEntityById('Organization', id);
 }
 
-async function getFullOrganizationById(id) {
+function getFullOrganizationById(id) {
   return fullEntityService.getFullEntityById('Organization', id);
 }
 
 function patchOrganization(id, updates) {
-  return serviceUtils.updateWithChangedFields(TABLE, { id }, updates);
+  return entityDataService.patchEntity('Organization', id, updates);
 }
 
 function deleteOrganization(id) {
-  return dbUtils.remove(TABLE, { id });
+  return entityDataService.deleteEntity('Organization', id);
 }
 
 module.exports = {

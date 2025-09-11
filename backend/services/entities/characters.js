@@ -1,31 +1,28 @@
-const dbUtils = require('../../utils/dbUtils');
-const serviceUtils = require('../../utils/serviceUtils');
+const entityDataService = require('../entityDataService');
 const fullEntityService = require('../fullEntityService');
 
-const TABLE = 'characters';
-
 function createCharacter(character) {
-  return dbUtils.insert(TABLE, character);
+  return entityDataService.createEntity('Character', character);
 }
 
 function getAllCharacters() {
-  return dbUtils.select(TABLE);
+  return entityDataService.getAllEntities('Character');
 }
 
 function getCharacterById(id) {
-  return dbUtils.select(TABLE, { id }, true);
+  return entityDataService.getEntityById('Character', id);
 }
 
-async function getFullCharacterById(id) {
+function getFullCharacterById(id) {
   return fullEntityService.getFullEntityById('Character', id);
 }
 
 function patchCharacter(id, updates) {
-  return serviceUtils.updateWithChangedFields(TABLE, { id }, updates);
+  return entityDataService.patchEntity('Character', id, updates);
 }
 
 function deleteCharacter(id) {
-  return dbUtils.remove(TABLE, { id });
+  return entityDataService.deleteEntity('Character', id);
 }
 
 module.exports = {

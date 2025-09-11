@@ -2,40 +2,42 @@ const request = require('supertest');
 const app = require('../../../server');
 const entities = require('../../../../common/entities');
 
+// ~TEST DATA~
+
+const testSpell = {
+  id: 'blossom',
+  type: 'arcane',
+  name: 'Blossom',
+  level: 3,
+  school: 'Conjuration',
+  casting_time: '3 segments',
+  range: 'Self',
+  components: 'S',
+  duration: 'Instantaneous',
+  description: 'This spell causes your fingers vibrate vigorously and feel no fatigue from use.'
+};
+
+const testSphere = {
+  id: 'eros',
+  name: 'Eros',
+  short_description: 'The sphere of arcane erotic magic.'
+};
+
+const testItem = {
+  id: 'slick-ring',
+  name: 'Slick Ring',
+  short_description: 'A ruby ring with a soft blue glow. It feels slippery to the touch.'
+};
+
+const testSphereAssoc = {
+  sphere_id: 'eros'
+};
+
+const testItemAssoc = {
+  item_id: 'slick-ring'
+};
+
 describe('Spell API', () => {
-  // Test data for creating a spell
-  const testSpell = {
-    id: 'blossom',
-    type: 'arcane',
-    name: 'Blossom',
-    level: 3,
-    school: 'Conjuration',
-    casting_time: '3 segments',
-    range: 'Self',
-    components: 'S',
-    duration: 'Instantaneous',
-    description: 'This spell causes your fingers vibrate vigorously and feel no fatigue from use.'
-  };
-
-  const testSphere = {
-    id: 'eros',
-    name: 'Eros',
-    description: 'The sphere of arcane erotic magic.'
-  };
-
-  const testItem = {
-    id: 'slick-ring',
-    name: 'Slick Ring',
-    short_description: 'A ruby ring with a soft blue glow. It feels slippery to the touch.'
-  };
-
-  const testSphereAssoc = {
-    sphere_id: 'eros'
-  };
-
-  const testItemAssoc = {
-    item_id: 'slick-ring'
-  };
 
   afterAll(async () => {
     // Clean up test spell
@@ -52,6 +54,41 @@ describe('Spell API', () => {
         .send(testSpell);
       expect([201, 409]).toContain(res.statusCode); // 409 if already exists
       expect(res.body).toBeDefined();
+    });
+
+    it('should reject a spell with an invalid id', async () => {
+      const invalidSpell = {
+        ...testSpell,
+        id: 'bad Spell 1d'
+      }
+      const res = await request(app)
+        .post('/api/spells')
+        .send(invalidSpell);
+      expect([400]).toContain(res.statusCode);
+    });
+
+    it('should reject a spell with an additional field', async () => {
+      const fuckedSpell = {
+        ...testSpell,
+        aura_points: 22
+      }
+      const res = await request(app)
+        .post('/api/spells')
+        .send(fuckedSpell);
+      // make sure that the spell entity does not include an aura_points field
+      expect(Object.keys(entities.Spell)).not.toContain('aura_points');
+      expect([400]).toContain(res.statusCode);
+    });
+
+    it('should reject a spell with M component but no materials', async () => {
+      const spellWithM = {
+        ...testSpell,
+        components: 'M'
+      };
+      const res = await request(app)
+        .post('/api/spells')
+        .send(spellWithM);
+      expect([400]).toContain(res.statusCode);
     });
   });
 
@@ -111,48 +148,4 @@ describe('Spell API', () => {
       expect([200, 404]).toContain(res.statusCode);
     });
   });
-
-  // ~~BUSINESS LOGIC TESTS~~
-  describe('must provide materials with M component', () => {
-    it('should reject a spell with M component but no materials', async () => {
-      const spellWithM = {
-        ...testSpell,
-        components: 'M'
-      };
-      const res = await request(app)
-        .post('/api/spells')
-        .send(spellWithM);
-      expect([400]).toContain(res.statusCode);
-    });
-  });
-
-  // ~~AUX TESTS~~
-  describe('unknown field test', () => {
-    it('should reject a spell with an additional field', async () => {
-      const fuckedSpell = {
-        ...testSpell,
-        aura_points: 22
-      }
-      const res = await request(app)
-        .post('/api/spells')
-        .send(fuckedSpell);
-      // make sure that the spell entity does not include an aura_points field
-      expect(Object.keys(entities.Spell)).not.toContain('aura_points');
-      expect([400]).toContain(res.statusCode);
-    });
-  });
-
-  describe('valid id test', () => {
-    it('should reject a spell with an invalid id', async () => {
-      const invalidSpell = {
-        ...testSpell,
-        id: 'bad Spell 1d'
-      }
-      const res = await request(app)
-        .post('/api/spells')
-        .send(invalidSpell);
-      expect([400]).toContain(res.statusCode);
-    });
-  });
-
 });

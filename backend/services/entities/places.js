@@ -1,31 +1,28 @@
-const dbUtils = require('../../utils/dbUtils');
-const serviceUtils = require('../../utils/serviceUtils');
+const entityDataService = require('../entityDataService');
 const fullEntityService = require('../fullEntityService');
 
-const TABLE = 'places';
-
 function createPlace(place) {
-  return dbUtils.insert(TABLE, place);
+  return entityDataService.createEntity('Place', place);
 }
 
 function getAllPlaces() {
-  return dbUtils.select(TABLE);
+  return entityDataService.getAllEntities('Place');
 }
 
 function getPlaceById(id) {
-  return dbUtils.select(TABLE, { id }, true);
+  return entityDataService.getEntityById('Place', id);
 }
 
-async function getFullPlaceById(id) {
+function getFullPlaceById(id) {
   return fullEntityService.getFullEntityById('Place', id);
 }
 
 function patchPlace(id, updates) {
-  return serviceUtils.updateWithChangedFields(TABLE, { id }, updates);
+  return entityDataService.patchEntity('Place', id, updates);
 }
 
 function deletePlace(id) {
-  return dbUtils.remove(TABLE, { id });
+  return entityDataService.deleteEntity('Place', id);
 }
 
 module.exports = {

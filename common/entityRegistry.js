@@ -15,6 +15,16 @@ const entityRegistry = {
       ]
     },
     {
+      joinTable: 'event_characters',
+      relatedEntity: 'Event',
+      type: 'relationship',
+      mainIdField: 'event_id',
+      relatedIdField: 'character_id',
+      joinFields: [
+        'short_description', 'long_explanation'
+      ]
+    },
+    {
       joinTable: 'character_items',
       relatedEntity: 'Item',
       type: 'history',
@@ -85,6 +95,58 @@ const entityRegistry = {
       type: 'relationship',
       mainIdField: 'deity_id',
       relatedIdField: 'event_id',
+      joinFields: [
+        'short_description', 'long_explanation'
+      ]
+    }
+  ],
+  Event: [
+    {
+      joinTable: 'event_characters',
+      relatedEntity: 'Character',
+      type: 'relationship',
+      mainIdField: 'event_id',
+      relatedIdField: 'character_id',
+      joinFields: [
+        'short_description', 'long_explanation'
+      ]
+    },
+    {
+      joinTable: 'event_deities',
+      relatedEntity: 'Deity',
+      type: 'relationship',
+      mainIdField: 'event_id',
+      relatedIdField: 'deity_id',
+      joinFields: [
+        'short_description', 'long_explanation'
+      ]
+    },
+    {
+      joinTable: 'event_items',
+      relatedEntity: 'Item',
+      type: 'relationship',
+      mainIdField: 'event_id',
+      relatedIdField: 'item_id',
+      joinFields: [
+        'short_description', 'long_explanation'
+      ]
+    },
+    {
+      joinTable: 'event_organizations',
+      relatedEntity: 'Organization',
+      type: 'relationship',
+      mainIdField: 'event_id',
+      relatedIdField: 'organization_id',
+      joinFields: [
+        'short_description', 'long_explanation'
+      ]
+    },
+    {
+      joinTable: 'event_places',
+      relatedEntity: 'Place',
+      type: 'relationship',
+      mainIdField: 'event_id',
+      relatedIdField: 'place_id',
       joinFields: [
         'short_description', 'long_explanation'
       ]
@@ -182,58 +244,6 @@ const entityRegistry = {
       type: 'relationship',
       mainIdField: 'place_id',
       relatedIdField: 'organization_id',
-      joinFields: [
-        'short_description', 'long_explanation'
-      ]
-    }
-  ],
-  Event: [
-    {
-      joinTable: 'event_characters',
-      relatedEntity: 'Character',
-      type: 'relationship',
-      mainIdField: 'event_id',
-      relatedIdField: 'character_id',
-      joinFields: [
-        'short_description', 'long_explanation'
-      ]
-    },
-    {
-      joinTable: 'event_deities',
-      relatedEntity: 'Deity',
-      type: 'relationship',
-      mainIdField: 'event_id',
-      relatedIdField: 'deity_id',
-      joinFields: [
-        'short_description', 'long_explanation'
-      ]
-    },
-    {
-      joinTable: 'event_items',
-      relatedEntity: 'Item',
-      type: 'relationship',
-      mainIdField: 'event_id',
-      relatedIdField: 'item_id',
-      joinFields: [
-        'short_description', 'long_explanation'
-      ]
-    },
-    {
-      joinTable: 'event_organizations',
-      relatedEntity: 'Organization',
-      type: 'relationship',
-      mainIdField: 'event_id',
-      relatedIdField: 'organization_id',
-      joinFields: [
-        'short_description', 'long_explanation'
-      ]
-    },
-    {
-      joinTable: 'event_places',
-      relatedEntity: 'Place',
-      type: 'relationship',
-      mainIdField: 'event_id',
-      relatedIdField: 'place_id',
       joinFields: [
         'short_description', 'long_explanation'
       ]

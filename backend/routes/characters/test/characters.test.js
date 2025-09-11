@@ -2,42 +2,43 @@ const request = require('supertest');
 const app = require('../../../server');
 const entities = require('../../../../common/entities');
 
+// ~TEST DATA~
+const testCharacter = {
+  id: 'jestar-morningstar',
+  type: 'pc',
+  name: 'Jestar the Morningstar',
+  class: 'Wizard',
+  level: '5',
+  alignment: 'Neutral Good',
+  strength: 10,
+  dexterity: 12,
+  constitution: 14,
+  intelligence: 18,
+  wisdom: 13,
+  charisma: 8,
+  total_health: 30,
+  deceased: 0,
+  short_description: 'Jestar seeks magical power.',
+  long_explanation: 'Created by Jest for API testing.'
+};
+
+const testItem = {
+  id: 'elven-dagger',
+  name: 'Indistinct Elven Dagger',
+  short_description: 'Contains the very heart of the Morningstar.'
+};
+
+const testItemAssoc = {
+  character_id: 'jestar-morningstar',
+  item_id: 'elven-dagger',
+  acquired_date: 'sep-11-198',
+  short_description: 'Given to him by the universe.'
+};
+
 describe('Character API', () => {
-  // Test data for creating a character
-  const testCharacter = {
-    id: 'jestar-morningstar',
-    type: 'pc',
-    name: 'Jestar the Morningstar',
-    class: 'Wizard',
-    level: '5',
-    alignment: 'Neutral Good',
-    strength: 10,
-    dexterity: 12,
-    constitution: 14,
-    intelligence: 18,
-    wisdom: 13,
-    charisma: 8,
-    total_health: 30,
-    deceased: 0,
-    short_description: 'Jestar seeks magical power.',
-    long_explanation: 'Created by Jest for API testing.'
-  };
 
-  const testItem = {
-    id: 'elven-dagger',
-    name: 'Indistinct Elven Dagger',
-    short_description: 'Contains the very heart of the Morningstar.'
-  };
-
-  const testItemAssoc = {
-    character_id: 'jestar-morningstar',
-    item_id: 'elven-dagger',
-    acquired_date: 'sep-11-198',
-    short_description: 'Given to him by the universe.'
-  };
-
+  // ~SETUP & TEARDOWN~
   afterAll(async () => {
-    // Clean up test character
     await request(app).delete(`/api/characters/${testCharacter.id}`);
     await request(app).delete(`/api/characters/${testCharacter.id}/items`);
     await request(app).delete(`/api/items/${testItem.id}`);
