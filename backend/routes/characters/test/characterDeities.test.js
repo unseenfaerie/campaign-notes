@@ -1,6 +1,5 @@
 const request = require('supertest');
 const app = require('../../../server');
-const { validateFields } = require('../../../../common/validate');
 
 // ~TEST DATA~
 const testCharacter = {
@@ -49,7 +48,7 @@ const testDeityAssoc = {
 const testDeityAssocII = {
   deity_id: 'testax',
   adopted_date: 'jun-20-200',
-  short_description: 'Mario learns of testax and delves into his holy texts.'
+  short_description: 'Mario learns of Testax and delves into his holy texts.'
 }
 
 describe('Character/Deity API', () => {
