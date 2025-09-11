@@ -16,9 +16,24 @@ function getDeitiesForSphere(sphere_id) {
   return simpleJoinTableService.getLinkagesById(tableName, 'sphere_id', sphere_id);
 }
 
+function removeAllSpheresForDeity(deity_id) {
+  return simpleJoinTableService.deleteAllLinkages(tableName, { deity_id });
+}
+
+function removeAllDeitiesForSphere(sphere_id) {
+  return simpleJoinTableService.deleteAllLinkages(tableName, { sphere_id });
+}
+
 function removeDeitySphere(linkage) {
   // linkage: { deity_id, sphere_id }
   return simpleJoinTableService.deleteLinkage(tableName, linkage);
 }
 
-module.exports = { addDeitySphere, getSpheresForDeity, getDeitiesForSphere, removeDeitySphere };
+module.exports = {
+  addDeitySphere,
+  getSpheresForDeity,
+  getDeitiesForSphere,
+  removeDeitySphere,
+  removeAllSpheresForDeity,
+  removeAllDeitiesForSphere
+};

@@ -19,6 +19,10 @@ function removeAllSpheresForSpell(spell_id) {
   return simpleJoinTableService.deleteAllLinkages(tableName, { spell_id });
 }
 
+function removeAllSpellsForSphere(sphere_id) {
+  return simpleJoinTableService.deleteAllLinkages(tableName, { sphere_id });
+}
+
 function removeSpellSphere(spell_id, sphere_id) {
   return simpleJoinTableService.deleteLinkage(tableName, { spell_id, sphere_id });
 }
@@ -28,5 +32,6 @@ module.exports = {
   getSpheresForSpell,
   getSpellsForSphere,
   removeSpellSphere,
+  removeAllSpellsForSphere,
   removeAllSpheresForSpell
 };
