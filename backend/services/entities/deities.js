@@ -1,4 +1,4 @@
-const entityDataService = require('../../entityDataService');
+const entityDataService = require('../entityDataService');
 const fullEntityService = require('../fullEntityService');
 
 function createDeity(deity) {
