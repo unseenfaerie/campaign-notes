@@ -1,18 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const eventsService = require('../../services/entities/events');
-const idUtils = require('../../utils/idUtils');
-const { validateFields } = require('../../../common/validate');
+const { mapErrorToStatus } = require('../../utils/errorUtils');
 
-// Helper: Validate event data using generic validator
-function validateEventEntity(e, isUpdate = false) {
-  const { valid, errors } = validateFields('Event', e, { allowPartial: isUpdate });
-  if (!valid) return errors.join('; ');
-  if (!isUpdate && idUtils.validateIdFormat(e.id) === false) {
-    return 'Field id must use only lowercase and dashes';
+// Create a new event
+router.post('/', async (req, res) => {
+  try {
+    const result = await eventsService.createEvent(req.body);
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
-  return null;
-}
+});
 
 // Get all events
 router.get('/', async (req, res) => {
@@ -20,7 +19,7 @@ router.get('/', async (req, res) => {
     const events = await eventsService.getAllEvents();
     res.json(events);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
@@ -28,12 +27,9 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const event = await eventsService.getEventById(req.params.id);
-    if (!event) {
-      return res.status(404).json({ error: 'Event not found' });
-    }
     res.json(event);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
@@ -41,63 +37,29 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/full', async (req, res) => {
   try {
     const fullEvent = await eventsService.getFullEventById(req.params.id);
-    if (!fullEvent) {
-      return res.status(404).json({ error: 'Event not found' });
-    }
     res.json(fullEvent);
   } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Create a new event
-router.post('/', async (req, res) => {
-  const e = req.body;
-  const validationError = validateEventEntity(e, false);
-  if (validationError) {
-    return res.status(400).json({ error: validationError });
-  }
-  try {
-    const existing = await eventsService.getEventById(e.id);
-    if (existing) {
-      return res.status(409).json({ error: 'An event with this id already exists.' });
-    }
-    await eventsService.createEvent(e);
-    res.status(201).json({ id: e.id });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
 // Partially update an existing event
 router.patch('/:id', async (req, res) => {
-  const updates = req.body;
-  const validationError = validateEventEntity(updates, true);
-  if (validationError) {
-    return res.status(400).json({ error: validationError });
-  }
   try {
-    const result = await eventsService.patchEvent(req.params.id, updates);
-    if (result && result.message === 'record not found') {
-      return res.status(404).json({ error: 'Event not found' });
-    }
+    const result = await eventsService.patchEvent(req.params.id, req.body);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
 // Delete an event
 router.delete('/:id', async (req, res) => {
   try {
-    const existing = await eventsService.getEventById(req.params.id);
-    if (!existing) {
-      return res.status(404).json({ error: 'Event not found' });
-    }
-    await eventsService.deleteEvent(req.params.id);
-    res.json({ deleted: req.params.id });
+    const result = await eventsService.deleteEvent(req.params.id);
+    res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 

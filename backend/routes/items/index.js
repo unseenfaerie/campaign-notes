@@ -1,18 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const itemsService = require('../../services/entities/items');
+const { mapErrorToStatus } = require('../../utils/errorUtils');
 
 // Create a new item
 router.post('/', async (req, res) => {
-  const i = req.body;
   try {
-    const result = await itemsService.createItem(i);
+    const result = await itemsService.createItem(req.body);
     res.status(201).json(result);
   } catch (err) {
-    if (err.code === 'DUPLICATE_ID') {
-      return res.status(409).json({ error: err.message });
-    }
-    res.status(400).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
@@ -22,7 +19,7 @@ router.get('/', async (req, res) => {
     const items = await itemsService.getAllItems();
     res.json(items);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
@@ -30,12 +27,9 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const item = await itemsService.getItemById(req.params.id);
-    if (!item) {
-      return res.status(404).json({ error: 'Item not found' });
-    }
     res.json(item);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
@@ -43,26 +37,19 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/full', async (req, res) => {
   try {
     const item = await itemsService.getFullItemById(req.params.id);
-    if (!item) {
-      return res.status(404).json({ error: 'Item not found' });
-    }
     res.json(item);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
 // Update an existing item (PATCH)
 router.patch('/:id', async (req, res) => {
-  const updates = req.body;
   try {
-    const result = await itemsService.patchItem(req.params.id, updates);
+    const result = await itemsService.patchItem(req.params.id, req.body);
     res.json(result);
   } catch (err) {
-    if (err.code === 'NOT_FOUND') {
-      return res.status(404).json({ error: 'Item not found' });
-    }
-    res.status(400).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
@@ -72,10 +59,7 @@ router.delete('/:id', async (req, res) => {
     const result = await itemsService.deleteItem(req.params.id);
     res.json(result);
   } catch (err) {
-    if (err.code === 'NOT_FOUND') {
-      return res.status(404).json({ error: 'Item not found' });
-    }
-    res.status(500).json({ error: err.message });
+    res.status(mapErrorToStatus(err)).json({ error: err.message, code: err.code, details: err.details });
   }
 });
 
