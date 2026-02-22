@@ -33,3 +33,7 @@
 ### Environment setup
 - Install: node, npm, sqlite3
 - Tools: VSCode, DB Browser for SQLite, Postman
+
+### Running the App
+- run node db.js, then node seed.js. You can run validateSeed.js after that for confirmation of a good setup.
+- then to run the API, run node server.js. it will be hosted on port 3000
