@@ -7,6 +7,12 @@ Manifest-driven API for Campaign Notes. This package owns the backend runtime fo
 
 Definitions come from [../common/domainManifest.js](../common/domainManifest.js).
 
+## To Do
+
+- finish all routes in domain router
+- enums for certain fields (character type)/more heavy duty validation
+- sort out booleans in manifest. i want them
+
 ## What This API Does
 
 - Initializes SQLite schema from the domain manifest
@@ -64,11 +70,13 @@ curl http://localhost:3001/health
 
 - `GET /health`
 
+
 - `GET /api/data/resources`
 - `GET /api/data/:resource`
 - `POST /api/data/:resource`
 - `PATCH /api/data/:resource`
 - `DELETE /api/data/:resource`
+
 
 - `POST /api/:entityRoute`
 - `GET /api/:entityRoute`
