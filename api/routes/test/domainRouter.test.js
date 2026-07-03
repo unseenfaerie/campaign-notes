@@ -1,7 +1,7 @@
 const request = require('supertest');
 const { app } = require('../../server');
-const { initializeDatabase } = require('../../db');
-const { manifestCrudService } = require('../../genericCrudService');
+const { initializeDatabase } = require('../../data/db');
+const { manifestCrudService } = require('../../data/genericCrudService');
 
 describe('domain router entity routes', () => {
     beforeAll(async () => {

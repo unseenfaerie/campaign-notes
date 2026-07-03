@@ -1,6 +1,6 @@
 const express = require('express');
 const { domainManifest } = require('../../common/domainManifest');
-const { manifestCrudService } = require('../genericCrudService');
+const { manifestCrudService } = require('../data/genericCrudService');
 const {
     coerceValueByType,
     getEntityByRoute,

@@ -1,4 +1,4 @@
-const { domainManifest } = require('../common/domainManifest');
+const { domainManifest } = require('../../common/domainManifest');
 
 function toSqlType(type) {
     if (type === 'number') return 'INTEGER';

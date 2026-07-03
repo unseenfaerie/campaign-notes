@@ -1,5 +1,5 @@
 const { db } = require('./db');
-const { domainManifest } = require('../common/domainManifest');
+const { domainManifest } = require('../../common/domainManifest');
 
 function getRelationMembers(relationDef) {
   if (Array.isArray(relationDef.members) && relationDef.members.length === 2) {

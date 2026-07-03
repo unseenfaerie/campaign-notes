@@ -1,5 +1,5 @@
 const express = require('express');
-const { manifestCrudService } = require('../genericCrudService');
+const { manifestCrudService } = require('../data/genericCrudService');
 const manifestHelpers = require('../utils/manifestHelpers');
 
 const router = express.Router();
