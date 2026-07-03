@@ -7,7 +7,7 @@ const db = new sqlite3.Database(dbPath);
 
 db.serialize(() => {
   console.log('Inserting characters...');
-  db.run(`INSERT OR IGNORE INTO characters (id, type, name, age, stock, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, short_description, long_explanation) VALUES
+  db.run(`INSERT OR IGNORE INTO characters (id, type, name, age, ancestry, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, short_description, long_explanation) VALUES
     ('alann-barnett', 'pc', 'Alann Barnett', 32, 'human', 'Cleric', '4', 'Neutral Good', 13, 8, 11, 10, 14, 11, 20, 0, 'A thoughtful and strong-willed adventurer.', 'Long Explanation.'),
     ('releas-neb', 'pc', 'Releas Neb', 28, 'human', 'Magic User', '7', 'Chaotic Good', 5, 14, 10, 18, 13, 9, 16, 0, 'A clever and resourceful wizard.', 'Long Explanation.'),
     ('appolonia-palleday', 'pc', 'Appolonia Palleday', 16, 'human', 'Magic User', '5', 'Neutral Good', 13, 8, 11, 18, 14, 11, 18, 0, 'A bright and curious spellcaster.', 'Long Explanation.'),

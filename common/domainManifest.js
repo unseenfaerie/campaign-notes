@@ -1,7 +1,8 @@
-// common/domainManifest.js
-// Single source of truth for entity fields, database tables, and API relationships.
-// Intentionally declarative so route and DB generation can consume the same manifest.
-
+// relationship types:
+// simple - no metadata, just association between two entities
+// relationship - association between two entities with metadata
+// history - association between two entities with metadata and a date key, 
+// meaning that there may be many records for a given pair
 const domainManifest = {
     entities: {
         Character: {
@@ -13,7 +14,7 @@ const domainManifest = {
                 type: { type: 'string', required: true },
                 name: { type: 'string', required: true },
                 age: { type: 'number' },
-                stock: { type: 'string' },
+                ancestry: { type: 'string' },
                 class: { type: 'string' },
                 level: { type: 'string' },
                 alignment: { type: 'string' },
