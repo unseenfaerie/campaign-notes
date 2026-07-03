@@ -77,6 +77,11 @@ router.get('/:resource', async (req, res) => {
   try {
     const where = coerceWhere(req.params.resource, req.query);
     const rows = await manifestCrudService.getMany(req.params.resource, where);
+
+    if (Object.keys(where).length > 0 && rows.length === 0) {
+      return res.status(404).json({ error: 'Record not found' });
+    }
+
     res.json(rows);
   } catch (err) {
     const httpErr = toHttpError(err);
