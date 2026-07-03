@@ -60,7 +60,6 @@ Base path: `/api/data`
 
 - `GET /api/data/resources`
 - `GET /api/data/:resource`
-- `GET /api/data/:resource/one`
 - `POST /api/data/:resource`
 - `PATCH /api/data/:resource`
 - `DELETE /api/data/:resource`
@@ -84,13 +83,7 @@ curl "http://localhost:3001/api/data/Item?id=fireball-wand"
 
 With no query params, returns all rows for that resource.
 
-### 3) Query One
-
-```bash
-curl "http://localhost:3001/api/data/Item/one?id=fireball-wand"
-```
-
-### 4) Insert
+### 3) Insert
 
 ```bash
 curl -X POST http://localhost:3001/api/data/Item \
@@ -102,7 +95,7 @@ curl -X POST http://localhost:3001/api/data/Item \
   }'
 ```
 
-### 5) Update
+### 4) Update
 
 ```bash
 curl -X PATCH http://localhost:3001/api/data/Item \
@@ -113,7 +106,7 @@ curl -X PATCH http://localhost:3001/api/data/Item \
   }'
 ```
 
-### 6) Delete
+### 5) Delete
 
 ```bash
 curl -X DELETE http://localhost:3001/api/data/Item \
