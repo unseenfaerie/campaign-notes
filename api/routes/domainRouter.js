@@ -153,11 +153,33 @@ function toHttpError(err) {
         return { status: 404, message };
     }
 
-    if (/Invalid number value|Invalid boolean value|Unknown field for route/i.test(message)) {
+    if (
+        /Invalid number value|Invalid boolean value|Unknown field for route|Primary key updates are not allowed|Data must be an object/i.test(
+            message
+        )
+    ) {
         return { status: 400, message };
     }
 
+    if (err && err.code === 'SQLITE_CONSTRAINT') {
+        return { status: 409, message };
+    }
+
     return { status: 500, message };
+}
+
+function getEntityLookup(params) {
+    const { entityName, entityDef } = getEntityByRoute(params.entityRoute);
+    const idField = entityDef.idField;
+    const idMeta = entityDef.fields[idField];
+    const idValue = coerceValueByType(idMeta.type, params.id);
+
+    return {
+        entityName,
+        entityDef,
+        idField,
+        idValue,
+    };
 }
 
 router.post('/:entityRoute', async (req, res) => {
@@ -213,10 +235,7 @@ router.get('/:entityRoute/:id/:relatedRoute', async (req, res) => {
 
 router.get('/:entityRoute/:id', async (req, res) => {
     try {
-        const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
-        const idField = entityDef.idField;
-        const idMeta = entityDef.fields[idField];
-        const idValue = coerceValueByType(idMeta.type, req.params.id);
+        const { entityName, idField, idValue } = getEntityLookup(req.params);
 
         const record = await manifestCrudService.getOne(entityName, {
             [idField]: idValue,
@@ -227,6 +246,44 @@ router.get('/:entityRoute/:id', async (req, res) => {
         }
 
         return res.json(record);
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
+router.patch('/:entityRoute/:id', async (req, res) => {
+    try {
+        const { entityName, entityDef, idField, idValue } = getEntityLookup(req.params);
+        const updates = conformObjectToEntity(req.body, entityDef);
+
+        const result = await manifestCrudService.update(entityName, {
+            [idField]: idValue,
+        }, updates);
+
+        if (result.updated === 0 && !result.record) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        return res.json(result);
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
+router.delete('/:entityRoute/:id', async (req, res) => {
+    try {
+        const { entityName, idField, idValue } = getEntityLookup(req.params);
+        const result = await manifestCrudService.remove(entityName, {
+            [idField]: idValue,
+        });
+
+        if (result.deleted === 0) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        return res.json(result);
     } catch (err) {
         const httpErr = toHttpError(err);
         return res.status(httpErr.status).json({ error: httpErr.message });

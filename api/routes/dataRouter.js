@@ -92,47 +92,4 @@ router.get('/:resource', async (req, res) => {
   }
 });
 
-router.post('/:resource', async (req, res) => {
-  try {
-    const created = await manifestCrudService.insert(req.params.resource, req.body);
-    res.status(201).json(created);
-  } catch (err) {
-    const httpErr = toHttpError(err);
-    res.status(httpErr.status).json({ error: httpErr.message });
-  }
-});
-
-router.patch('/:resource', async (req, res) => {
-  try {
-    const where = coerceWhere(req.params.resource, req.body.where || {});
-    const updates = req.body.updates || {};
-
-    const result = await manifestCrudService.update(req.params.resource, where, updates);
-    if (result.updated === 0 && !result.record) {
-      return res.status(404).json({ error: 'Record not found' });
-    }
-
-    return res.json(result);
-  } catch (err) {
-    const httpErr = toHttpError(err);
-    return res.status(httpErr.status).json({ error: httpErr.message });
-  }
-});
-
-router.delete('/:resource', async (req, res) => {
-  try {
-    const where = coerceWhere(req.params.resource, req.body.where || req.query || {});
-    const result = await manifestCrudService.remove(req.params.resource, where);
-
-    if (result.deleted === 0) {
-      return res.status(404).json({ error: 'Record not found' });
-    }
-
-    return res.json(result);
-  } catch (err) {
-    const httpErr = toHttpError(err);
-    return res.status(httpErr.status).json({ error: httpErr.message });
-  }
-});
-
 module.exports = router;

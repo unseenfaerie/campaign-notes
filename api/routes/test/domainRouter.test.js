@@ -20,6 +20,8 @@ describe('domain router entity routes', () => {
             });
             await manifestCrudService.remove('Item', { id: 'test-domain-router-item' });
             await manifestCrudService.remove('Character', { id: 'test-domain-router-character' });
+            await manifestCrudService.remove('Character', { id: 'test-domain-router-patch-character' });
+            await manifestCrudService.remove('Deity', { id: 'test-domain-router-delete-deity' });
         } catch (err) {
             // Ignore cleanup errors when the record is absent.
         }
@@ -128,6 +130,50 @@ describe('domain router entity routes', () => {
             type: 'npc',
         });
         expect(Array.isArray(response.body)).toBe(false);
+    });
+
+    it('patches a single entity by manifest route and id', async () => {
+        await manifestCrudService.insert('Character', {
+            id: 'test-domain-router-patch-character',
+            type: 'npc',
+            name: 'Patch Me',
+            deceased: 0,
+            short_description: 'Original short description.',
+        });
+
+        const response = await request(app)
+            .patch('/api/characters/test-domain-router-patch-character')
+            .send({
+                name: 'Patched Name',
+                short_description: 'Updated short description.',
+            });
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({
+            updated: 1,
+            record: expect.objectContaining({
+                id: 'test-domain-router-patch-character',
+                name: 'Patched Name',
+                short_description: 'Updated short description.',
+            }),
+        });
+    });
+
+    it('deletes a single entity by manifest route and id', async () => {
+        await manifestCrudService.insert('Deity', {
+            id: 'test-domain-router-delete-deity',
+            name: 'Delete Me',
+            short_description: 'Temporary deity for delete tests.',
+        });
+
+        const response = await request(app).delete('/api/deities/test-domain-router-delete-deity');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({ deleted: 1 });
+
+        const fetchResponse = await request(app).get('/api/deities/test-domain-router-delete-deity');
+        expect(fetchResponse.status).toBe(404);
+        expect(fetchResponse.body).toEqual({ error: 'Record not found' });
     });
 
     it('returns 404 for an unknown entity route', async () => {
