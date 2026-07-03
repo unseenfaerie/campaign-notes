@@ -6,7 +6,7 @@ function toSqlType(type) {
     return 'TEXT';
 }
 
-function makeEntityTableSql(entityName, def) {
+function makeEntityTableSql(def) {
     const cols = [];
     const primary = [];
 
@@ -70,7 +70,7 @@ function buildAllCreateTableSql(manifest = domainManifest) {
     const statements = [];
 
     for (const [name, def] of Object.entries(manifest.entities)) {
-        statements.push(makeEntityTableSql(name, def));
+        statements.push(makeEntityTableSql(def));
     }
 
     for (const [name, rel] of Object.entries(manifest.relations)) {
