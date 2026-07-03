@@ -94,6 +94,30 @@ describe('domain router entity routes', () => {
         ]);
     });
 
+    it('returns the same associated collection from the opposite side of the relation', async () => {
+        const response = await request(app).get('/api/items/test-domain-router-item/characters');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([
+            expect.objectContaining({
+                id: 'test-domain-router-character',
+                name: 'Domain Router Test Character',
+                history: [
+                    expect.objectContaining({
+                        acquired_date: 'jan-01-200',
+                        relinquished_date: 'jan-05-200',
+                        short_description: 'First possession record.',
+                    }),
+                    expect.objectContaining({
+                        acquired_date: 'jan-02-200',
+                        relinquished_date: null,
+                        short_description: 'Second possession record.',
+                    }),
+                ],
+            }),
+        ]);
+    });
+
     it('returns a single entity by manifest route and id', async () => {
         const response = await request(app).get('/api/characters/test-domain-router-character');
 

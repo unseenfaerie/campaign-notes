@@ -41,14 +41,21 @@ function makeRelationTableSql(relName, rel, manifest) {
     const cols = [];
     const fks = [];
 
-    const sourceDef = manifest.entities[rel.source];
-    const targetDef = manifest.entities[rel.target];
+    const members = rel.members || [];
+    if (members.length !== 2) {
+        throw new Error(`Relation ${relName} must define exactly two members`);
+    }
 
-    cols.push(rel.sourceKey + ' TEXT NOT NULL');
-    cols.push(rel.targetKey + ' TEXT NOT NULL');
+    for (const member of members) {
+        if (!manifest.entities[member.entity]) {
+            throw new Error(`Unknown relation entity for ${relName}: ${member.entity}`);
+        }
+
+        cols.push(member.key + ' TEXT NOT NULL');
+    }
 
     for (const [field, meta] of Object.entries(rel.payload || {})) {
-        if (field === rel.sourceKey || field === rel.targetKey) continue;
+        if (members.some((member) => member.key === field)) continue;
         let col = field + ' ' + toSqlType(meta.type);
         if (meta.required) col += ' NOT NULL';
         cols.push(col);

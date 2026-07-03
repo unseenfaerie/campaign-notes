@@ -142,11 +142,10 @@ const domainManifest = {
         CharacterDeity: {
             kind: 'history',
             table: 'character_deities',
-            routeFromSource: 'deities',
-            source: 'Character',
-            target: 'Deity',
-            sourceKey: 'character_id',
-            targetKey: 'deity_id',
+            members: [
+                { entity: 'Character', key: 'character_id', route: 'deities' },
+                { entity: 'Deity', key: 'deity_id', route: 'characters' },
+            ],
             historyKey: 'adopted_date',
             keys: ['character_id', 'deity_id', 'adopted_date'],
             payload: {
@@ -160,11 +159,10 @@ const domainManifest = {
         CharacterItem: {
             kind: 'history',
             table: 'character_items',
-            routeFromSource: 'items',
-            source: 'Character',
-            target: 'Item',
-            sourceKey: 'character_id',
-            targetKey: 'item_id',
+            members: [
+                { entity: 'Character', key: 'character_id', route: 'items' },
+                { entity: 'Item', key: 'item_id', route: 'characters' },
+            ],
             historyKey: 'acquired_date',
             keys: ['character_id', 'item_id', 'acquired_date'],
             payload: {
@@ -176,11 +174,10 @@ const domainManifest = {
         CharacterOrganization: {
             kind: 'history',
             table: 'character_organizations',
-            routeFromSource: 'organizations',
-            source: 'Character',
-            target: 'Organization',
-            sourceKey: 'character_id',
-            targetKey: 'organization_id',
+            members: [
+                { entity: 'Character', key: 'character_id', route: 'organizations' },
+                { entity: 'Organization', key: 'organization_id', route: 'characters' },
+            ],
             historyKey: 'joined_date',
             keys: ['character_id', 'organization_id', 'joined_date'],
             payload: {
@@ -193,11 +190,10 @@ const domainManifest = {
         CharacterPlace: {
             kind: 'history',
             table: 'character_places',
-            routeFromSource: 'places',
-            source: 'Character',
-            target: 'Place',
-            sourceKey: 'character_id',
-            targetKey: 'place_id',
+            members: [
+                { entity: 'Character', key: 'character_id', route: 'places' },
+                { entity: 'Place', key: 'place_id', route: 'characters' },
+            ],
             historyKey: 'arrived_date',
             keys: ['character_id', 'place_id', 'arrived_date'],
             payload: {
@@ -210,11 +206,10 @@ const domainManifest = {
         CharacterRelationship: {
             kind: 'history',
             table: 'character_relationships',
-            routeFromSource: 'relationships',
-            source: 'Character',
-            target: 'Character',
-            sourceKey: 'character_id',
-            targetKey: 'related_id',
+            members: [
+                { entity: 'Character', key: 'character_id', route: 'relationships' },
+                { entity: 'Character', key: 'related_id', route: 'relationships' },
+            ],
             historyKey: 'established_date',
             keys: ['character_id', 'related_id', 'established_date'],
             payload: {
@@ -228,22 +223,20 @@ const domainManifest = {
         DeitySphere: {
             kind: 'simple',
             table: 'deity_spheres',
-            routeFromSource: 'spheres',
-            source: 'Deity',
-            target: 'Sphere',
-            sourceKey: 'deity_id',
-            targetKey: 'sphere_id',
+            members: [
+                { entity: 'Deity', key: 'deity_id', route: 'spheres' },
+                { entity: 'Sphere', key: 'sphere_id', route: 'deities' },
+            ],
             keys: ['deity_id', 'sphere_id'],
             payload: {},
         },
         EventCharacter: {
             kind: 'relationship',
             table: 'event_characters',
-            routeFromSource: 'characters',
-            source: 'Event',
-            target: 'Character',
-            sourceKey: 'event_id',
-            targetKey: 'character_id',
+            members: [
+                { entity: 'Event', key: 'event_id', route: 'characters' },
+                { entity: 'Character', key: 'character_id', route: 'events' },
+            ],
             keys: ['event_id', 'character_id'],
             payload: {
                 short_description: { type: 'string', required: true },
@@ -253,11 +246,10 @@ const domainManifest = {
         EventDeity: {
             kind: 'relationship',
             table: 'event_deities',
-            routeFromSource: 'deities',
-            source: 'Event',
-            target: 'Deity',
-            sourceKey: 'event_id',
-            targetKey: 'deity_id',
+            members: [
+                { entity: 'Event', key: 'event_id', route: 'deities' },
+                { entity: 'Deity', key: 'deity_id', route: 'events' },
+            ],
             keys: ['event_id', 'deity_id'],
             payload: {
                 short_description: { type: 'string', required: true },
@@ -267,11 +259,10 @@ const domainManifest = {
         EventItem: {
             kind: 'relationship',
             table: 'event_items',
-            routeFromSource: 'items',
-            source: 'Event',
-            target: 'Item',
-            sourceKey: 'event_id',
-            targetKey: 'item_id',
+            members: [
+                { entity: 'Event', key: 'event_id', route: 'items' },
+                { entity: 'Item', key: 'item_id', route: 'events' },
+            ],
             keys: ['event_id', 'item_id'],
             payload: {
                 short_description: { type: 'string', required: true },
@@ -281,11 +272,10 @@ const domainManifest = {
         EventOrganization: {
             kind: 'relationship',
             table: 'event_organizations',
-            routeFromSource: 'organizations',
-            source: 'Event',
-            target: 'Organization',
-            sourceKey: 'event_id',
-            targetKey: 'organization_id',
+            members: [
+                { entity: 'Event', key: 'event_id', route: 'organizations' },
+                { entity: 'Organization', key: 'organization_id', route: 'events' },
+            ],
             keys: ['event_id', 'organization_id'],
             payload: {
                 short_description: { type: 'string', required: true },
@@ -295,11 +285,10 @@ const domainManifest = {
         EventPlace: {
             kind: 'relationship',
             table: 'event_places',
-            routeFromSource: 'places',
-            source: 'Event',
-            target: 'Place',
-            sourceKey: 'event_id',
-            targetKey: 'place_id',
+            members: [
+                { entity: 'Event', key: 'event_id', route: 'places' },
+                { entity: 'Place', key: 'place_id', route: 'events' },
+            ],
             keys: ['event_id', 'place_id'],
             payload: {
                 short_description: { type: 'string', required: true },
@@ -309,11 +298,10 @@ const domainManifest = {
         OrganizationPlace: {
             kind: 'relationship',
             table: 'organization_places',
-            routeFromSource: 'places',
-            source: 'Organization',
-            target: 'Place',
-            sourceKey: 'organization_id',
-            targetKey: 'place_id',
+            members: [
+                { entity: 'Organization', key: 'organization_id', route: 'places' },
+                { entity: 'Place', key: 'place_id', route: 'organizations' },
+            ],
             keys: ['organization_id', 'place_id'],
             payload: {
                 short_description: { type: 'string', required: true },
@@ -323,22 +311,20 @@ const domainManifest = {
         ItemSpell: {
             kind: 'simple',
             table: 'item_spells',
-            routeFromSource: 'spells',
-            source: 'Item',
-            target: 'Spell',
-            sourceKey: 'item_id',
-            targetKey: 'spell_id',
+            members: [
+                { entity: 'Item', key: 'item_id', route: 'spells' },
+                { entity: 'Spell', key: 'spell_id', route: 'items' },
+            ],
             keys: ['item_id', 'spell_id'],
             payload: {},
         },
         SpellSphere: {
             kind: 'simple',
             table: 'spell_spheres',
-            routeFromSource: 'spheres',
-            source: 'Spell',
-            target: 'Sphere',
-            sourceKey: 'spell_id',
-            targetKey: 'sphere_id',
+            members: [
+                { entity: 'Spell', key: 'spell_id', route: 'spheres' },
+                { entity: 'Sphere', key: 'sphere_id', route: 'spells' },
+            ],
             keys: ['spell_id', 'sphere_id'],
             payload: {},
         },
