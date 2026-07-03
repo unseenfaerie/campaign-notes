@@ -54,10 +54,10 @@ function getRelationByRoutes(entityRoute, relatedRoute, manifest = domainManifes
     throw new Error(`Unknown related route for ${entityRoute}: ${relatedRoute}`);
 }
 
-function coerceEntityWhere(entityDef, where) {
+function conformObjectToEntity(obj, entityDef) {
     const normalized = {};
 
-    for (const [field, rawValue] of Object.entries(where || {})) {
+    for (const [field, rawValue] of Object.entries(obj || {})) {
         const fieldDef = entityDef.fields[field];
         if (!fieldDef) {
             throw new Error(`Unknown field for route ${entityDef.route}: ${field}`);
@@ -157,8 +157,9 @@ function toHttpError(err) {
 
 router.post('/:entityRoute', async (req, res) => {
     try {
-        const { entityName } = getEntityByRoute(req.params.entityRoute);
-        const created = await manifestCrudService.insert(entityName, req.body);
+        const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
+        const validated = conformObjectToEntity(req.body, entityDef)
+        const created = await manifestCrudService.insert(entityName, validated);
         res.status(201).json(created);
     } catch (err) {
         const httpErr = toHttpError(err);
@@ -168,9 +169,8 @@ router.post('/:entityRoute', async (req, res) => {
 
 router.get('/:entityRoute', async (req, res) => {
     try {
-        const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
-        const where = coerceEntityWhere(entityDef, req.query);
-        const records = await manifestCrudService.getMany(entityName, where);
+        const { entityName } = getEntityByRoute(req.params.entityRoute);
+        const records = await manifestCrudService.getMany(entityName);
 
         return res.json(records);
     } catch (err) {
