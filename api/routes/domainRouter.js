@@ -155,6 +155,17 @@ function toHttpError(err) {
     return { status: 500, message };
 }
 
+router.post('/:entityRoute', async (req, res) => {
+    try {
+        const { entityName } = getEntityByRoute(req.params.entityRoute);
+        const created = await manifestCrudService.insert(entityName, req.body);
+        res.status(201).json(created);
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
 router.get('/:entityRoute', async (req, res) => {
     try {
         const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
