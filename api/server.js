@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dataRouter = require('./routes/dataRouter');
+const domainRouter = require('./routes/domainRouter');
 const { initializeDatabase } = require('./db');
 
 const app = express();
@@ -13,6 +14,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/data', dataRouter);
+app.use('/api', domainRouter);
 
 app.use((err, req, res, next) => {
   console.error(err);
