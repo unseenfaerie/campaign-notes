@@ -89,22 +89,6 @@ router.get('/:resource', async (req, res) => {
   }
 });
 
-router.get('/:resource/one', async (req, res) => {
-  try {
-    const where = coerceWhere(req.params.resource, req.query);
-    const row = await manifestCrudService.getOne(req.params.resource, where);
-
-    if (!row) {
-      return res.status(404).json({ error: 'Record not found' });
-    }
-
-    return res.json(row);
-  } catch (err) {
-    const httpErr = toHttpError(err);
-    return res.status(httpErr.status).json({ error: httpErr.message });
-  }
-});
-
 router.post('/:resource', async (req, res) => {
   try {
     const created = await manifestCrudService.insert(req.params.resource, req.body);
