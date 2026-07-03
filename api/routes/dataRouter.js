@@ -1,7 +1,10 @@
 const express = require('express');
 const { manifestCrudService } = require('../genericCrudService');
+const manifestHelpers = require('../utils/manifestHelpers');
 
 const router = express.Router();
+
+void manifestHelpers;
 
 function coerceValueByType(type, value) {
   if (value === undefined || value === null) return value;
