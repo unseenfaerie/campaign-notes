@@ -2,8 +2,8 @@
 
 Manifest-driven API for Campaign Notes. This package owns the backend runtime for both:
 
-- A generic manifest CRUD router for entities and relation tables
-- A domain router that exposes entity-centric read flows and simple entity creation
+- A generic manifest data router for entities and relation tables
+- A domain router that exposes entity-centric CRUD and related-record lookup flows
 
 Definitions come from [../common/domainManifest.js](../common/domainManifest.js).
 
@@ -16,18 +16,20 @@ Definitions come from [../common/domainManifest.js](../common/domainManifest.js)
 ## What This API Does
 
 - Initializes SQLite schema from the domain manifest
-- Exposes generic CRUD routes for all manifest resources
-- Exposes domain routes for entity lookup and associated record loading
+- Exposes generic data routes for manifest resources
+- Exposes domain routes for entity CRUD and associated record loading
 - Validates and type-checks payloads and filters from manifest field definitions
 
 Core files:
 
 - [server.js](server.js): Express app and startup
-- [routes/dataRouter.js](routes/dataRouter.js): Generic CRUD endpoints under `/api/data`
+- [routes/dataRouter.js](routes/dataRouter.js): Generic data endpoints under `/api/data`
 - [routes/domainRouter.js](routes/domainRouter.js): Domain-oriented endpoints under `/api`
-- [genericCrudService.js](genericCrudService.js): Manifest-driven data layer
-- [db.js](db.js): DB connection and schema init orchestration
-- [schemaBuilder.js](schemaBuilder.js): SQL generation from manifest
+- [data/genericCrudService.js](data/genericCrudService.js): Manifest-driven data layer
+- [data/db.js](data/db.js): DB connection and schema init orchestration
+- [data/schemaBuilder.js](data/schemaBuilder.js): SQL generation from manifest
+- [scripts/seed.js](scripts/seed.js): Example data seeding
+- [scripts/validateSeed.js](scripts/validateSeed.js): Seed row-value count validator
 
 ## Install
 
@@ -58,6 +60,24 @@ From this folder:
 npm run start
 ```
 
+Run tests:
+
+```bash
+npm run test
+```
+
+Run seed validation script:
+
+```bash
+node scripts/validateSeed.js
+```
+
+Run seed script:
+
+```bash
+node scripts/seed.js
+```
+
 Default port: `3001`
 
 Health check:
@@ -73,19 +93,18 @@ curl http://localhost:3001/health
 
 - `GET /api/data/resources`
 - `GET /api/data/:resource`
-- `POST /api/data/:resource`
-- `PATCH /api/data/:resource`
-- `DELETE /api/data/:resource`
 
 
 - `POST /api/:entityRoute`
 - `GET /api/:entityRoute`
 - `GET /api/:entityRoute/:id`
 - `GET /api/:entityRoute/:id/:relatedRoute`
+- `PATCH /api/:entityRoute/:id`
+- `DELETE /api/:entityRoute/:id`
 
 ## Generic Data Router (`/api/data`)
 
-Use this for table-shaped CRUD operations against any manifest resource.
+Use this for table-shaped read operations against any manifest resource.
 
 `resource` is the manifest key (examples: `Item`, `Character`, `CharacterItem`, `EventPlace`).
 
@@ -105,54 +124,14 @@ Query rows by field values (or omit query params to return all rows).
 curl "http://localhost:3001/api/data/Item?id=fireball-wand"
 ```
 
-### `POST /api/data/:resource`
-
-Insert a row into a resource table.
-
-```bash
-curl -X POST http://localhost:3001/api/data/Item \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "fireball-wand",
-    "name": "Fireball Wand",
-    "short_description": "A wand with a warm core."
-  }'
-```
-
-### `PATCH /api/data/:resource`
-
-Update rows matching `where`.
-
-```bash
-curl -X PATCH http://localhost:3001/api/data/Item \
-  -H "Content-Type: application/json" \
-  -d '{
-    "where": { "id": "fireball-wand" },
-    "updates": { "long_explanation": "Recovered from a ruined tower." }
-  }'
-```
-
-### `DELETE /api/data/:resource`
-
-Delete rows matching `where`.
-
-```bash
-curl -X DELETE http://localhost:3001/api/data/Item \
-  -H "Content-Type: application/json" \
-  -d '{
-    "where": { "id": "fireball-wand" }
-  }'
-```
-
 ## Domain Router (`/api`)
 
 Use this for domain-shaped access by entity route names from the manifest (examples: `characters`, `events`, `items`).
 
-Current progress:
+Current capabilities:
 
-- Supports entity create (`POST`) and read (`GET`) endpoints
+- Supports entity create/read/update/delete (`POST`, `GET`, `PATCH`, `DELETE`) endpoints
 - Supports related-entity expansion via relation routes from `routeFromSource`
-- Does not yet expose update/delete domain routes
 
 ### `POST /api/:entityRoute`
 
@@ -192,13 +171,33 @@ Fetch associated target records for a source entity.
 curl http://localhost:3001/api/characters/releas-neb/items
 ```
 
+### `PATCH /api/:entityRoute/:id`
+
+Patch a single entity by route and id.
+
+```bash
+curl -X PATCH http://localhost:3001/api/characters/releas-neb \
+  -H "Content-Type: application/json" \
+  -d '{
+    "short_description": "Updated summary text."
+  }'
+```
+
+### `DELETE /api/:entityRoute/:id`
+
+Delete a single entity by route and id.
+
+```bash
+curl -X DELETE http://localhost:3001/api/deities/achiel
+```
+
 ## Error Behavior
 
 Common route error mapping:
 
 - `400`: validation/type/shape errors
 - `404`: unknown route/resource or record not found
-- `409`: SQLite constraint conflicts (primarily generic data router)
+- `409`: SQLite constraint conflicts
 - `500`: unexpected errors
 
 Error payload shape:
