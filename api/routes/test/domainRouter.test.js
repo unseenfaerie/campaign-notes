@@ -1,208 +1,294 @@
 const request = require('supertest');
-const { app } = require('../../server');
-const { initializeDatabase } = require('../../data/db');
+const express = require('express');
+
+jest.mock('../../data/genericCrudService', () => ({
+    manifestCrudService: {
+        insert: jest.fn(),
+        getMany: jest.fn(),
+        getOne: jest.fn(),
+        update: jest.fn(),
+        remove: jest.fn(),
+    },
+}));
+
+jest.mock('../../utils/manifestHelpers', () => ({
+    coerceValueByType: jest.fn(),
+    getEntityByRoute: jest.fn(),
+    getRelationMembers: jest.fn(),
+    getRelationByRoutes: jest.fn(),
+    conformObjectToEntity: jest.fn(),
+}));
+
+jest.mock('../../../common/domainManifest', () => ({
+    domainManifest: {
+        entities: {
+            Character: {
+                idField: 'id',
+                route: 'characters',
+                fields: { id: { type: 'string' } },
+            },
+            Item: {
+                idField: 'id',
+                route: 'items',
+                fields: { id: { type: 'string' } },
+            },
+            Deity: {
+                idField: 'id',
+                route: 'deities',
+                fields: { id: { type: 'string' } },
+            },
+            Alias: {
+                idField: 'id',
+                route: 'aliases',
+                fields: { id: { type: 'number' } },
+            },
+        },
+    },
+}));
+
 const { manifestCrudService } = require('../../data/genericCrudService');
+const manifestHelpers = require('../../utils/manifestHelpers');
+const router = require('../domainRouter');
 
-describe('domain router entity routes', () => {
-    beforeAll(async () => {
-        await initializeDatabase();
+function createTestApp() {
+    const app = express();
+    app.use(express.json());
+    app.use('/api', router);
+    return app;
+}
 
-        try {
-            await manifestCrudService.remove('CharacterItem', {
-                character_id: 'test-domain-router-character',
-                item_id: 'test-domain-router-item',
-                acquired_date: 'jan-02-200',
-            });
-            await manifestCrudService.remove('CharacterItem', {
-                character_id: 'test-domain-router-character',
-                item_id: 'test-domain-router-item',
-                acquired_date: 'jan-01-200',
-            });
-            await manifestCrudService.remove('Item', { id: 'test-domain-router-item' });
-            await manifestCrudService.remove('Character', { id: 'test-domain-router-character' });
-            await manifestCrudService.remove('Character', { id: 'test-domain-router-patch-character' });
-            await manifestCrudService.remove('Deity', { id: 'test-domain-router-delete-deity' });
-        } catch (err) {
-            // Ignore cleanup errors when the record is absent.
+const app = createTestApp();
+
+function buildEntity(entityName, route, idType = 'string') {
+    return {
+        entityName,
+        entityDef: {
+            route,
+            idField: 'id',
+            fields: {
+                id: { type: idType },
+            },
+        },
+    };
+}
+
+beforeEach(() => {
+    jest.clearAllMocks();
+
+    manifestHelpers.coerceValueByType.mockImplementation((type, value) => {
+        if (type === 'number') {
+            const n = Number(value);
+            if (Number.isNaN(n)) {
+                throw new Error(`Invalid number value: ${value}`);
+            }
+            return n;
         }
-
-        await manifestCrudService.insert('Character', {
-            id: 'test-domain-router-character',
-            type: 'npc',
-            name: 'Domain Router Test Character',
-            deceased: 0,
-            short_description: 'Used to validate nested domain entity routing.',
-        });
-
-        await manifestCrudService.insert('Item', {
-            id: 'test-domain-router-item',
-            name: 'Domain Router Test Item',
-            short_description: 'Used to validate nested domain association routing.',
-        });
-
-        await manifestCrudService.insert('CharacterItem', {
-            character_id: 'test-domain-router-character',
-            item_id: 'test-domain-router-item',
-            acquired_date: 'jan-01-200',
-            relinquished_date: 'jan-05-200',
-            short_description: 'First possession record.',
-        });
-
-        await manifestCrudService.insert('CharacterItem', {
-            character_id: 'test-domain-router-character',
-            item_id: 'test-domain-router-item',
-            acquired_date: 'jan-02-200',
-            relinquished_date: null,
-            short_description: 'Second possession record.',
-        });
+        return value;
     });
 
-    it('returns an entity collection by manifest route', async () => {
+    manifestHelpers.getEntityByRoute.mockImplementation((entityRoute) => {
+        if (entityRoute === 'characters') return buildEntity('Character', 'characters', 'string');
+        if (entityRoute === 'items') return buildEntity('Item', 'items', 'string');
+        if (entityRoute === 'deities') return buildEntity('Deity', 'deities', 'string');
+        if (entityRoute === 'aliases') return buildEntity('Alias', 'aliases', 'number');
+        throw new Error(`Unknown entity route: ${entityRoute}`);
+    });
+
+    manifestHelpers.getRelationMembers.mockImplementation((relationDef) => relationDef.members);
+
+    manifestHelpers.getRelationByRoutes.mockImplementation((entityRoute, relatedRoute) => {
+        throw new Error(`Unknown related route for ${entityRoute}: ${relatedRoute}`);
+    });
+
+    manifestHelpers.conformObjectToEntity.mockImplementation((obj) => obj);
+});
+
+describe('domainRouter isolated unit tests', () => {
+    it('GET /:entityRoute returns collection for mapped entity route', async () => {
+        manifestCrudService.getMany.mockResolvedValueOnce([{ id: 'c1', name: 'A' }]);
+
         const response = await request(app).get('/api/characters');
 
         expect(response.status).toBe(200);
-        expect(Array.isArray(response.body)).toBe(true);
-        expect(response.body).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    id: 'test-domain-router-character',
-                    name: 'Domain Router Test Character',
-                }),
-            ])
-        );
+        expect(response.body).toEqual([{ id: 'c1', name: 'A' }]);
+        expect(manifestHelpers.getEntityByRoute).toHaveBeenCalledWith('characters');
+        expect(manifestCrudService.getMany).toHaveBeenCalledWith('Character');
     });
 
-    it('returns an associated collection without exposing the join-table name', async () => {
-        const response = await request(app).get('/api/characters/test-domain-router-character/items');
+    it('GET /:entityRoute/:id returns single record', async () => {
+        manifestCrudService.getOne.mockResolvedValueOnce({ id: 'char-1', name: 'Hero' });
+
+        const response = await request(app).get('/api/characters/char-1');
 
         expect(response.status).toBe(200);
-        expect(response.body).toEqual([
-            expect.objectContaining({
-                id: 'test-domain-router-item',
-                name: 'Domain Router Test Item',
-                history: [
-                    expect.objectContaining({
-                        acquired_date: 'jan-01-200',
-                        relinquished_date: 'jan-05-200',
-                        short_description: 'First possession record.',
-                    }),
-                    expect.objectContaining({
-                        acquired_date: 'jan-02-200',
-                        relinquished_date: null,
-                        short_description: 'Second possession record.',
-                    }),
-                ],
-            }),
-        ]);
+        expect(response.body).toEqual({ id: 'char-1', name: 'Hero' });
+        expect(manifestHelpers.coerceValueByType).toHaveBeenCalledWith('string', 'char-1');
+        expect(manifestCrudService.getOne).toHaveBeenCalledWith('Character', { id: 'char-1' });
     });
 
-    it('returns the same associated collection from the opposite side of the relation', async () => {
-        const response = await request(app).get('/api/items/test-domain-router-item/characters');
+    it('GET /:entityRoute/:id returns 404 when record is missing', async () => {
+        manifestCrudService.getOne.mockResolvedValueOnce(null);
 
-        expect(response.status).toBe(200);
-        expect(response.body).toEqual([
-            expect.objectContaining({
-                id: 'test-domain-router-character',
-                name: 'Domain Router Test Character',
-                history: [
-                    expect.objectContaining({
-                        acquired_date: 'jan-01-200',
-                        relinquished_date: 'jan-05-200',
-                        short_description: 'First possession record.',
-                    }),
-                    expect.objectContaining({
-                        acquired_date: 'jan-02-200',
-                        relinquished_date: null,
-                        short_description: 'Second possession record.',
-                    }),
-                ],
-            }),
-        ]);
-    });
-
-    it('returns a single entity by manifest route and id', async () => {
-        const response = await request(app).get('/api/characters/test-domain-router-character');
-
-        expect(response.status).toBe(200);
-        expect(response.body).toMatchObject({
-            id: 'test-domain-router-character',
-            name: 'Domain Router Test Character',
-            type: 'npc',
-        });
-        expect(Array.isArray(response.body)).toBe(false);
-    });
-
-    it('patches a single entity by manifest route and id', async () => {
-        await manifestCrudService.insert('Character', {
-            id: 'test-domain-router-patch-character',
-            type: 'npc',
-            name: 'Patch Me',
-            deceased: 0,
-            short_description: 'Original short description.',
-        });
-
-        const response = await request(app)
-            .patch('/api/characters/test-domain-router-patch-character')
-            .send({
-                name: 'Patched Name',
-                short_description: 'Updated short description.',
-            });
-
-        expect(response.status).toBe(200);
-        expect(response.body).toEqual({
-            updated: 1,
-            record: expect.objectContaining({
-                id: 'test-domain-router-patch-character',
-                name: 'Patched Name',
-                short_description: 'Updated short description.',
-            }),
-        });
-    });
-
-    it('deletes a single entity by manifest route and id', async () => {
-        await manifestCrudService.insert('Deity', {
-            id: 'test-domain-router-delete-deity',
-            name: 'Delete Me',
-            short_description: 'Temporary deity for delete tests.',
-        });
-
-        const response = await request(app).delete('/api/deities/test-domain-router-delete-deity');
-
-        expect(response.status).toBe(200);
-        expect(response.body).toEqual({ deleted: 1 });
-
-        const fetchResponse = await request(app).get('/api/deities/test-domain-router-delete-deity');
-        expect(fetchResponse.status).toBe(404);
-        expect(fetchResponse.body).toEqual({ error: 'Record not found' });
-    });
-
-    it('returns 404 for an unknown entity route', async () => {
-        const response = await request(app).get('/api/not-a-real-entity/some-id');
+        const response = await request(app).get('/api/characters/not-found');
 
         expect(response.status).toBe(404);
-        expect(response.body).toEqual({ error: 'Unknown entity route: not-a-real-entity' });
+        expect(response.body).toEqual({ error: 'Record not found' });
     });
 
-    it('returns 400 when the path id cannot be coerced to the entity id type', async () => {
+    it('GET /:entityRoute/:id returns 400 on invalid id coercion', async () => {
         const response = await request(app).get('/api/aliases/not-a-number');
 
         expect(response.status).toBe(400);
         expect(response.body).toEqual({ error: 'Invalid number value: not-a-number' });
     });
 
-    it('returns 404 when the entity route exists but the record does not', async () => {
-        const response = await request(app).get('/api/characters/does-not-exist');
+    it('GET /:entityRoute/:id/:relatedRoute returns 404 on unknown related route', async () => {
+        const response = await request(app).get('/api/characters/char-1/not-real');
+
+        expect(response.status).toBe(404);
+        expect(response.body).toEqual({
+            error: 'Unknown related route for characters: not-real',
+        });
+    });
+
+    it('GET /:entityRoute/:id/:relatedRoute shapes history relations', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterItem',
+            relationDef: {
+                kind: 'history',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+            },
+            anchorMemberIndex: 0,
+        });
+
+        manifestCrudService.getOne.mockImplementation(async (resourceName, where) => {
+            if (resourceName === 'Character' && where.id === 'char-1') {
+                return { id: 'char-1', name: 'Hero' };
+            }
+            if (resourceName === 'Item' && where.id === 'item-1') {
+                return { id: 'item-1', name: 'Sword' };
+            }
+            return null;
+        });
+
+        manifestCrudService.getMany.mockResolvedValueOnce([
+            {
+                character_id: 'char-1',
+                item_id: 'item-1',
+                acquired_date: 'jan-01-200',
+                relinquished_date: 'jan-05-200',
+                short_description: 'First possession',
+            },
+            {
+                character_id: 'char-1',
+                item_id: 'item-1',
+                acquired_date: 'jan-10-200',
+                relinquished_date: null,
+                short_description: 'Second possession',
+            },
+        ]);
+
+        const response = await request(app).get('/api/characters/char-1/items');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([
+            {
+                id: 'item-1',
+                name: 'Sword',
+                history: [
+                    {
+                        acquired_date: 'jan-01-200',
+                        relinquished_date: 'jan-05-200',
+                        short_description: 'First possession',
+                    },
+                    {
+                        acquired_date: 'jan-10-200',
+                        relinquished_date: null,
+                        short_description: 'Second possession',
+                    },
+                ],
+            },
+        ]);
+    });
+
+    it('PATCH /:entityRoute/:id updates and returns service payload', async () => {
+        manifestCrudService.update.mockResolvedValueOnce({
+            updated: 1,
+            record: { id: 'char-1', name: 'Updated Name' },
+        });
+
+        const response = await request(app)
+            .patch('/api/characters/char-1')
+            .send({ name: 'Updated Name' });
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({
+            updated: 1,
+            record: { id: 'char-1', name: 'Updated Name' },
+        });
+        expect(manifestHelpers.conformObjectToEntity).toHaveBeenCalledWith(
+            { name: 'Updated Name' },
+            expect.objectContaining({ idField: 'id' })
+        );
+        expect(manifestCrudService.update).toHaveBeenCalledWith(
+            'Character',
+            { id: 'char-1' },
+            { name: 'Updated Name' }
+        );
+    });
+
+    it('PATCH /:entityRoute/:id returns 404 when update affects no record', async () => {
+        manifestCrudService.update.mockResolvedValueOnce({ updated: 0, record: null });
+
+        const response = await request(app)
+            .patch('/api/characters/char-missing')
+            .send({ name: 'Nope' });
 
         expect(response.status).toBe(404);
         expect(response.body).toEqual({ error: 'Record not found' });
     });
 
-    it('returns 404 for an unknown related route under a valid entity route', async () => {
-        const response = await request(app).get('/api/characters/test-domain-router-character/not-a-real-related-route');
+    it('DELETE /:entityRoute/:id deletes and returns result', async () => {
+        manifestCrudService.remove.mockResolvedValueOnce({ deleted: 1 });
+
+        const response = await request(app).delete('/api/deities/deity-1');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({ deleted: 1 });
+        expect(manifestCrudService.remove).toHaveBeenCalledWith('Deity', { id: 'deity-1' });
+    });
+
+    it('DELETE /:entityRoute/:id returns 404 when no record is deleted', async () => {
+        manifestCrudService.remove.mockResolvedValueOnce({ deleted: 0 });
+
+        const response = await request(app).delete('/api/deities/missing');
 
         expect(response.status).toBe(404);
-        expect(response.body).toEqual({
-            error: 'Unknown related route for characters: not-a-real-related-route',
-        });
+        expect(response.body).toEqual({ error: 'Record not found' });
+    });
+
+    it('POST /:entityRoute maps SQLITE_CONSTRAINT to 409', async () => {
+        const err = new Error('constraint failed');
+        err.code = 'SQLITE_CONSTRAINT';
+        manifestCrudService.insert.mockRejectedValueOnce(err);
+
+        const response = await request(app)
+            .post('/api/characters')
+            .send({ id: 'char-1', name: 'A' });
+
+        expect(response.status).toBe(409);
+        expect(response.body).toEqual({ error: 'constraint failed' });
+    });
+
+    it('GET /:entityRoute maps unknown errors to 500', async () => {
+        manifestCrudService.getMany.mockRejectedValueOnce(new Error('boom'));
+
+        const response = await request(app).get('/api/characters');
+
+        expect(response.status).toBe(500);
+        expect(response.body).toEqual({ error: 'boom' });
     });
 });
