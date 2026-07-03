@@ -1,14 +1,13 @@
 {
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "sqlite3": "^5.1.7"
-  },
-  "devDependencies": {
-    "jest": "^30.0.5",
-    "supertest": "^7.1.4"
-  },
+  "name": "campaign-notes-workspace",
+  "private": true,
+  "workspaces": [
+    "api",
+    "frontend"
+  ],
   "scripts": {
-    "test": "jest"
+    "api:start": "npm --workspace api run start",
+    "api:test": "npm --workspace api run test",
+    "frontend:start": "npm --workspace frontend run serve"
   }
 }

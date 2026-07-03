@@ -1,0 +1,19 @@
+{
+    "name": "campaign-notes-api",
+    "version": "1.0.0",
+    "private": true,
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "test": "jest"
+    },
+    "dependencies": {
+        "cors": "^2.8.5",
+        "express": "^5.1.0",
+        "sqlite3": "^5.1.7"
+    },
+    "devDependencies": {
+        "jest": "^30.0.5",
+        "supertest": "^7.1.4"
+    }
+}
