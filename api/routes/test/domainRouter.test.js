@@ -291,4 +291,208 @@ describe('domainRouter isolated unit tests', () => {
         expect(response.status).toBe(500);
         expect(response.body).toEqual({ error: 'boom' });
     });
+
+    it('POST /:entityRoute/:id/:relatedRoute creates simple relation', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterItem',
+            relationDef: {
+                kind: 'simple',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {},
+            },
+            anchorMemberIndex: 0,
+        });
+
+        manifestCrudService.getOne.mockImplementation(async (resourceName, where) => {
+            if (resourceName === 'Character' && where.id === 'char-1') {
+                return { id: 'char-1' };
+            }
+
+            if (resourceName === 'Item' && where.id === 'item-1') {
+                return { id: 'item-1' };
+            }
+
+            return null;
+        });
+
+        manifestCrudService.insert.mockResolvedValueOnce({
+            character_id: 'char-1',
+            item_id: 'item-1',
+        });
+
+        const response = await request(app)
+            .post('/api/characters/char-1/items')
+            .send({ id: 'item-1' });
+
+        expect(response.status).toBe(201);
+        expect(response.body).toEqual({
+            character_id: 'char-1',
+            item_id: 'item-1',
+        });
+        expect(manifestCrudService.insert).toHaveBeenCalledWith('CharacterItem', {
+            character_id: 'char-1',
+            item_id: 'item-1',
+        });
+    });
+
+    it('POST /:entityRoute/:id/:relatedRoute creates relation with payload metadata', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterDeity',
+            relationDef: {
+                kind: 'history',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'deities' },
+                    { entity: 'Deity', key: 'deity_id', route: 'characters' },
+                ],
+                payload: {
+                    adopted_date: { type: 'string', required: true },
+                    short_description: { type: 'string', required: true },
+                },
+            },
+            anchorMemberIndex: 0,
+        });
+
+        manifestCrudService.getOne.mockImplementation(async (resourceName, where) => {
+            if (resourceName === 'Character' && where.id === 'char-1') {
+                return { id: 'char-1' };
+            }
+
+            if (resourceName === 'Deity' && where.id === 'deity-1') {
+                return { id: 'deity-1' };
+            }
+
+            return null;
+        });
+
+        manifestCrudService.insert.mockResolvedValueOnce({
+            character_id: 'char-1',
+            deity_id: 'deity-1',
+            adopted_date: '100-01-01',
+            short_description: 'Chosen by prophecy',
+        });
+
+        const response = await request(app)
+            .post('/api/characters/char-1/deities')
+            .send({
+                id: 'deity-1',
+                adopted_date: '100-01-01',
+                short_description: 'Chosen by prophecy',
+            });
+
+        expect(response.status).toBe(201);
+        expect(manifestCrudService.insert).toHaveBeenCalledWith('CharacterDeity', {
+            character_id: 'char-1',
+            deity_id: 'deity-1',
+            adopted_date: '100-01-01',
+            short_description: 'Chosen by prophecy',
+        });
+    });
+
+    it('POST /:entityRoute/:id/:relatedRoute returns 400 when relatedId is missing', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterItem',
+            relationDef: {
+                kind: 'simple',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {},
+            },
+            anchorMemberIndex: 0,
+        });
+
+        manifestCrudService.getOne.mockResolvedValueOnce({ id: 'char-1' });
+
+        const response = await request(app)
+            .post('/api/characters/char-1/items')
+            .send({});
+
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual({ error: 'Missing required field: id' });
+    });
+
+    it('POST /:entityRoute/:id/:relatedRoute returns 404 when source does not exist', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterItem',
+            relationDef: {
+                kind: 'simple',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {},
+            },
+            anchorMemberIndex: 0,
+        });
+
+        manifestCrudService.getOne.mockResolvedValueOnce(null);
+
+        const response = await request(app)
+            .post('/api/characters/char-1/items')
+            .send({ relatedId: 'item-1' });
+
+        expect(response.status).toBe(404);
+        expect(response.body).toEqual({ error: 'Record not found' });
+    });
+
+    it('POST /:entityRoute/:id/:relatedRoute returns 404 when related record does not exist', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterItem',
+            relationDef: {
+                kind: 'simple',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {},
+            },
+            anchorMemberIndex: 0,
+        });
+
+        manifestCrudService.getOne
+            .mockResolvedValueOnce({ id: 'char-1' })
+            .mockResolvedValueOnce(null);
+
+        const response = await request(app)
+            .post('/api/characters/char-1/items')
+            .send({ id: 'item-1' });
+
+        expect(response.status).toBe(404);
+        expect(response.body).toEqual({ error: 'Record not found' });
+    });
+
+    it('POST /:entityRoute/:id/:relatedRoute returns 400 for unknown relation payload field', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterItem',
+            relationDef: {
+                kind: 'relationship',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {
+                    short_description: { type: 'string', required: true },
+                },
+            },
+            anchorMemberIndex: 0,
+        });
+
+        manifestCrudService.getOne
+            .mockResolvedValueOnce({ id: 'char-1' })
+            .mockResolvedValueOnce({ id: 'item-1' });
+
+        const response = await request(app)
+            .post('/api/characters/char-1/items')
+            .send({
+                id: 'item-1',
+                unknown_field: 'not allowed',
+            });
+
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual({ error: 'Unknown field for relation: unknown_field' });
+    });
 });

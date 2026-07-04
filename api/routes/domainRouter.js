@@ -8,6 +8,11 @@ const {
     getRelationByRoutes,
     conformObjectToEntity,
 } = require('../utils/manifestHelpers');
+const {
+    getRelatedMemberInfo,
+    normalizeRelationPayload,
+    buildRelationInsertData,
+} = require('../utils/relationWriteHelpers');
 
 const router = express.Router();
 
@@ -228,7 +233,7 @@ function toHttpError(err) {
     }
 
     if (
-        /Invalid number value|Invalid boolean value|Unknown field for route|Primary key updates are not allowed|Data must be an object/i.test(
+        /Invalid number value|Invalid boolean value|Unknown field for route|Unknown field for relation|Primary key updates are not allowed|Data must be an object/i.test(
             message
         )
     ) {
@@ -240,6 +245,18 @@ function toHttpError(err) {
     }
 
     return { status: 500, message };
+}
+
+async function ensureRecordExists(entityName, idField, idValue) {
+    const record = await manifestCrudService.getOne(entityName, {
+        [idField]: idValue,
+    });
+
+    if (!record) {
+        throw new Error('Record not found');
+    }
+
+    return record;
 }
 
 function getEntityLookup(params) {
@@ -256,6 +273,8 @@ function getEntityLookup(params) {
     };
 }
 
+/* BASIC ENTITY ROUTES */
+// create entity
 router.post('/:entityRoute', async (req, res) => {
     try {
         const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
@@ -267,7 +286,7 @@ router.post('/:entityRoute', async (req, res) => {
         res.status(httpErr.status).json({ error: httpErr.message });
     }
 });
-
+// get all of this entity
 router.get('/:entityRoute', async (req, res) => {
     try {
         const { entityName } = getEntityByRoute(req.params.entityRoute);
@@ -279,7 +298,119 @@ router.get('/:entityRoute', async (req, res) => {
         return res.status(httpErr.status).json({ error: httpErr.message });
     }
 });
+// get one of this entity
+router.get('/:entityRoute/:id', async (req, res) => {
+    try {
+        const { entityName, idField, idValue } = getEntityLookup(req.params);
 
+        const record = await manifestCrudService.getOne(entityName, {
+            [idField]: idValue,
+        });
+
+        if (!record) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        return res.json(record);
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+// edit this entity
+router.patch('/:entityRoute/:id', async (req, res) => {
+    try {
+        const { entityName, entityDef, idField, idValue } = getEntityLookup(req.params);
+        const updates = conformObjectToEntity(req.body, entityDef);
+
+        const result = await manifestCrudService.update(entityName, {
+            [idField]: idValue,
+        }, updates);
+
+        if (result.updated === 0 && !result.record) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        return res.json(result);
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+// delete this entity
+router.delete('/:entityRoute/:id', async (req, res) => {
+    try {
+        const { entityName, idField, idValue } = getEntityLookup(req.params);
+        const result = await manifestCrudService.remove(entityName, {
+            [idField]: idValue,
+        });
+
+        if (result.deleted === 0) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        return res.json(result);
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
+/* RELATIONAL ROUTES */
+// create relation between these two entities
+router.post('/:entityRoute/:id/:relatedRoute', async (req, res) => {
+    try {
+        const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
+        const { relationName, relationDef, anchorMemberIndex } = getRelationByRoutes(
+            req.params.entityRoute,
+            req.params.relatedRoute
+        );
+
+        const sourceIdField = entityDef.idField;
+        const sourceIdMeta = entityDef.fields[sourceIdField];
+        const sourceId = coerceValueByType(sourceIdMeta.type, req.params.id);
+
+        await ensureRecordExists(entityName, sourceIdField, sourceId);
+
+        const { members, relatedEntityDef } = getRelatedMemberInfo(relationDef, anchorMemberIndex);
+        const relatedIdField = relatedEntityDef.idField;
+        const relatedIdMeta = relatedEntityDef.fields[relatedIdField];
+        const relatedId = coerceValueByType(relatedIdMeta.type, req.body && req.body.id);
+
+        if (relatedId === undefined || relatedId === null) {
+            return res.status(400).json({ error: 'Missing required field: id' });
+        }
+
+        await ensureRecordExists(
+            members[anchorMemberIndex === 0 ? 1 : 0].entity,
+            relatedIdField,
+            relatedId
+        );
+
+        const { id: _, ...rawPayload } = req.body || {};
+        const payload = normalizeRelationPayload(rawPayload, relationDef);
+        const relationData = buildRelationInsertData({
+            relationDef,
+            members,
+            anchorMemberIndex,
+            sourceId,
+            relatedId,
+            payload,
+        });
+
+        const created = await manifestCrudService.insert(relationName, relationData);
+        return res.status(201).json(created);
+    } catch (err) {
+        if (err && err.message === 'Record not found') {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
+// get all of this type of entity related to this specific entity
 router.get('/:entityRoute/:id/:relatedRoute', async (req, res) => {
     try {
         const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
@@ -307,61 +438,14 @@ router.get('/:entityRoute/:id/:relatedRoute', async (req, res) => {
     }
 });
 
-router.get('/:entityRoute/:id', async (req, res) => {
-    try {
-        const { entityName, idField, idValue } = getEntityLookup(req.params);
+// get this one specific related entity
+router.get('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => { });
 
-        const record = await manifestCrudService.getOne(entityName, {
-            [idField]: idValue,
-        });
+// update this one specific relation between these entities
+router.patch('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => { });
 
-        if (!record) {
-            return res.status(404).json({ error: 'Record not found' });
-        }
+// delete this relationship
+router.delete('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => { });
 
-        return res.json(record);
-    } catch (err) {
-        const httpErr = toHttpError(err);
-        return res.status(httpErr.status).json({ error: httpErr.message });
-    }
-});
-
-router.patch('/:entityRoute/:id', async (req, res) => {
-    try {
-        const { entityName, entityDef, idField, idValue } = getEntityLookup(req.params);
-        const updates = conformObjectToEntity(req.body, entityDef);
-
-        const result = await manifestCrudService.update(entityName, {
-            [idField]: idValue,
-        }, updates);
-
-        if (result.updated === 0 && !result.record) {
-            return res.status(404).json({ error: 'Record not found' });
-        }
-
-        return res.json(result);
-    } catch (err) {
-        const httpErr = toHttpError(err);
-        return res.status(httpErr.status).json({ error: httpErr.message });
-    }
-});
-
-router.delete('/:entityRoute/:id', async (req, res) => {
-    try {
-        const { entityName, idField, idValue } = getEntityLookup(req.params);
-        const result = await manifestCrudService.remove(entityName, {
-            [idField]: idValue,
-        });
-
-        if (result.deleted === 0) {
-            return res.status(404).json({ error: 'Record not found' });
-        }
-
-        return res.json(result);
-    } catch (err) {
-        const httpErr = toHttpError(err);
-        return res.status(httpErr.status).json({ error: httpErr.message });
-    }
-});
 
 module.exports = router;
