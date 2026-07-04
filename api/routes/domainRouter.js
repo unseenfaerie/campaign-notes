@@ -61,89 +61,163 @@ function getRelatedIdForRow(row, members, sourceId, anchorMemberIndex) {
 
 async function loadAssociatedRecords(relationName, relationDef, sourceId, anchorMemberIndex) {
     const members = getRelationMembers(relationDef);
-    const anchorMember = members[anchorMemberIndex];
-    const relatedMember = members[anchorMemberIndex === 0 ? 1 : 0];
-
-    let relationRows;
-    if (anchorMember.entity === relatedMember.entity) {
-        const [forwardRows, reverseRows] = await Promise.all([
-            manifestCrudService.getMany(relationName, {
-                [anchorMember.key]: sourceId,
-            }),
-            manifestCrudService.getMany(relationName, {
-                [relatedMember.key]: sourceId,
-            }),
-        ]);
-
-        relationRows = dedupeRows([...forwardRows, ...reverseRows]);
-    } else {
-        relationRows = await manifestCrudService.getMany(relationName, {
-            [anchorMember.key]: sourceId,
-        });
-    }
+    const relationContext = getRelationContext(members, anchorMemberIndex);
+    const relationRows = await loadRelationRows(relationName, relationContext, sourceId);
 
     if (relationRows.length === 0) {
         return [];
     }
 
-    const targetEntityDef = domainManifest.entities[relatedMember.entity];
-    const targetIdField = targetEntityDef.idField;
-
-    const targetIds = [...new Set(
-        relationRows
-            .map((row) => getRelatedIdForRow(row, members, sourceId, anchorMemberIndex))
-            .filter((targetId) => targetId !== null && targetId !== undefined)
-    )];
-    const targets = await Promise.all(
-        targetIds.map((targetId) =>
-            manifestCrudService.getOne(relatedMember.entity, {
-                [targetIdField]: targetId,
-            })
-        )
-    );
-
-    const targetById = new Map(
-        targets.filter(Boolean).map((target) => [target[targetIdField], target])
-    );
+    const targetInfo = getTargetInfo(relationContext.relatedMember);
+    const targetIds = collectTargetIds(relationRows, members, sourceId, anchorMemberIndex);
+    const targetById = await loadTargetMap(targetInfo, targetIds);
+    const memberKeys = members.map((member) => member.key);
 
     if (relationDef.kind === 'simple') {
-        return targetIds.map((targetId) => targetById.get(targetId)).filter(Boolean);
+        return buildSimpleResults(targetIds, targetById);
     }
 
     if (relationDef.kind === 'relationship') {
-        return relationRows
-            .map((row) => {
-                const targetId = getRelatedIdForRow(row, members, sourceId, anchorMemberIndex);
-                const target = targetById.get(targetId);
-                if (!target) return null;
-
-                return {
-                    ...target,
-                    relationship: omitKeys(row, members.map((member) => member.key)),
-                };
-            })
-            .filter(Boolean);
+        return buildRelationshipResults(relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex);
     }
 
     if (relationDef.kind === 'history') {
-        return targetIds
-            .map((targetId) => {
-                const target = targetById.get(targetId);
-                if (!target) return null;
-
-                const history = relationRows
-                    .filter((row) => getRelatedIdForRow(row, members, sourceId, anchorMemberIndex) === targetId)
-                    .map((row) => omitKeys(row, members.map((member) => member.key)));
-
-                return {
-                    ...target,
-                    history,
-                };
-            })
-            .filter(Boolean);
+        return buildHistoryResults(targetIds, relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex);
     }
 
     return relationRows;
+}
+
+function getRelationContext(members, anchorMemberIndex) {
+    return {
+        anchorMember: members[anchorMemberIndex],
+        relatedMember: members[anchorMemberIndex === 0 ? 1 : 0],
+    };
+}
+
+async function loadRelationRows(relationName, relationContext, sourceId) {
+    const { anchorMember, relatedMember } = relationContext;
+
+    if (anchorMember.entity !== relatedMember.entity) {
+        return manifestCrudService.getMany(relationName, {
+            [anchorMember.key]: sourceId,
+        });
+    }
+
+    const [forwardRows, reverseRows] = await Promise.all([
+        manifestCrudService.getMany(relationName, {
+            [anchorMember.key]: sourceId,
+        }),
+        manifestCrudService.getMany(relationName, {
+            [relatedMember.key]: sourceId,
+        }),
+    ]);
+
+    return dedupeRows([...forwardRows, ...reverseRows]);
+}
+
+function getTargetInfo(relatedMember) {
+    const targetEntityDef = domainManifest.entities[relatedMember.entity];
+
+    return {
+        entityName: relatedMember.entity,
+        idField: targetEntityDef.idField,
+    };
+}
+
+function collectTargetIds(relationRows, members, sourceId, anchorMemberIndex) {
+    const seenIds = new Set();
+    const ids = [];
+
+    for (const row of relationRows) {
+        const targetId = getRelatedIdForRow(row, members, sourceId, anchorMemberIndex);
+        if (targetId === null || targetId === undefined) {
+            continue;
+        }
+
+        if (seenIds.has(targetId)) {
+            continue;
+        }
+
+        seenIds.add(targetId);
+        ids.push(targetId);
+    }
+
+    return ids;
+}
+
+async function loadTargetMap(targetInfo, targetIds) {
+    const targetById = new Map();
+
+    for (const targetId of targetIds) {
+        const target = await manifestCrudService.getOne(targetInfo.entityName, {
+            [targetInfo.idField]: targetId,
+        });
+
+        if (target) {
+            targetById.set(target[targetInfo.idField], target);
+        }
+    }
+
+    return targetById;
+}
+
+function buildSimpleResults(targetIds, targetById) {
+    const results = [];
+
+    for (const targetId of targetIds) {
+        const target = targetById.get(targetId);
+        if (target) {
+            results.push(target);
+        }
+    }
+
+    return results;
+}
+
+function buildRelationshipResults(relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex) {
+    const results = [];
+
+    for (const row of relationRows) {
+        const targetId = getRelatedIdForRow(row, members, sourceId, anchorMemberIndex);
+        const target = targetById.get(targetId);
+        if (!target) {
+            continue;
+        }
+
+        results.push({
+            ...target,
+            relationship: omitKeys(row, memberKeys),
+        });
+    }
+
+    return results;
+}
+
+function buildHistoryResults(targetIds, relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex) {
+    const results = [];
+
+    for (const targetId of targetIds) {
+        const target = targetById.get(targetId);
+        if (!target) {
+            continue;
+        }
+
+        const history = [];
+        for (const row of relationRows) {
+            const relatedId = getRelatedIdForRow(row, members, sourceId, anchorMemberIndex);
+            if (relatedId === targetId) {
+                history.push(omitKeys(row, memberKeys));
+            }
+        }
+
+        results.push({
+            ...target,
+            history,
+        });
+    }
+
+    return results;
 }
 
 function toHttpError(err) {
