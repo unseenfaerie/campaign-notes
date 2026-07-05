@@ -149,10 +149,10 @@ curl -X POST http://localhost:3001/api/items \
 
 ### `GET /api/:entityRoute`
 
-Query entity records by optional filters.
+Query entity records.
 
 ```bash
-curl "http://localhost:3001/api/characters?name=Releas%20Neb"
+curl "http://localhost:3001/api/characters
 ```
 
 ### `GET /api/:entityRoute/:id`
