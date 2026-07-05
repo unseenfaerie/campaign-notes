@@ -9,9 +9,9 @@ Definitions come from [../common/domainManifest.js](../common/domainManifest.js)
 
 ## To Do
 
-- finish all routes in domain router
-- enums for certain fields (character type)/more heavy duty validation
-- sort out booleans in manifest. i want them
+[x] finish all CRUD routes in domain router for entities and relations (create, get all, get one, update, delete)
+[ ] enums for certain fields (character type)/more heavy duty validation
+[ ] sort out booleans in manifest. i want them
 
 ## What This API Does
 

@@ -345,6 +345,57 @@ describe('domainRouter isolated unit tests', () => {
         });
     });
 
+    it('GET /:entityRoute/:id/:relatedRoute/:relatedId supports reverse-stored self history relation records', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterRelationship',
+            relationDef: {
+                kind: 'history',
+                historyKey: 'established_date',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'relationships' },
+                    { entity: 'Character', key: 'related_id', route: 'relationships' },
+                ],
+                payload: {
+                    established_date: { type: 'string', required: true },
+                    relationship_type: { type: 'string', required: true },
+                },
+            },
+            anchorMemberIndex: 0,
+            relatedMemberIndex: 1,
+        });
+
+        manifestCrudService.getOne
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce({
+                character_id: 'char-2',
+                related_id: 'char-1',
+                established_date: '100-01-01',
+                relationship_type: 'rival',
+            });
+
+        const response = await request(app)
+            .get('/api/characters/char-1/relationships/char-2')
+            .query({ established_date: '100-01-01' });
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({
+            character_id: 'char-2',
+            related_id: 'char-1',
+            established_date: '100-01-01',
+            relationship_type: 'rival',
+        });
+        expect(manifestCrudService.getOne).toHaveBeenNthCalledWith(1, 'CharacterRelationship', {
+            character_id: 'char-1',
+            related_id: 'char-2',
+            established_date: '100-01-01',
+        });
+        expect(manifestCrudService.getOne).toHaveBeenNthCalledWith(2, 'CharacterRelationship', {
+            related_id: 'char-1',
+            character_id: 'char-2',
+            established_date: '100-01-01',
+        });
+    });
+
     it('GET /:entityRoute/:id/:relatedRoute/:relatedId returns 400 on unexpected history query params', async () => {
         manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
             relationName: 'CharacterItem',
@@ -611,6 +662,74 @@ describe('domainRouter isolated unit tests', () => {
         expect(response.body).toEqual({ error: 'Cannot update primary key field: acquired_date' });
     });
 
+    it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId updates reverse-stored self history relation records', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterRelationship',
+            relationDef: {
+                kind: 'history',
+                historyKey: 'established_date',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'relationships' },
+                    { entity: 'Character', key: 'related_id', route: 'relationships' },
+                ],
+                payload: {
+                    established_date: { type: 'string', required: true },
+                    relationship_type: { type: 'string', required: true },
+                    short_description: { type: 'string' },
+                },
+            },
+            anchorMemberIndex: 0,
+        });
+
+        manifestCrudService.getOne
+            .mockResolvedValueOnce({ id: 'char-1' })
+            .mockResolvedValueOnce({ id: 'char-2' });
+
+        manifestCrudService.update
+            .mockResolvedValueOnce({ updated: 0, record: null })
+            .mockResolvedValueOnce({
+                updated: 1,
+                record: {
+                    character_id: 'char-2',
+                    related_id: 'char-1',
+                    established_date: '100-01-01',
+                    relationship_type: 'ally',
+                    short_description: 'Mutual trust',
+                },
+            });
+
+        const response = await request(app)
+            .patch('/api/characters/char-1/relationships/char-2')
+            .query({ established_date: '100-01-01' })
+            .send({ short_description: 'Mutual trust' });
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({
+            updated: 1,
+            record: {
+                character_id: 'char-2',
+                related_id: 'char-1',
+                established_date: '100-01-01',
+                relationship_type: 'ally',
+                short_description: 'Mutual trust',
+            },
+        });
+        expect(manifestCrudService.update).toHaveBeenNthCalledWith(1, 'CharacterRelationship', {
+            character_id: 'char-1',
+            related_id: 'char-2',
+            established_date: '100-01-01',
+        }, {
+            short_description: 'Mutual trust',
+        });
+        expect(manifestCrudService.update).toHaveBeenNthCalledWith(2, 'CharacterRelationship', {
+            related_id: 'char-1',
+            character_id: 'char-2',
+            established_date: '100-01-01',
+        }, {
+            short_description: 'Mutual trust',
+        });
+    });
+
     it('DELETE /:entityRoute/:id/:relatedRoute/:relatedId deletes non-history relation', async () => {
         manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
             relationName: 'EventItem',
@@ -701,6 +820,49 @@ describe('domainRouter isolated unit tests', () => {
 
         expect(response.status).toBe(400);
         expect(response.body).toEqual({ error: 'Missing required query field: acquired_date' });
+    });
+
+    it('DELETE /:entityRoute/:id/:relatedRoute/:relatedId deletes reverse-stored self history relation records', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterRelationship',
+            relationDef: {
+                kind: 'history',
+                historyKey: 'established_date',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'relationships' },
+                    { entity: 'Character', key: 'related_id', route: 'relationships' },
+                ],
+                payload: {
+                    established_date: { type: 'string', required: true },
+                    relationship_type: { type: 'string', required: true },
+                },
+            },
+            anchorMemberIndex: 0,
+        });
+
+        manifestCrudService.getOne
+            .mockResolvedValueOnce({ id: 'char-1' })
+            .mockResolvedValueOnce({ id: 'char-2' });
+        manifestCrudService.remove
+            .mockResolvedValueOnce({ deleted: 0 })
+            .mockResolvedValueOnce({ deleted: 1 });
+
+        const response = await request(app)
+            .delete('/api/characters/char-1/relationships/char-2')
+            .query({ established_date: '100-01-01' });
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({ deleted: 1 });
+        expect(manifestCrudService.remove).toHaveBeenNthCalledWith(1, 'CharacterRelationship', {
+            character_id: 'char-1',
+            related_id: 'char-2',
+            established_date: '100-01-01',
+        });
+        expect(manifestCrudService.remove).toHaveBeenNthCalledWith(2, 'CharacterRelationship', {
+            related_id: 'char-1',
+            character_id: 'char-2',
+            established_date: '100-01-01',
+        });
     });
 
     it('POST /:entityRoute/:id/:relatedRoute creates simple relation', async () => {

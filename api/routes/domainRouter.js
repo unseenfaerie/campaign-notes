@@ -103,6 +103,92 @@ function getRelationContext(members, anchorMemberIndex) {
     };
 }
 
+function buildRelationWhereCandidates({
+    members,
+    anchorMemberIndex,
+    sourceId,
+    relatedId,
+    relationDef,
+    historyValue,
+}) {
+    const where = buildRelationWhere({
+        members,
+        anchorMemberIndex,
+        sourceId,
+        relatedId,
+        relationDef,
+        historyValue,
+    });
+
+    const relatedMemberIndex = anchorMemberIndex === 0 ? 1 : 0;
+    const isSelfRelation = members[anchorMemberIndex].entity === members[relatedMemberIndex].entity;
+
+    if (!isSelfRelation || sourceId === relatedId) {
+        return [where];
+    }
+
+    const reverseWhere = buildRelationWhere({
+        members,
+        anchorMemberIndex,
+        sourceId: relatedId,
+        relatedId: sourceId,
+        relationDef,
+        historyValue,
+    });
+
+    return [where, reverseWhere];
+}
+
+async function getFirstRelationRecordByWhereCandidates(relationName, whereCandidates) {
+    for (const where of whereCandidates) {
+        const record = await manifestCrudService.getOne(relationName, where);
+        if (record) {
+            return record;
+        }
+    }
+
+    return null;
+}
+
+async function getAllRelationRecordsByWhereCandidates(relationName, whereCandidates) {
+    if (whereCandidates.length === 1) {
+        return manifestCrudService.getMany(relationName, whereCandidates[0]);
+    }
+
+    const rows = await Promise.all(
+        whereCandidates.map((where) => manifestCrudService.getMany(relationName, where))
+    );
+
+    return dedupeRows(rows.flat());
+}
+
+async function updateFirstRelationRecordByWhereCandidates(relationName, whereCandidates, updates) {
+    for (const where of whereCandidates) {
+        const result = await manifestCrudService.update(relationName, where, updates);
+        if (result.updated > 0 || result.record) {
+            return result;
+        }
+    }
+
+    return {
+        updated: 0,
+        record: null,
+    };
+}
+
+async function removeFirstRelationRecordByWhereCandidates(relationName, whereCandidates) {
+    for (const where of whereCandidates) {
+        const result = await manifestCrudService.remove(relationName, where);
+        if (result.deleted > 0) {
+            return result;
+        }
+    }
+
+    return {
+        deleted: 0,
+    };
+}
+
 async function loadRelationRows(relationName, relationContext, sourceId) {
     const { anchorMember, relatedMember } = relationContext;
 
@@ -466,17 +552,29 @@ router.get('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
         const relatedIdMeta = relatedEntityDef.fields[relatedEntityIdField];
         const relatedId = coerceValueByType(relatedIdMeta.type, req.params.relatedId);
 
-        const where = {
-            [sourceIdField]: sourceId,
-            [relatedIdField]: relatedId
-        };
+        const whereCandidates = buildRelationWhereCandidates({
+            members,
+            anchorMemberIndex,
+            sourceId,
+            relatedId,
+            relationDef,
+        });
 
         if (relationDef.kind === 'history' && relationDef.historyKey) {
             const historyValue = getValidatedHistorySelector(req.query, relationDef, { required: false });
             if (historyValue !== undefined) {
-                where[relationDef.historyKey] = historyValue;
-
-                const record = await manifestCrudService.getOne(relationName, where);
+                const historyWhereCandidates = buildRelationWhereCandidates({
+                    members,
+                    anchorMemberIndex,
+                    sourceId,
+                    relatedId,
+                    relationDef,
+                    historyValue,
+                });
+                const record = await getFirstRelationRecordByWhereCandidates(
+                    relationName,
+                    historyWhereCandidates
+                );
                 if (!record) {
                     return res.status(404).json({ error: 'Record not found' });
                 }
@@ -484,7 +582,7 @@ router.get('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
                 return res.json(record);
             }
 
-            const records = await manifestCrudService.getMany(relationName, where);
+            const records = await getAllRelationRecordsByWhereCandidates(relationName, whereCandidates);
             if (records.length === 0) {
                 return res.status(404).json({ error: 'Record not found' });
             }
@@ -492,7 +590,7 @@ router.get('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
             return res.json(records);
         }
 
-        const record = await manifestCrudService.getOne(relationName, where);
+        const record = await getFirstRelationRecordByWhereCandidates(relationName, whereCandidates);
         if (!record) {
             return res.status(404).json({ error: 'Record not found' });
         }
@@ -536,7 +634,7 @@ router.patch('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
         }
 
         const updates = normalizeRelationUpdatePayload(req.body, relationDef);
-        const where = buildRelationWhere({
+        const whereCandidates = buildRelationWhereCandidates({
             members,
             anchorMemberIndex,
             sourceId,
@@ -545,7 +643,11 @@ router.patch('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
             historyValue,
         });
 
-        const result = await manifestCrudService.update(relationName, where, updates);
+        const result = await updateFirstRelationRecordByWhereCandidates(
+            relationName,
+            whereCandidates,
+            updates
+        );
 
         if (result.updated === 0 && !result.record) {
             return res.status(404).json({ error: 'Record not found' });
@@ -593,7 +695,7 @@ router.delete('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => 
             historyValue = getValidatedHistorySelector(req.query, relationDef, { required: true });
         }
 
-        const where = buildRelationWhere({
+        const whereCandidates = buildRelationWhereCandidates({
             members,
             anchorMemberIndex,
             sourceId,
@@ -602,7 +704,7 @@ router.delete('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => 
             historyValue,
         });
 
-        const result = await manifestCrudService.remove(relationName, where);
+        const result = await removeFirstRelationRecordByWhereCandidates(relationName, whereCandidates);
 
         if (result.deleted === 0) {
             return res.status(404).json({ error: 'Record not found' });
