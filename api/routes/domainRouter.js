@@ -11,7 +11,10 @@ const {
 const {
     getRelatedMemberInfo,
     normalizeRelationPayload,
+    normalizeRelationUpdatePayload,
+    getValidatedHistorySelector,
     buildRelationInsertData,
+    buildRelationWhere,
 } = require('../utils/relationWriteHelpers');
 
 const router = express.Router();
@@ -233,7 +236,7 @@ function toHttpError(err) {
     }
 
     if (
-        /Invalid number value|Invalid boolean value|Unknown field for route|Unknown field for relation|Primary key updates are not allowed|Data must be an object/i.test(
+        /Invalid number value|Invalid boolean value|Unknown field for route|Unknown field for relation|Unknown query field for relation|Missing required query field|Cannot update primary key field|Primary key updates are not allowed|Data must be an object/i.test(
             message
         )
     ) {
@@ -469,11 +472,9 @@ router.get('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
         };
 
         if (relationDef.kind === 'history' && relationDef.historyKey) {
-            const historyRaw = req.query[relationDef.historyKey];
-            if (historyRaw !== undefined) {
-                const historyMeta = relationDef.payload && relationDef.payload[relationDef.historyKey];
-                const historyType = historyMeta && historyMeta.type ? historyMeta.type : 'string';
-                where[relationDef.historyKey] = coerceValueByType(historyType, historyRaw);
+            const historyValue = getValidatedHistorySelector(req.query, relationDef, { required: false });
+            if (historyValue !== undefined) {
+                where[relationDef.historyKey] = historyValue;
 
                 const record = await manifestCrudService.getOne(relationName, where);
                 if (!record) {
@@ -504,10 +505,119 @@ router.get('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
 });
 
 // update this one specific relation between these entities
-router.patch('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => { });
+router.patch('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
+    try {
+        const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
+        const { relationName, relationDef, anchorMemberIndex } = getRelationByRoutes(
+            req.params.entityRoute,
+            req.params.relatedRoute
+        );
+        const members = getRelationMembers(relationDef);
+        const { relatedEntityDef } = getRelatedMemberInfo(relationDef, anchorMemberIndex);
+
+        const sourceIdField = entityDef.idField;
+        const sourceIdMeta = entityDef.fields[sourceIdField];
+        const sourceId = coerceValueByType(sourceIdMeta.type, req.params.id);
+
+        const relatedIdField = relatedEntityDef.idField;
+        const relatedIdMeta = relatedEntityDef.fields[relatedIdField];
+        const relatedId = coerceValueByType(relatedIdMeta.type, req.params.relatedId);
+
+        await ensureRecordExists(entityName, sourceIdField, sourceId);
+        await ensureRecordExists(
+            members[anchorMemberIndex === 0 ? 1 : 0].entity,
+            relatedIdField,
+            relatedId
+        );
+
+        let historyValue;
+        if (relationDef.kind === 'history' && relationDef.historyKey) {
+            historyValue = getValidatedHistorySelector(req.query, relationDef, { required: true });
+        }
+
+        const updates = normalizeRelationUpdatePayload(req.body, relationDef);
+        const where = buildRelationWhere({
+            members,
+            anchorMemberIndex,
+            sourceId,
+            relatedId,
+            relationDef,
+            historyValue,
+        });
+
+        const result = await manifestCrudService.update(relationName, where, updates);
+
+        if (result.updated === 0 && !result.record) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        return res.json(result);
+    } catch (err) {
+        if (err && err.message === 'Record not found') {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
 
 // delete this relationship
-router.delete('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => { });
+router.delete('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
+    try {
+        const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
+        const { relationName, relationDef, anchorMemberIndex } = getRelationByRoutes(
+            req.params.entityRoute,
+            req.params.relatedRoute
+        );
+        const members = getRelationMembers(relationDef);
+        const { relatedEntityDef } = getRelatedMemberInfo(relationDef, anchorMemberIndex);
+
+        const sourceIdField = entityDef.idField;
+        const sourceIdMeta = entityDef.fields[sourceIdField];
+        const sourceId = coerceValueByType(sourceIdMeta.type, req.params.id);
+
+        const relatedIdField = relatedEntityDef.idField;
+        const relatedIdMeta = relatedEntityDef.fields[relatedIdField];
+        const relatedId = coerceValueByType(relatedIdMeta.type, req.params.relatedId);
+
+        await ensureRecordExists(entityName, sourceIdField, sourceId);
+        await ensureRecordExists(
+            members[anchorMemberIndex === 0 ? 1 : 0].entity,
+            relatedIdField,
+            relatedId
+        );
+
+        let historyValue;
+        if (relationDef.kind === 'history' && relationDef.historyKey) {
+            historyValue = getValidatedHistorySelector(req.query, relationDef, { required: true });
+        }
+
+        const where = buildRelationWhere({
+            members,
+            anchorMemberIndex,
+            sourceId,
+            relatedId,
+            relationDef,
+            historyValue,
+        });
+
+        const result = await manifestCrudService.remove(relationName, where);
+
+        if (result.deleted === 0) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        return res.json(result);
+    } catch (err) {
+        if (err && err.message === 'Record not found') {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
 
 
 module.exports = router;

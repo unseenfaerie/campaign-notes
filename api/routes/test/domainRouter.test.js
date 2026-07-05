@@ -345,6 +345,33 @@ describe('domainRouter isolated unit tests', () => {
         });
     });
 
+    it('GET /:entityRoute/:id/:relatedRoute/:relatedId returns 400 on unexpected history query params', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterItem',
+            relationDef: {
+                kind: 'history',
+                historyKey: 'acquired_date',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {
+                    acquired_date: { type: 'string', required: true },
+                    short_description: { type: 'string' },
+                },
+            },
+            anchorMemberIndex: 0,
+            relatedMemberIndex: 1,
+        });
+
+        const response = await request(app)
+            .get('/api/characters/char-1/items/item-1')
+            .query({ nonsense: 'bad' });
+
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual({ error: 'Unknown query field for relation: nonsense' });
+    });
+
     it('PATCH /:entityRoute/:id updates and returns service payload', async () => {
         manifestCrudService.update.mockResolvedValueOnce({
             updated: 1,
@@ -421,6 +448,259 @@ describe('domainRouter isolated unit tests', () => {
 
         expect(response.status).toBe(500);
         expect(response.body).toEqual({ error: 'boom' });
+    });
+
+    it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId updates non-history relation metadata', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'EventItem',
+            relationDef: {
+                kind: 'relationship',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {
+                    short_description: { type: 'string', required: true },
+                    long_explanation: { type: 'string' },
+                },
+            },
+            anchorMemberIndex: 0,
+        });
+
+        manifestCrudService.getOne
+            .mockResolvedValueOnce({ id: 'char-1' })
+            .mockResolvedValueOnce({ id: 'item-1' });
+
+        manifestCrudService.update.mockResolvedValueOnce({
+            updated: 1,
+            record: {
+                character_id: 'char-1',
+                item_id: 'item-1',
+                short_description: 'updated context',
+            },
+        });
+
+        const response = await request(app)
+            .patch('/api/characters/char-1/items/item-1')
+            .send({ short_description: 'updated context' });
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({
+            updated: 1,
+            record: {
+                character_id: 'char-1',
+                item_id: 'item-1',
+                short_description: 'updated context',
+            },
+        });
+        expect(manifestCrudService.update).toHaveBeenCalledWith(
+            'EventItem',
+            { character_id: 'char-1', item_id: 'item-1' },
+            { short_description: 'updated context' }
+        );
+    });
+
+    it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId updates a specific history record by query selector', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterItem',
+            relationDef: {
+                kind: 'history',
+                historyKey: 'acquired_date',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {
+                    acquired_date: { type: 'string', required: true },
+                    relinquished_date: { type: 'string' },
+                    short_description: { type: 'string', required: true },
+                },
+            },
+            anchorMemberIndex: 0,
+        });
+
+        manifestCrudService.getOne
+            .mockResolvedValueOnce({ id: 'char-1' })
+            .mockResolvedValueOnce({ id: 'item-1' });
+
+        manifestCrudService.update.mockResolvedValueOnce({
+            updated: 1,
+            record: {
+                character_id: 'char-1',
+                item_id: 'item-1',
+                acquired_date: '100-01-01',
+                relinquished_date: '100-02-01',
+            },
+        });
+
+        const response = await request(app)
+            .patch('/api/characters/char-1/items/item-1')
+            .query({ acquired_date: '100-01-01' })
+            .send({ relinquished_date: '100-02-01' });
+
+        expect(response.status).toBe(200);
+        expect(manifestCrudService.update).toHaveBeenCalledWith(
+            'CharacterItem',
+            {
+                character_id: 'char-1',
+                item_id: 'item-1',
+                acquired_date: '100-01-01',
+            },
+            { relinquished_date: '100-02-01' }
+        );
+    });
+
+    it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId returns 400 when history selector is missing', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterItem',
+            relationDef: {
+                kind: 'history',
+                historyKey: 'acquired_date',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {
+                    acquired_date: { type: 'string', required: true },
+                    short_description: { type: 'string', required: true },
+                },
+            },
+            anchorMemberIndex: 0,
+        });
+
+        manifestCrudService.getOne
+            .mockResolvedValueOnce({ id: 'char-1' })
+            .mockResolvedValueOnce({ id: 'item-1' });
+
+        const response = await request(app)
+            .patch('/api/characters/char-1/items/item-1')
+            .send({ short_description: 'updated context' });
+
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual({ error: 'Missing required query field: acquired_date' });
+    });
+
+    it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId returns 400 when body tries to update the history key', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterItem',
+            relationDef: {
+                kind: 'history',
+                historyKey: 'acquired_date',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {
+                    acquired_date: { type: 'string', required: true },
+                    short_description: { type: 'string', required: true },
+                },
+            },
+            anchorMemberIndex: 0,
+        });
+
+        manifestCrudService.getOne
+            .mockResolvedValueOnce({ id: 'char-1' })
+            .mockResolvedValueOnce({ id: 'item-1' });
+
+        const response = await request(app)
+            .patch('/api/characters/char-1/items/item-1')
+            .query({ acquired_date: '100-01-01' })
+            .send({ acquired_date: '100-02-01' });
+
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual({ error: 'Cannot update primary key field: acquired_date' });
+    });
+
+    it('DELETE /:entityRoute/:id/:relatedRoute/:relatedId deletes non-history relation', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'EventItem',
+            relationDef: {
+                kind: 'relationship',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {},
+            },
+            anchorMemberIndex: 0,
+        });
+
+        manifestCrudService.getOne
+            .mockResolvedValueOnce({ id: 'char-1' })
+            .mockResolvedValueOnce({ id: 'item-1' });
+        manifestCrudService.remove.mockResolvedValueOnce({ deleted: 1 });
+
+        const response = await request(app).delete('/api/characters/char-1/items/item-1');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({ deleted: 1 });
+        expect(manifestCrudService.remove).toHaveBeenCalledWith('EventItem', {
+            character_id: 'char-1',
+            item_id: 'item-1',
+        });
+    });
+
+    it('DELETE /:entityRoute/:id/:relatedRoute/:relatedId deletes a specific history tenure when the selector is provided', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterItem',
+            relationDef: {
+                kind: 'history',
+                historyKey: 'acquired_date',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {
+                    acquired_date: { type: 'string', required: true },
+                    short_description: { type: 'string', required: true },
+                },
+            },
+            anchorMemberIndex: 0,
+        });
+
+        manifestCrudService.getOne
+            .mockResolvedValueOnce({ id: 'char-1' })
+            .mockResolvedValueOnce({ id: 'item-1' });
+        manifestCrudService.remove.mockResolvedValueOnce({ deleted: 1 });
+
+        const response = await request(app)
+            .delete('/api/characters/char-1/items/item-1')
+            .query({ acquired_date: '100-01-01' });
+
+        expect(response.status).toBe(200);
+        expect(manifestCrudService.remove).toHaveBeenCalledWith('CharacterItem', {
+            character_id: 'char-1',
+            item_id: 'item-1',
+            acquired_date: '100-01-01',
+        });
+    });
+
+    it('DELETE /:entityRoute/:id/:relatedRoute/:relatedId returns 400 when history selector is missing', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterItem',
+            relationDef: {
+                kind: 'history',
+                historyKey: 'acquired_date',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {
+                    acquired_date: { type: 'string', required: true },
+                    short_description: { type: 'string', required: true },
+                },
+            },
+            anchorMemberIndex: 0,
+        });
+
+        manifestCrudService.getOne
+            .mockResolvedValueOnce({ id: 'char-1' })
+            .mockResolvedValueOnce({ id: 'item-1' });
+
+        const response = await request(app).delete('/api/characters/char-1/items/item-1');
+
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual({ error: 'Missing required query field: acquired_date' });
     });
 
     it('POST /:entityRoute/:id/:relatedRoute creates simple relation', async () => {
