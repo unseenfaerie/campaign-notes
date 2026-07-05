@@ -41,6 +41,7 @@ const {
     getValidatedHistorySelector,
     buildRelationInsertData,
     buildRelationWhere,
+    validateHistoryChronology,
 } = require('../relationWriteHelpers');
 
 describe('relationWriteHelpers isolated unit tests', () => {
@@ -427,6 +428,92 @@ describe('relationWriteHelpers isolated unit tests', () => {
                 item_id: 'item-1',
                 character_id: 'char-1',
             });
+        });
+    });
+
+    describe('validateHistoryChronology', () => {
+        const historyRelationDef = {
+            kind: 'history',
+            historyKey: 'acquired_date',
+            historyEndKey: 'relinquished_date',
+        };
+
+        it('allows end date that is after start date', () => {
+            expect(() =>
+                validateHistoryChronology({
+                    relationDef: historyRelationDef,
+                    startValue: 'jan-01-100',
+                    endValue: 'jan-02-100',
+                })
+            ).not.toThrow();
+        });
+
+        it('allows missing end date for ongoing history rows', () => {
+            expect(() =>
+                validateHistoryChronology({
+                    relationDef: historyRelationDef,
+                    startValue: 'jan-01-100',
+                    endValue: '',
+                })
+            ).not.toThrow();
+        });
+
+        it('rejects end date that is equal to start date', () => {
+            expect(() =>
+                validateHistoryChronology({
+                    relationDef: historyRelationDef,
+                    startValue: 'jan-01-100',
+                    endValue: 'jan-01-100',
+                })
+            ).toThrow('History end date must be after history start date');
+        });
+
+        it('rejects end date that is before start date', () => {
+            expect(() =>
+                validateHistoryChronology({
+                    relationDef: historyRelationDef,
+                    startValue: 'jan-02-100',
+                    endValue: 'jan-01-100',
+                })
+            ).toThrow('History end date must be after history start date');
+        });
+
+        it('rejects invalid lore date formats', () => {
+            expect(() =>
+                validateHistoryChronology({
+                    relationDef: historyRelationDef,
+                    startValue: 'not-a-date',
+                    endValue: 'jan-02-100',
+                })
+            ).toThrow('Invalid history date format for field: acquired_date');
+
+            expect(() =>
+                validateHistoryChronology({
+                    relationDef: historyRelationDef,
+                    startValue: 'jan-01-100',
+                    endValue: 'bad-date',
+                })
+            ).toThrow('Invalid history date format for field: relinquished_date');
+        });
+
+        it('rejects chronology checks when start value is missing but end is provided', () => {
+            expect(() =>
+                validateHistoryChronology({
+                    relationDef: historyRelationDef,
+                    startValue: undefined,
+                    endValue: 'jan-02-100',
+                })
+            ).toThrow('Missing history start date value for chronology validation');
+        });
+
+        it('no-ops for non-history relations', () => {
+            expect(() =>
+                validateHistoryChronology({
+                    relationDef: { kind: 'relationship', historyKey: 'acquired_date', historyEndKey: 'relinquished_date' },
+                    startValue: 'jan-02-100',
+                    endValue: 'jan-01-100',
+                })
+            ).not.toThrow();
         });
     });
 });

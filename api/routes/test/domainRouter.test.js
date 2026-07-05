@@ -659,6 +659,7 @@ describe('domainRouter isolated unit tests', () => {
             relationDef: {
                 kind: 'history',
                 historyKey: 'acquired_date',
+                historyEndKey: 'relinquished_date',
                 members: [
                     { entity: 'Character', key: 'character_id', route: 'items' },
                     { entity: 'Item', key: 'item_id', route: 'characters' },
@@ -681,15 +682,15 @@ describe('domainRouter isolated unit tests', () => {
             record: {
                 character_id: 'char-1',
                 item_id: 'item-1',
-                acquired_date: '100-01-01',
-                relinquished_date: '100-02-01',
+                acquired_date: 'jan-01-100',
+                relinquished_date: 'jan-02-100',
             },
         });
 
         const response = await request(app)
             .patch('/api/characters/char-1/items/item-1')
-            .query({ acquired_date: '100-01-01' })
-            .send({ relinquished_date: '100-02-01' });
+            .query({ acquired_date: 'jan-01-100' })
+            .send({ relinquished_date: 'jan-02-100' });
 
         expect(response.status).toBe(200);
         expect(manifestCrudService.update).toHaveBeenCalledWith(
@@ -697,10 +698,44 @@ describe('domainRouter isolated unit tests', () => {
             {
                 character_id: 'char-1',
                 item_id: 'item-1',
-                acquired_date: '100-01-01',
+                acquired_date: 'jan-01-100',
             },
-            { relinquished_date: '100-02-01' }
+            { relinquished_date: 'jan-02-100' }
         );
+    });
+
+    it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId returns 400 when history end date is before selector start date', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterItem',
+            relationDef: {
+                kind: 'history',
+                historyKey: 'acquired_date',
+                historyEndKey: 'relinquished_date',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {
+                    acquired_date: { type: 'string', required: true },
+                    relinquished_date: { type: 'string' },
+                    short_description: { type: 'string', required: true },
+                },
+            },
+            anchorMemberIndex: 0,
+        });
+
+        manifestCrudService.getOne
+            .mockResolvedValueOnce({ id: 'char-1' })
+            .mockResolvedValueOnce({ id: 'item-1' });
+
+        const response = await request(app)
+            .patch('/api/characters/char-1/items/item-1')
+            .query({ acquired_date: 'jan-10-100' })
+            .send({ relinquished_date: 'jan-09-100' });
+
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual({ error: 'History end date must be after history start date' });
+        expect(manifestCrudService.update).not.toHaveBeenCalled();
     });
 
     it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId returns 400 when history selector is missing', async () => {
@@ -1018,12 +1053,15 @@ describe('domainRouter isolated unit tests', () => {
             relationName: 'CharacterDeity',
             relationDef: {
                 kind: 'history',
+                historyKey: 'adopted_date',
+                historyEndKey: 'dissolution_date',
                 members: [
                     { entity: 'Character', key: 'character_id', route: 'deities' },
                     { entity: 'Deity', key: 'deity_id', route: 'characters' },
                 ],
                 payload: {
                     adopted_date: { type: 'string', required: true },
+                    dissolution_date: { type: 'string' },
                     short_description: { type: 'string', required: true },
                 },
             },
@@ -1064,6 +1102,44 @@ describe('domainRouter isolated unit tests', () => {
             adopted_date: '100-01-01',
             short_description: 'Chosen by prophecy',
         });
+    });
+
+    it('POST /:entityRoute/:id/:relatedRoute returns 400 when history end date is not after start date', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterItem',
+            relationDef: {
+                kind: 'history',
+                historyKey: 'acquired_date',
+                historyEndKey: 'relinquished_date',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {
+                    acquired_date: { type: 'string', required: true },
+                    relinquished_date: { type: 'string' },
+                    short_description: { type: 'string', required: true },
+                },
+            },
+            anchorMemberIndex: 0,
+        });
+
+        manifestCrudService.getOne
+            .mockResolvedValueOnce({ id: 'char-1' })
+            .mockResolvedValueOnce({ id: 'item-1' });
+
+        const response = await request(app)
+            .post('/api/characters/char-1/items')
+            .send({
+                id: 'item-1',
+                acquired_date: 'jan-10-100',
+                relinquished_date: 'jan-10-100',
+                short_description: 'Nope',
+            });
+
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual({ error: 'History end date must be after history start date' });
+        expect(manifestCrudService.insert).not.toHaveBeenCalled();
     });
 
     it('POST /:entityRoute/:id/:relatedRoute returns 400 when relatedId is missing', async () => {
