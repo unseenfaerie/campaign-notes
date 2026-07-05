@@ -149,7 +149,7 @@ curl -X POST http://localhost:3001/api/items \
 
 ### `GET /api/:entityRoute`
 
-Query entity records.
+Query all entity records.
 
 ```bash
 curl "http://localhost:3001/api/characters

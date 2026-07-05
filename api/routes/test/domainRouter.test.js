@@ -396,6 +396,59 @@ describe('domainRouter isolated unit tests', () => {
         });
     });
 
+    it('GET /:entityRoute/:id/:relatedRoute/:relatedId supports self history relation records without history selector', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterRelationship',
+            relationDef: {
+                kind: 'history',
+                historyKey: 'established_date',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'relationships' },
+                    { entity: 'Character', key: 'related_id', route: 'relationships' },
+                ],
+                payload: {
+                    established_date: { type: 'string', required: true },
+                    relationship_type: { type: 'string', required: true },
+                },
+            },
+            anchorMemberIndex: 0,
+            relatedMemberIndex: 1,
+        });
+
+        manifestCrudService.getMany
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([
+                {
+                    character_id: 'char-2',
+                    related_id: 'char-1',
+                    established_date: '100-01-01',
+                    relationship_type: 'rival',
+                },
+            ]);
+
+        const response = await request(app).get('/api/characters/char-1/relationships/char-2');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([
+            {
+                character_id: 'char-2',
+                related_id: 'char-1',
+                established_date: '100-01-01',
+                relationship_type: 'rival',
+            },
+        ]);
+        expect(manifestCrudService.getMany).toHaveBeenNthCalledWith(1, 'CharacterRelationship', {
+            character_id: 'char-1',
+            related_id: 'char-2',
+        });
+        expect(manifestCrudService.getMany).toHaveBeenNthCalledWith(2, 'CharacterRelationship', {
+            character_id: 'char-2',
+            related_id: 'char-1',
+        });
+        expect(Object.prototype.hasOwnProperty.call(manifestCrudService.getMany.mock.calls[0][1], 'established_date')).toBe(false);
+        expect(Object.prototype.hasOwnProperty.call(manifestCrudService.getMany.mock.calls[1][1], 'established_date')).toBe(false);
+    });
+
     it('GET /:entityRoute/:id/:relatedRoute/:relatedId returns 400 on unexpected history query params', async () => {
         manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
             relationName: 'CharacterItem',

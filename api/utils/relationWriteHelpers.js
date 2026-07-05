@@ -127,7 +127,7 @@ function buildRelationWhere({ members, anchorMemberIndex, sourceId, relatedId, r
         [relatedMember.key]: relatedId,
     };
 
-    if (relationDef.kind === 'history' && relationDef.historyKey) {
+    if (relationDef.kind === 'history' && relationDef.historyKey && historyValue !== undefined) {
         where[relationDef.historyKey] = historyValue;
     }
 
