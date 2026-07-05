@@ -1,73 +1,23 @@
 const express = require('express');
 const { domainManifest } = require('../../common/domainManifest');
-const { manifestCrudService } = require('../genericCrudService');
+const { manifestCrudService } = require('../data/genericCrudService');
+const {
+    coerceValueByType,
+    getEntityByRoute,
+    getRelationMembers,
+    getRelationByRoutes,
+    conformObjectToEntity,
+} = require('../utils/manifestHelpers');
+const {
+    getRelatedMemberInfo,
+    normalizeRelationPayload,
+    normalizeRelationUpdatePayload,
+    getValidatedHistorySelector,
+    buildRelationInsertData,
+    buildRelationWhere,
+} = require('../utils/relationWriteHelpers');
 
 const router = express.Router();
-
-function coerceValueByType(type, value) {
-    if (value === undefined || value === null) return value;
-
-    if (type === 'number') {
-        const n = Number(value);
-        if (Number.isNaN(n)) {
-            throw new Error(`Invalid number value: ${value}`);
-        }
-        return n;
-    }
-
-    if (type === 'boolean') {
-        if (value === true || value === false) return value;
-        if (typeof value === 'string') {
-            const normalized = value.trim().toLowerCase();
-            if (normalized === 'true') return true;
-            if (normalized === 'false') return false;
-        }
-        throw new Error(`Invalid boolean value: ${value}`);
-    }
-
-    if (type === 'string') {
-        return String(value);
-    }
-
-    return value;
-}
-
-function getEntityByRoute(entityRoute, manifest = domainManifest) {
-    for (const [entityName, entityDef] of Object.entries(manifest.entities)) {
-        if (entityDef.route === entityRoute) {
-            return { entityName, entityDef };
-        }
-    }
-
-    throw new Error(`Unknown entity route: ${entityRoute}`);
-}
-
-function getRelationByRoutes(entityRoute, relatedRoute, manifest = domainManifest) {
-    const { entityName } = getEntityByRoute(entityRoute, manifest);
-
-    for (const [relationName, relationDef] of Object.entries(manifest.relations)) {
-        if (relationDef.source === entityName && relationDef.routeFromSource === relatedRoute) {
-            return { relationName, relationDef };
-        }
-    }
-
-    throw new Error(`Unknown related route for ${entityRoute}: ${relatedRoute}`);
-}
-
-function conformObjectToEntity(obj, entityDef) {
-    const normalized = {};
-
-    for (const [field, rawValue] of Object.entries(obj || {})) {
-        const fieldDef = entityDef.fields[field];
-        if (!fieldDef) {
-            throw new Error(`Unknown field for route ${entityDef.route}: ${field}`);
-        }
-
-        normalized[field] = coerceValueByType(fieldDef.type, rawValue);
-    }
-
-    return normalized;
-}
 
 function omitKeys(record, keys) {
     const normalized = { ...record };
@@ -77,68 +27,291 @@ function omitKeys(record, keys) {
     return normalized;
 }
 
-async function loadAssociatedRecords(relationName, relationDef, sourceId) {
-    const relationRows = await manifestCrudService.getMany(relationName, {
-        [relationDef.sourceKey]: sourceId,
-    });
+function dedupeRows(rows) {
+    const seen = new Set();
+    const deduped = [];
+
+    for (const row of rows) {
+        const key = JSON.stringify(row);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        deduped.push(row);
+    }
+
+    return deduped;
+}
+
+function getRelatedIdForRow(row, members, sourceId, anchorMemberIndex) {
+    const anchorMember = members[anchorMemberIndex];
+    const relatedMember = members[anchorMemberIndex === 0 ? 1 : 0];
+
+    if (anchorMember.entity === relatedMember.entity) {
+        const anchorMatches = row[anchorMember.key] === sourceId;
+        const relatedMatches = row[relatedMember.key] === sourceId;
+
+        if (anchorMatches && relatedMatches) {
+            return sourceId;
+        }
+
+        if (anchorMatches) {
+            return row[relatedMember.key];
+        }
+
+        if (relatedMatches) {
+            return row[anchorMember.key];
+        }
+
+        return null;
+    }
+
+    return row[relatedMember.key];
+}
+
+async function loadAssociatedRecords(relationName, relationDef, sourceId, anchorMemberIndex) {
+    const members = getRelationMembers(relationDef);
+    const relationContext = getRelationContext(members, anchorMemberIndex);
+    const relationRows = await loadRelationRows(relationName, relationContext, sourceId);
 
     if (relationRows.length === 0) {
         return [];
     }
 
-    const targetEntityDef = domainManifest.entities[relationDef.target];
-    const targetIdField = targetEntityDef.idField;
-
-    const targetIds = [...new Set(relationRows.map((row) => row[relationDef.targetKey]))];
-    const targets = await Promise.all(
-        targetIds.map((targetId) =>
-            manifestCrudService.getOne(relationDef.target, {
-                [targetIdField]: targetId,
-            })
-        )
-    );
-
-    const targetById = new Map(
-        targets.filter(Boolean).map((target) => [target[targetIdField], target])
-    );
+    const targetInfo = getTargetInfo(relationContext.relatedMember);
+    const targetIds = collectTargetIds(relationRows, members, sourceId, anchorMemberIndex);
+    const targetById = await loadTargetMap(targetInfo, targetIds);
+    const memberKeys = members.map((member) => member.key);
 
     if (relationDef.kind === 'simple') {
-        return targetIds.map((targetId) => targetById.get(targetId)).filter(Boolean);
+        return buildSimpleResults(targetIds, targetById);
     }
 
     if (relationDef.kind === 'relationship') {
-        return relationRows
-            .map((row) => {
-                const target = targetById.get(row[relationDef.targetKey]);
-                if (!target) return null;
-
-                return {
-                    ...target,
-                    relationship: omitKeys(row, [relationDef.sourceKey, relationDef.targetKey]),
-                };
-            })
-            .filter(Boolean);
+        return buildRelationshipResults(relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex);
     }
 
     if (relationDef.kind === 'history') {
-        return targetIds
-            .map((targetId) => {
-                const target = targetById.get(targetId);
-                if (!target) return null;
-
-                const history = relationRows
-                    .filter((row) => row[relationDef.targetKey] === targetId)
-                    .map((row) => omitKeys(row, [relationDef.sourceKey, relationDef.targetKey]));
-
-                return {
-                    ...target,
-                    history,
-                };
-            })
-            .filter(Boolean);
+        return buildHistoryResults(targetIds, relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex);
     }
 
     return relationRows;
+}
+
+function getRelationContext(members, anchorMemberIndex) {
+    return {
+        anchorMember: members[anchorMemberIndex],
+        relatedMember: members[anchorMemberIndex === 0 ? 1 : 0],
+    };
+}
+
+function buildRelationWhereCandidates({
+    members,
+    anchorMemberIndex,
+    sourceId,
+    relatedId,
+    relationDef,
+    historyValue,
+}) {
+    const where = buildRelationWhere({
+        members,
+        anchorMemberIndex,
+        sourceId,
+        relatedId,
+        relationDef,
+        historyValue,
+    });
+
+    const relatedMemberIndex = anchorMemberIndex === 0 ? 1 : 0;
+    const isSelfRelation = members[anchorMemberIndex].entity === members[relatedMemberIndex].entity;
+
+    if (!isSelfRelation || sourceId === relatedId) {
+        return [where];
+    }
+
+    const reverseWhere = buildRelationWhere({
+        members,
+        anchorMemberIndex,
+        sourceId: relatedId,
+        relatedId: sourceId,
+        relationDef,
+        historyValue,
+    });
+
+    return [where, reverseWhere];
+}
+
+async function getFirstRelationRecordByWhereCandidates(relationName, whereCandidates) {
+    for (const where of whereCandidates) {
+        const record = await manifestCrudService.getOne(relationName, where);
+        if (record) {
+            return record;
+        }
+    }
+
+    return null;
+}
+
+async function getAllRelationRecordsByWhereCandidates(relationName, whereCandidates) {
+    if (whereCandidates.length === 1) {
+        return manifestCrudService.getMany(relationName, whereCandidates[0]);
+    }
+
+    const rows = await Promise.all(
+        whereCandidates.map((where) => manifestCrudService.getMany(relationName, where))
+    );
+
+    return dedupeRows(rows.flat());
+}
+
+async function updateFirstRelationRecordByWhereCandidates(relationName, whereCandidates, updates) {
+    for (const where of whereCandidates) {
+        const result = await manifestCrudService.update(relationName, where, updates);
+        if (result.updated > 0 || result.record) {
+            return result;
+        }
+    }
+
+    return {
+        updated: 0,
+        record: null,
+    };
+}
+
+async function removeFirstRelationRecordByWhereCandidates(relationName, whereCandidates) {
+    for (const where of whereCandidates) {
+        const result = await manifestCrudService.remove(relationName, where);
+        if (result.deleted > 0) {
+            return result;
+        }
+    }
+
+    return {
+        deleted: 0,
+    };
+}
+
+async function loadRelationRows(relationName, relationContext, sourceId) {
+    const { anchorMember, relatedMember } = relationContext;
+
+    if (anchorMember.entity !== relatedMember.entity) {
+        return manifestCrudService.getMany(relationName, {
+            [anchorMember.key]: sourceId,
+        });
+    }
+
+    const [forwardRows, reverseRows] = await Promise.all([
+        manifestCrudService.getMany(relationName, {
+            [anchorMember.key]: sourceId,
+        }),
+        manifestCrudService.getMany(relationName, {
+            [relatedMember.key]: sourceId,
+        }),
+    ]);
+
+    return dedupeRows([...forwardRows, ...reverseRows]);
+}
+
+function getTargetInfo(relatedMember) {
+    const targetEntityDef = domainManifest.entities[relatedMember.entity];
+
+    return {
+        entityName: relatedMember.entity,
+        idField: targetEntityDef.idField,
+    };
+}
+
+function collectTargetIds(relationRows, members, sourceId, anchorMemberIndex) {
+    const seenIds = new Set();
+    const ids = [];
+
+    for (const row of relationRows) {
+        const targetId = getRelatedIdForRow(row, members, sourceId, anchorMemberIndex);
+        if (targetId === null || targetId === undefined) {
+            continue;
+        }
+
+        if (seenIds.has(targetId)) {
+            continue;
+        }
+
+        seenIds.add(targetId);
+        ids.push(targetId);
+    }
+
+    return ids;
+}
+
+async function loadTargetMap(targetInfo, targetIds) {
+    const targetById = new Map();
+
+    for (const targetId of targetIds) {
+        const target = await manifestCrudService.getOne(targetInfo.entityName, {
+            [targetInfo.idField]: targetId,
+        });
+
+        if (target) {
+            targetById.set(target[targetInfo.idField], target);
+        }
+    }
+
+    return targetById;
+}
+
+function buildSimpleResults(targetIds, targetById) {
+    const results = [];
+
+    for (const targetId of targetIds) {
+        const target = targetById.get(targetId);
+        if (target) {
+            results.push(target);
+        }
+    }
+
+    return results;
+}
+
+function buildRelationshipResults(relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex) {
+    const results = [];
+
+    for (const row of relationRows) {
+        const targetId = getRelatedIdForRow(row, members, sourceId, anchorMemberIndex);
+        const target = targetById.get(targetId);
+        if (!target) {
+            continue;
+        }
+
+        results.push({
+            ...target,
+            relationship: omitKeys(row, memberKeys),
+        });
+    }
+
+    return results;
+}
+
+function buildHistoryResults(targetIds, relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex) {
+    const results = [];
+
+    for (const targetId of targetIds) {
+        const target = targetById.get(targetId);
+        if (!target) {
+            continue;
+        }
+
+        const history = [];
+        for (const row of relationRows) {
+            const relatedId = getRelatedIdForRow(row, members, sourceId, anchorMemberIndex);
+            if (relatedId === targetId) {
+                history.push(omitKeys(row, memberKeys));
+            }
+        }
+
+        results.push({
+            ...target,
+            history,
+        });
+    }
+
+    return results;
 }
 
 function toHttpError(err) {
@@ -148,13 +321,49 @@ function toHttpError(err) {
         return { status: 404, message };
     }
 
-    if (/Invalid number value|Invalid boolean value|Unknown field for route/i.test(message)) {
+    if (
+        /Invalid number value|Invalid boolean value|Unknown field for route|Unknown field for relation|Unknown query field for relation|Missing required query field|Cannot update primary key field|Primary key updates are not allowed|Data must be an object/i.test(
+            message
+        )
+    ) {
         return { status: 400, message };
+    }
+
+    if (err && err.code === 'SQLITE_CONSTRAINT') {
+        return { status: 409, message };
     }
 
     return { status: 500, message };
 }
 
+async function ensureRecordExists(entityName, idField, idValue) {
+    const record = await manifestCrudService.getOne(entityName, {
+        [idField]: idValue,
+    });
+
+    if (!record) {
+        throw new Error('Record not found');
+    }
+
+    return record;
+}
+
+function getEntityLookup(params) {
+    const { entityName, entityDef } = getEntityByRoute(params.entityRoute);
+    const idField = entityDef.idField;
+    const idMeta = entityDef.fields[idField];
+    const idValue = coerceValueByType(idMeta.type, params.id);
+
+    return {
+        entityName,
+        entityDef,
+        idField,
+        idValue,
+    };
+}
+
+/* BASIC ENTITY ROUTES */
+// create entity
 router.post('/:entityRoute', async (req, res) => {
     try {
         const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
@@ -166,7 +375,7 @@ router.post('/:entityRoute', async (req, res) => {
         res.status(httpErr.status).json({ error: httpErr.message });
     }
 });
-
+// get all of this entity
 router.get('/:entityRoute', async (req, res) => {
     try {
         const { entityName } = getEntityByRoute(req.params.entityRoute);
@@ -178,40 +387,10 @@ router.get('/:entityRoute', async (req, res) => {
         return res.status(httpErr.status).json({ error: httpErr.message });
     }
 });
-
-router.get('/:entityRoute/:id/:relatedRoute', async (req, res) => {
-    try {
-        const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
-        const { relationName, relationDef } = getRelationByRoutes(
-            req.params.entityRoute,
-            req.params.relatedRoute
-        );
-        const idField = entityDef.idField;
-        const idMeta = entityDef.fields[idField];
-        const sourceId = coerceValueByType(idMeta.type, req.params.id);
-
-        const sourceRecord = await manifestCrudService.getOne(entityName, {
-            [idField]: sourceId,
-        });
-
-        if (!sourceRecord) {
-            return res.status(404).json({ error: 'Record not found' });
-        }
-
-        const records = await loadAssociatedRecords(relationName, relationDef, sourceId);
-        return res.json(records);
-    } catch (err) {
-        const httpErr = toHttpError(err);
-        return res.status(httpErr.status).json({ error: httpErr.message });
-    }
-});
-
+// get one of this entity
 router.get('/:entityRoute/:id', async (req, res) => {
     try {
-        const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
-        const idField = entityDef.idField;
-        const idMeta = entityDef.fields[idField];
-        const idValue = coerceValueByType(idMeta.type, req.params.id);
+        const { entityName, idField, idValue } = getEntityLookup(req.params);
 
         const record = await manifestCrudService.getOne(entityName, {
             [idField]: idValue,
@@ -227,5 +406,320 @@ router.get('/:entityRoute/:id', async (req, res) => {
         return res.status(httpErr.status).json({ error: httpErr.message });
     }
 });
+// edit this entity
+router.patch('/:entityRoute/:id', async (req, res) => {
+    try {
+        const { entityName, entityDef, idField, idValue } = getEntityLookup(req.params);
+        const updates = conformObjectToEntity(req.body, entityDef);
+
+        const result = await manifestCrudService.update(entityName, {
+            [idField]: idValue,
+        }, updates);
+
+        if (result.updated === 0 && !result.record) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        return res.json(result);
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+// delete this entity
+router.delete('/:entityRoute/:id', async (req, res) => {
+    try {
+        const { entityName, idField, idValue } = getEntityLookup(req.params);
+        const result = await manifestCrudService.remove(entityName, {
+            [idField]: idValue,
+        });
+
+        if (result.deleted === 0) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        return res.json(result);
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
+/* RELATIONAL ROUTES */
+// create relation between these two entities
+router.post('/:entityRoute/:id/:relatedRoute', async (req, res) => {
+    try {
+        const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
+        const { relationName, relationDef, anchorMemberIndex } = getRelationByRoutes(
+            req.params.entityRoute,
+            req.params.relatedRoute
+        );
+
+        const sourceIdField = entityDef.idField;
+        const sourceIdMeta = entityDef.fields[sourceIdField];
+        const sourceId = coerceValueByType(sourceIdMeta.type, req.params.id);
+
+        await ensureRecordExists(entityName, sourceIdField, sourceId);
+
+        const { members, relatedEntityDef } = getRelatedMemberInfo(relationDef, anchorMemberIndex);
+        const relatedIdField = relatedEntityDef.idField;
+        const relatedIdMeta = relatedEntityDef.fields[relatedIdField];
+        const relatedId = coerceValueByType(relatedIdMeta.type, req.body && req.body.id);
+
+        if (relatedId === undefined || relatedId === null) {
+            return res.status(400).json({ error: 'Missing required field: id' });
+        }
+
+        await ensureRecordExists(
+            members[anchorMemberIndex === 0 ? 1 : 0].entity,
+            relatedIdField,
+            relatedId
+        );
+
+        const { id: _, ...rawPayload } = req.body || {};
+        const payload = normalizeRelationPayload(rawPayload, relationDef);
+        const relationData = buildRelationInsertData({
+            relationDef,
+            members,
+            anchorMemberIndex,
+            sourceId,
+            relatedId,
+            payload,
+        });
+
+        const created = await manifestCrudService.insert(relationName, relationData);
+        return res.status(201).json(created);
+    } catch (err) {
+        if (err && err.message === 'Record not found') {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
+// get all of this type of entity related to this specific entity
+router.get('/:entityRoute/:id/:relatedRoute', async (req, res) => {
+    try {
+        const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
+        const { relationName, relationDef, anchorMemberIndex } = getRelationByRoutes(
+            req.params.entityRoute,
+            req.params.relatedRoute
+        );
+        const idField = entityDef.idField;
+        const idMeta = entityDef.fields[idField];
+        const sourceId = coerceValueByType(idMeta.type, req.params.id);
+
+        const sourceRecord = await manifestCrudService.getOne(entityName, {
+            [idField]: sourceId,
+        });
+
+        if (!sourceRecord) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        const records = await loadAssociatedRecords(relationName, relationDef, sourceId, anchorMemberIndex);
+        return res.json(records);
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
+// get this one specific related entity
+router.get('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
+    try {
+        const { relationName, relationDef, anchorMemberIndex, relatedMemberIndex } = getRelationByRoutes(
+            req.params.entityRoute,
+            req.params.relatedRoute
+        );
+        const members = getRelationMembers(relationDef);
+
+        const sourceMember = members[anchorMemberIndex];
+        const relatedMember = members[relatedMemberIndex];
+        const sourceIdField = sourceMember.key;
+        const relatedIdField = relatedMember.key;
+
+        const sourceEntityDef = domainManifest.entities[sourceMember.entity];
+        const relatedEntityDef = domainManifest.entities[relatedMember.entity];
+
+        const sourceEntityIdField = sourceEntityDef.idField;
+        const sourceIdMeta = sourceEntityDef.fields[sourceEntityIdField];
+        const sourceId = coerceValueByType(sourceIdMeta.type, req.params.id);
+
+        const relatedEntityIdField = relatedEntityDef.idField;
+        const relatedIdMeta = relatedEntityDef.fields[relatedEntityIdField];
+        const relatedId = coerceValueByType(relatedIdMeta.type, req.params.relatedId);
+
+        const whereCandidates = buildRelationWhereCandidates({
+            members,
+            anchorMemberIndex,
+            sourceId,
+            relatedId,
+            relationDef,
+        });
+
+        if (relationDef.kind === 'history' && relationDef.historyKey) {
+            const historyValue = getValidatedHistorySelector(req.query, relationDef, { required: false });
+            if (historyValue !== undefined) {
+                const historyWhereCandidates = buildRelationWhereCandidates({
+                    members,
+                    anchorMemberIndex,
+                    sourceId,
+                    relatedId,
+                    relationDef,
+                    historyValue,
+                });
+                const record = await getFirstRelationRecordByWhereCandidates(
+                    relationName,
+                    historyWhereCandidates
+                );
+                if (!record) {
+                    return res.status(404).json({ error: 'Record not found' });
+                }
+
+                return res.json(record);
+            }
+
+            const records = await getAllRelationRecordsByWhereCandidates(relationName, whereCandidates);
+            if (records.length === 0) {
+                return res.status(404).json({ error: 'Record not found' });
+            }
+
+            return res.json(records);
+        }
+
+        const record = await getFirstRelationRecordByWhereCandidates(relationName, whereCandidates);
+        if (!record) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        return res.json(record);
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
+// update this one specific relation between these entities
+router.patch('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
+    try {
+        const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
+        const { relationName, relationDef, anchorMemberIndex } = getRelationByRoutes(
+            req.params.entityRoute,
+            req.params.relatedRoute
+        );
+        const members = getRelationMembers(relationDef);
+        const { relatedEntityDef } = getRelatedMemberInfo(relationDef, anchorMemberIndex);
+
+        const sourceIdField = entityDef.idField;
+        const sourceIdMeta = entityDef.fields[sourceIdField];
+        const sourceId = coerceValueByType(sourceIdMeta.type, req.params.id);
+
+        const relatedIdField = relatedEntityDef.idField;
+        const relatedIdMeta = relatedEntityDef.fields[relatedIdField];
+        const relatedId = coerceValueByType(relatedIdMeta.type, req.params.relatedId);
+
+        await ensureRecordExists(entityName, sourceIdField, sourceId);
+        await ensureRecordExists(
+            members[anchorMemberIndex === 0 ? 1 : 0].entity,
+            relatedIdField,
+            relatedId
+        );
+
+        let historyValue;
+        if (relationDef.kind === 'history' && relationDef.historyKey) {
+            historyValue = getValidatedHistorySelector(req.query, relationDef, { required: true });
+        }
+
+        const updates = normalizeRelationUpdatePayload(req.body, relationDef);
+        const whereCandidates = buildRelationWhereCandidates({
+            members,
+            anchorMemberIndex,
+            sourceId,
+            relatedId,
+            relationDef,
+            historyValue,
+        });
+
+        const result = await updateFirstRelationRecordByWhereCandidates(
+            relationName,
+            whereCandidates,
+            updates
+        );
+
+        if (result.updated === 0 && !result.record) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        return res.json(result);
+    } catch (err) {
+        if (err && err.message === 'Record not found') {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
+// delete this relationship
+router.delete('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
+    try {
+        const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
+        const { relationName, relationDef, anchorMemberIndex } = getRelationByRoutes(
+            req.params.entityRoute,
+            req.params.relatedRoute
+        );
+        const members = getRelationMembers(relationDef);
+        const { relatedEntityDef } = getRelatedMemberInfo(relationDef, anchorMemberIndex);
+
+        const sourceIdField = entityDef.idField;
+        const sourceIdMeta = entityDef.fields[sourceIdField];
+        const sourceId = coerceValueByType(sourceIdMeta.type, req.params.id);
+
+        const relatedIdField = relatedEntityDef.idField;
+        const relatedIdMeta = relatedEntityDef.fields[relatedIdField];
+        const relatedId = coerceValueByType(relatedIdMeta.type, req.params.relatedId);
+
+        await ensureRecordExists(entityName, sourceIdField, sourceId);
+        await ensureRecordExists(
+            members[anchorMemberIndex === 0 ? 1 : 0].entity,
+            relatedIdField,
+            relatedId
+        );
+
+        let historyValue;
+        if (relationDef.kind === 'history' && relationDef.historyKey) {
+            historyValue = getValidatedHistorySelector(req.query, relationDef, { required: true });
+        }
+
+        const whereCandidates = buildRelationWhereCandidates({
+            members,
+            anchorMemberIndex,
+            sourceId,
+            relatedId,
+            relationDef,
+            historyValue,
+        });
+
+        const result = await removeFirstRelationRecordByWhereCandidates(relationName, whereCandidates);
+
+        if (result.deleted === 0) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        return res.json(result);
+    } catch (err) {
+        if (err && err.message === 'Record not found') {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
 
 module.exports = router;

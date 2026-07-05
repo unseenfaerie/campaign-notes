@@ -1,5 +1,20 @@
 const { db } = require('./db');
-const { domainManifest } = require('../common/domainManifest');
+const { domainManifest } = require('../../common/domainManifest');
+
+function getRelationMembers(relationDef) {
+  if (Array.isArray(relationDef.members) && relationDef.members.length === 2) {
+    return relationDef.members;
+  }
+
+  if (relationDef.source && relationDef.target && relationDef.sourceKey && relationDef.targetKey) {
+    return [
+      { entity: relationDef.source, key: relationDef.sourceKey },
+      { entity: relationDef.target, key: relationDef.targetKey },
+    ];
+  }
+
+  throw new Error('Relation must define exactly two members');
+}
 
 function toResourceDefinition(resourceName, manifest = domainManifest) {
   const entityDef = manifest.entities[resourceName];
@@ -20,9 +35,11 @@ function toResourceDefinition(resourceName, manifest = domainManifest) {
 
   const relationDef = manifest.relations[resourceName];
   if (relationDef) {
+    const members = getRelationMembers(relationDef);
     const fields = {
-      [relationDef.sourceKey]: { type: 'string', required: true, primary: true },
-      [relationDef.targetKey]: { type: 'string', required: true, primary: true },
+      ...Object.fromEntries(
+        members.map((member) => [member.key, { type: 'string', required: true, primary: true }])
+      ),
       ...(relationDef.payload || {}),
     };
 
@@ -38,7 +55,9 @@ function toResourceDefinition(resourceName, manifest = domainManifest) {
       name: resourceName,
       table: relationDef.table,
       fields,
-      primaryKeys: relationDef.keys || [relationDef.sourceKey, relationDef.targetKey],
+      members,
+      primaryKeys:
+        relationDef.keys || members.map((member) => member.key).concat(relationDef.historyKey ? [relationDef.historyKey] : []),
     };
   }
 

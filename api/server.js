@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dataRouter = require('./routes/dataRouter');
 const domainRouter = require('./routes/domainRouter');
-const { initializeDatabase } = require('./db');
+const { initializeDatabase } = require('./data/db');
 
 const app = express();
 
