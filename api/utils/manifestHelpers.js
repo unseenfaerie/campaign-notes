@@ -1,4 +1,5 @@
 const { domainManifest } = require('../../common/domainManifest');
+const { validateIdFormat } = require('./idUtils');
 
 function coerceValueByType(type, value) {
     if (value === undefined || value === null) return value;
@@ -135,7 +136,8 @@ function getRelatedIdForRow(row, members, sourceId, anchorMemberIndex) {
     return row[relatedMember.key];
 }
 
-function conformObjectToEntity(obj, entityDef) {
+function conformObjectToEntity(obj, entityDef, options = {}) {
+    const { enforcePrimaryIdFormat = false } = options;
     const normalized = {};
 
     for (const [field, rawValue] of Object.entries(obj || {})) {
@@ -145,6 +147,17 @@ function conformObjectToEntity(obj, entityDef) {
         }
 
         normalized[field] = coerceValueByType(fieldDef.type, rawValue);
+
+        if (
+            enforcePrimaryIdFormat &&
+            fieldDef.primary &&
+            fieldDef.format === 'slug' &&
+            normalized[field] !== undefined &&
+            normalized[field] !== null &&
+            !validateIdFormat(normalized[field])
+        ) {
+            throw new Error(`Invalid slug id format for field ${field}: ${normalized[field]}`);
+        }
     }
 
     return normalized;

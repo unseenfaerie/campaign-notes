@@ -164,6 +164,20 @@ describe('domainRouter isolated unit tests', () => {
         expect(manifestCrudService.getMany).toHaveBeenCalledWith('Character');
     });
 
+    it('POST /:entityRoute returns 400 when primary id slug format is invalid', async () => {
+        manifestHelpers.conformObjectToEntity.mockImplementationOnce(() => {
+            throw new Error('Invalid slug id format for field id: Bad ID');
+        });
+
+        const response = await request(app)
+            .post('/api/characters')
+            .send({ id: 'Bad ID', name: 'Test' });
+
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual({ error: 'Invalid slug id format for field id: Bad ID' });
+        expect(manifestCrudService.insert).not.toHaveBeenCalled();
+    });
+
     it('GET /:entityRoute/:id returns single record', async () => {
         manifestCrudService.getOne.mockResolvedValueOnce({ id: 'char-1', name: 'Hero' });
 
