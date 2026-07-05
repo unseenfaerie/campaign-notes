@@ -111,7 +111,7 @@ describe('genericCrudService with isolated manifest and in-memory db', () => {
         await closeDatabase(db);
     });
 
-    it('inserts and reads an entity using the side manifest schema', async () => {
+    it('inserts and reads an entity using the manifest schema', async () => {
         const inserted = await service.insert('Character', {
             id: 'char-1',
             name: 'Aster',
@@ -131,7 +131,7 @@ describe('genericCrudService with isolated manifest and in-memory db', () => {
         });
     });
 
-    it('supports empty and filtered reads without touching the main database', async () => {
+    it('supports empty and filtered reads', async () => {
         await service.insert('Character', { id: 'char-1', name: 'Aster', level: 3 });
         await service.insert('Character', { id: 'char-2', name: 'Bryn', level: 5 });
 
@@ -145,7 +145,7 @@ describe('genericCrudService with isolated manifest and in-memory db', () => {
         ]);
     });
 
-    it('rejects unknown fields and missing required fields from the side manifest', async () => {
+    it('rejects unknown fields and missing required fields as defined by the manifest', async () => {
         await expect(
             service.insert('Character', { id: 'char-1', nickname: 'Ash' })
         ).rejects.toThrow('Unknown field for Character: nickname');
@@ -170,7 +170,7 @@ describe('genericCrudService with isolated manifest and in-memory db', () => {
         });
     });
 
-    it('persists composite-key history relations defined by the side manifest', async () => {
+    it('persists composite-key history relations as defined by manifest', async () => {
         await service.insert('Character', { id: 'char-1', name: 'Aster' });
         await service.insert('Item', { id: 'item-1', name: 'Moonblade' });
 
@@ -222,7 +222,7 @@ describe('genericCrudService with isolated manifest and in-memory db', () => {
         });
     });
 
-    it('handles auto-increment entities in the isolated database', async () => {
+    it('handles auto-increment entities', async () => {
         const inserted = await service.insert('Alias', {
             entity_id: 'char-1',
             alias: 'The Lantern',
@@ -242,7 +242,7 @@ describe('genericCrudService with isolated manifest and in-memory db', () => {
         ]);
     });
 
-    it('deletes from the isolated database only', async () => {
+    it('deletes from database', async () => {
         await service.insert('Character', { id: 'char-1', name: 'Aster' });
 
         await expect(service.remove('Character', { id: 'char-1' })).resolves.toEqual({
