@@ -439,7 +439,69 @@ router.get('/:entityRoute/:id/:relatedRoute', async (req, res) => {
 });
 
 // get this one specific related entity
-router.get('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => { });
+router.get('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
+    try {
+        const { relationName, relationDef, anchorMemberIndex, relatedMemberIndex } = getRelationByRoutes(
+            req.params.entityRoute,
+            req.params.relatedRoute
+        );
+        const members = getRelationMembers(relationDef);
+
+        const sourceMember = members[anchorMemberIndex];
+        const relatedMember = members[relatedMemberIndex];
+        const sourceIdField = sourceMember.key;
+        const relatedIdField = relatedMember.key;
+
+        const sourceEntityDef = domainManifest.entities[sourceMember.entity];
+        const relatedEntityDef = domainManifest.entities[relatedMember.entity];
+
+        const sourceEntityIdField = sourceEntityDef.idField;
+        const sourceIdMeta = sourceEntityDef.fields[sourceEntityIdField];
+        const sourceId = coerceValueByType(sourceIdMeta.type, req.params.id);
+
+        const relatedEntityIdField = relatedEntityDef.idField;
+        const relatedIdMeta = relatedEntityDef.fields[relatedEntityIdField];
+        const relatedId = coerceValueByType(relatedIdMeta.type, req.params.relatedId);
+
+        const where = {
+            [sourceIdField]: sourceId,
+            [relatedIdField]: relatedId
+        };
+
+        if (relationDef.kind === 'history' && relationDef.historyKey) {
+            const historyRaw = req.query[relationDef.historyKey];
+            if (historyRaw !== undefined) {
+                const historyMeta = relationDef.payload && relationDef.payload[relationDef.historyKey];
+                const historyType = historyMeta && historyMeta.type ? historyMeta.type : 'string';
+                where[relationDef.historyKey] = coerceValueByType(historyType, historyRaw);
+
+                const record = await manifestCrudService.getOne(relationName, where);
+                if (!record) {
+                    return res.status(404).json({ error: 'Record not found' });
+                }
+
+                return res.json(record);
+            }
+
+            const records = await manifestCrudService.getMany(relationName, where);
+            if (records.length === 0) {
+                return res.status(404).json({ error: 'Record not found' });
+            }
+
+            return res.json(records);
+        }
+
+        const record = await manifestCrudService.getOne(relationName, where);
+        if (!record) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        return res.json(record);
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
 
 // update this one specific relation between these entities
 router.patch('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => { });

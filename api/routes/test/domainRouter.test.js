@@ -214,6 +214,137 @@ describe('domainRouter isolated unit tests', () => {
         ]);
     });
 
+    it('GET /:entityRoute/:id/:relatedRoute/:relatedId returns one relation record for non-history relation', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'EventItem',
+            relationDef: {
+                kind: 'relationship',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+            },
+            anchorMemberIndex: 0,
+            relatedMemberIndex: 1,
+        });
+
+        manifestCrudService.getOne.mockResolvedValueOnce({
+            character_id: 'char-1',
+            item_id: 'item-1',
+            short_description: 'used in battle',
+        });
+
+        const response = await request(app).get('/api/characters/char-1/items/item-1');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({
+            character_id: 'char-1',
+            item_id: 'item-1',
+            short_description: 'used in battle',
+        });
+        expect(manifestCrudService.getOne).toHaveBeenCalledWith('EventItem', {
+            character_id: 'char-1',
+            item_id: 'item-1',
+        });
+    });
+
+    it('GET /:entityRoute/:id/:relatedRoute/:relatedId returns all tenures for history relation without history query', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterItem',
+            relationDef: {
+                kind: 'history',
+                historyKey: 'acquired_date',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {
+                    acquired_date: { type: 'string', required: true },
+                    short_description: { type: 'string' },
+                },
+            },
+            anchorMemberIndex: 0,
+            relatedMemberIndex: 1,
+        });
+
+        manifestCrudService.getMany.mockResolvedValueOnce([
+            {
+                character_id: 'char-1',
+                item_id: 'item-1',
+                acquired_date: '100-01-01',
+            },
+            {
+                character_id: 'char-1',
+                item_id: 'item-1',
+                acquired_date: '101-01-01',
+            },
+        ]);
+
+        const response = await request(app).get('/api/characters/char-1/items/item-1');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([
+            {
+                character_id: 'char-1',
+                item_id: 'item-1',
+                acquired_date: '100-01-01',
+            },
+            {
+                character_id: 'char-1',
+                item_id: 'item-1',
+                acquired_date: '101-01-01',
+            },
+        ]);
+        expect(manifestCrudService.getMany).toHaveBeenCalledWith('CharacterItem', {
+            character_id: 'char-1',
+            item_id: 'item-1',
+        });
+    });
+
+    it('GET /:entityRoute/:id/:relatedRoute/:relatedId returns one tenure when history query is provided', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'CharacterItem',
+            relationDef: {
+                kind: 'history',
+                historyKey: 'acquired_date',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {
+                    acquired_date: { type: 'string', required: true },
+                    short_description: { type: 'string' },
+                },
+            },
+            anchorMemberIndex: 0,
+            relatedMemberIndex: 1,
+        });
+
+        manifestCrudService.getOne.mockResolvedValueOnce({
+            character_id: 'char-1',
+            item_id: 'item-1',
+            acquired_date: '100-01-01',
+            short_description: 'first tenure',
+        });
+
+        const response = await request(app)
+            .get('/api/characters/char-1/items/item-1')
+            .query({ acquired_date: '100-01-01' });
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({
+            character_id: 'char-1',
+            item_id: 'item-1',
+            acquired_date: '100-01-01',
+            short_description: 'first tenure',
+        });
+        expect(manifestCrudService.getOne).toHaveBeenCalledWith('CharacterItem', {
+            character_id: 'char-1',
+            item_id: 'item-1',
+            acquired_date: '100-01-01',
+        });
+    });
+
     it('PATCH /:entityRoute/:id updates and returns service payload', async () => {
         manifestCrudService.update.mockResolvedValueOnce({
             updated: 1,
