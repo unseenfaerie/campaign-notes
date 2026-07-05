@@ -17,6 +17,55 @@ jest.mock('../../utils/manifestHelpers', () => ({
     getRelationMembers: jest.fn(),
     getRelationByRoutes: jest.fn(),
     conformObjectToEntity: jest.fn(),
+    omitKeys: jest.fn((record, keys) => {
+        const normalized = { ...record };
+        for (const key of keys) {
+            delete normalized[key];
+        }
+        return normalized;
+    }),
+    dedupeRows: jest.fn((rows) => {
+        const seen = new Set();
+        const deduped = [];
+
+        for (const row of rows) {
+            const key = JSON.stringify(row);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            deduped.push(row);
+        }
+
+        return deduped;
+    }),
+    getRelationContext: jest.fn((members, anchorMemberIndex) => ({
+        anchorMember: members[anchorMemberIndex],
+        relatedMember: members[anchorMemberIndex === 0 ? 1 : 0],
+    })),
+    getRelatedIdForRow: jest.fn((row, members, sourceId, anchorMemberIndex) => {
+        const anchorMember = members[anchorMemberIndex];
+        const relatedMember = members[anchorMemberIndex === 0 ? 1 : 0];
+
+        if (anchorMember.entity === relatedMember.entity) {
+            const anchorMatches = row[anchorMember.key] === sourceId;
+            const relatedMatches = row[relatedMember.key] === sourceId;
+
+            if (anchorMatches && relatedMatches) {
+                return sourceId;
+            }
+
+            if (anchorMatches) {
+                return row[relatedMember.key];
+            }
+
+            if (relatedMatches) {
+                return row[anchorMember.key];
+            }
+
+            return null;
+        }
+
+        return row[relatedMember.key];
+    }),
 }));
 
 jest.mock('../../../common/domainManifest', () => ({

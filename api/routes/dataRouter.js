@@ -1,38 +1,8 @@
 const express = require('express');
 const { manifestCrudService } = require('../data/genericCrudService');
-const manifestHelpers = require('../utils/manifestHelpers');
+const { coerceValueByType } = require('../utils/manifestHelpers');
 
 const router = express.Router();
-
-void manifestHelpers;
-
-function coerceValueByType(type, value) {
-  if (value === undefined || value === null) return value;
-
-  if (type === 'number') {
-    const n = Number(value);
-    if (Number.isNaN(n)) {
-      throw new Error(`Invalid number value: ${value}`);
-    }
-    return n;
-  }
-
-  if (type === 'boolean') {
-    if (value === true || value === false) return value;
-    if (typeof value === 'string') {
-      const normalized = value.trim().toLowerCase();
-      if (normalized === 'true') return true;
-      if (normalized === 'false') return false;
-    }
-    throw new Error(`Invalid boolean value: ${value}`);
-  }
-
-  if (type === 'string') {
-    return String(value);
-  }
-
-  return value;
-}
 
 function coerceWhere(resourceName, where) {
   const info = manifestCrudService.getResourceInfo(resourceName);

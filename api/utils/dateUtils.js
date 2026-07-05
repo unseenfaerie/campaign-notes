@@ -28,7 +28,7 @@ const MONTHS = {
 };
 
 function parseLoreDate(date) {
-  // Expects format mmm-dd-yyy
+  // expects format mmm-dd-yyy
   if (!isValidDateFormat(date)) return null;
   const [month, day, year] = date.toLowerCase().split('-');
   return {
@@ -38,11 +38,11 @@ function parseLoreDate(date) {
   };
 }
 
-// For sorting: convert to a sortable string or number
+// for sorting: convert to a sortable string or number
 function loreDateToSortable(date) {
   const parsed = parseLoreDate(date);
   if (!parsed) return null;
-  // Pad month and day for consistent sorting
+  // pad month and day for consistent sorting
   return `${parsed.year.toString().padStart(3, '0')}-${parsed.month.toString().padStart(2, '0')}-${parsed.day.toString().padStart(2, '0')}`;
 }
 
