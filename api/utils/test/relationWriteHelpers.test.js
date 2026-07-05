@@ -67,6 +67,23 @@ describe('relationWriteHelpers isolated unit tests', () => {
             });
         });
 
+        it('uses the opposite member when the anchor index is reversed', () => {
+            const relationDef = {
+                members: [
+                    { entity: 'Character', key: 'character_id' },
+                    { entity: 'Item', key: 'item_id' },
+                ],
+            };
+
+            const result = getRelatedMemberInfo(relationDef, 1);
+
+            expect(result).toEqual({
+                members: relationDef.members,
+                relatedMember: { entity: 'Character', key: 'character_id' },
+                relatedEntityDef: { idField: 'id', fields: { id: { type: 'string' } } },
+            });
+        });
+
         it('throws when related member entity is not in domain manifest', () => {
             const relationDef = {
                 members: [
@@ -300,6 +317,27 @@ describe('relationWriteHelpers isolated unit tests', () => {
                 short_description: 'linked',
             });
         });
+
+        it('preserves member ordering when the anchor index is the first member', () => {
+            const members = [
+                { entity: 'Character', key: 'character_id' },
+                { entity: 'Item', key: 'item_id' },
+            ];
+
+            const result = buildRelationInsertData({
+                relationDef: { kind: 'relationship' },
+                members,
+                anchorMemberIndex: 0,
+                sourceId: 'char-1',
+                relatedId: 'item-1',
+                payload: {},
+            });
+
+            expect(result).toEqual({
+                character_id: 'char-1',
+                item_id: 'item-1',
+            });
+        });
     });
 
     describe('buildRelationWhere', () => {
@@ -368,6 +406,26 @@ describe('relationWriteHelpers isolated unit tests', () => {
             expect(nonHistory).toEqual({
                 character_id: 'char-1',
                 item_id: 'item-1',
+            });
+        });
+
+        it('builds reversed where clauses when the anchor index changes', () => {
+            const members = [
+                { entity: 'Character', key: 'character_id' },
+                { entity: 'Item', key: 'item_id' },
+            ];
+
+            const where = buildRelationWhere({
+                members,
+                anchorMemberIndex: 1,
+                sourceId: 'item-1',
+                relatedId: 'char-1',
+                relationDef: { kind: 'relationship' },
+            });
+
+            expect(where).toEqual({
+                item_id: 'item-1',
+                character_id: 'char-1',
             });
         });
     });
