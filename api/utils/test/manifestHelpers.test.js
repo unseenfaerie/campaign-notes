@@ -1,0 +1,170 @@
+const { coerceValueByType, getEntityByRoute, getRelationMembers, getRelationByRoutes, conformObjectToEntity } = require('../manifestHelpers');
+
+describe('manifestHelpers isolated unit tests', () => {
+    describe('coerceValueByType', () => {
+        it('returns nullish values unchanged', () => {
+            expect(coerceValueByType('string', undefined)).toBeUndefined();
+            expect(coerceValueByType('string', null)).toBeNull();
+        });
+
+        it('coerces numbers, booleans, and strings', () => {
+            expect(coerceValueByType('number', '42')).toBe(42);
+            expect(coerceValueByType('boolean', 'true')).toBe(true);
+            expect(coerceValueByType('boolean', 'FALSE')).toBe(false);
+            expect(coerceValueByType('string', 123)).toBe('123');
+        });
+
+        it('rejects invalid numbers and booleans', () => {
+            expect(() => coerceValueByType('number', 'not-a-number')).toThrow(
+                'Invalid number value: not-a-number'
+            );
+            expect(() => coerceValueByType('boolean', 'maybe')).toThrow(
+                'Invalid boolean value: maybe'
+            );
+        });
+    });
+
+    describe('getEntityByRoute', () => {
+        const manifest = {
+            entities: {
+                Character: { route: 'characters' },
+                Item: { route: 'items' },
+            },
+        };
+
+        it('returns the matching entity definition', () => {
+            expect(getEntityByRoute('items', manifest)).toEqual({
+                entityName: 'Item',
+                entityDef: { route: 'items' },
+            });
+        });
+
+        it('throws when the route is unknown', () => {
+            expect(() => getEntityByRoute('missing', manifest)).toThrow(
+                'Unknown entity route: missing'
+            );
+        });
+    });
+
+    describe('getRelationMembers', () => {
+        it('returns explicit members when present', () => {
+            const relationDef = {
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+            };
+
+            expect(getRelationMembers(relationDef)).toBe(relationDef.members);
+        });
+
+        it('builds members from source/target metadata when present', () => {
+            const relationDef = {
+                source: 'Character',
+                target: 'Item',
+                sourceKey: 'character_id',
+                targetKey: 'item_id',
+                routeFromSource: 'items',
+                routeFromTarget: 'characters',
+            };
+
+            expect(getRelationMembers(relationDef)).toEqual([
+                { entity: 'Character', key: 'character_id', route: 'items' },
+                { entity: 'Item', key: 'item_id', route: 'characters' },
+            ]);
+        });
+
+        it('throws when relation members are invalid', () => {
+            expect(() => getRelationMembers({})).toThrow('Relation must define exactly two members');
+        });
+    });
+
+    describe('getRelationByRoutes', () => {
+        const manifest = {
+            entities: {
+                Character: { route: 'characters' },
+                Item: { route: 'items' },
+                Deity: { route: 'deities' },
+            },
+            relations: {
+                CharacterItem: {
+                    members: [
+                        { entity: 'Character', key: 'character_id', route: 'items' },
+                        { entity: 'Item', key: 'item_id', route: 'characters' },
+                    ],
+                },
+                CharacterDeity: {
+                    source: 'Character',
+                    target: 'Deity',
+                    sourceKey: 'character_id',
+                    targetKey: 'deity_id',
+                    routeFromSource: 'deities',
+                    routeFromTarget: 'characters',
+                },
+            },
+        };
+
+        it('returns the matching relation and anchor information for explicit members', () => {
+            expect(getRelationByRoutes('characters', 'items', manifest)).toEqual({
+                relationName: 'CharacterItem',
+                relationDef: manifest.relations.CharacterItem,
+                anchorMemberIndex: 0,
+                relatedMemberIndex: 1,
+            });
+        });
+
+        it('supports source/target relation definitions', () => {
+            expect(getRelationByRoutes('characters', 'deities', manifest)).toEqual({
+                relationName: 'CharacterDeity',
+                relationDef: manifest.relations.CharacterDeity,
+                anchorMemberIndex: 0,
+                relatedMemberIndex: 1,
+            });
+        });
+
+        it('throws when no relation matches the supplied routes', () => {
+            expect(() => getRelationByRoutes('characters', 'missing', manifest)).toThrow(
+                'Unknown related route for characters: missing'
+            );
+        });
+    });
+
+    describe('conformObjectToEntity', () => {
+        const entityDef = {
+            route: 'characters',
+            fields: {
+                id: { type: 'string' },
+                level: { type: 'number' },
+                active: { type: 'boolean' },
+            },
+        };
+
+        it('coerces values for known fields', () => {
+            expect(
+                conformObjectToEntity(
+                    {
+                        id: 123,
+                        level: '7',
+                        active: 'true',
+                    },
+                    entityDef
+                )
+            ).toEqual({
+                id: '123',
+                level: 7,
+                active: true,
+            });
+        });
+
+        it('throws when object contains an unknown field', () => {
+            expect(() =>
+                conformObjectToEntity(
+                    {
+                        nickname: 'Ash',
+                    },
+                    entityDef
+                )
+            ).toThrow('Unknown field for route characters: nickname');
+        });
+    });
+});

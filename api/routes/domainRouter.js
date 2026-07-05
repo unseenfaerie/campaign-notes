@@ -7,6 +7,10 @@ const {
     getRelationMembers,
     getRelationByRoutes,
     conformObjectToEntity,
+    omitKeys,
+    dedupeRows,
+    getRelationContext,
+    getRelatedIdForRow,
 } = require('../utils/manifestHelpers');
 const {
     getRelatedMemberInfo,
@@ -18,54 +22,6 @@ const {
 } = require('../utils/relationWriteHelpers');
 
 const router = express.Router();
-
-function omitKeys(record, keys) {
-    const normalized = { ...record };
-    for (const key of keys) {
-        delete normalized[key];
-    }
-    return normalized;
-}
-
-function dedupeRows(rows) {
-    const seen = new Set();
-    const deduped = [];
-
-    for (const row of rows) {
-        const key = JSON.stringify(row);
-        if (seen.has(key)) continue;
-        seen.add(key);
-        deduped.push(row);
-    }
-
-    return deduped;
-}
-
-function getRelatedIdForRow(row, members, sourceId, anchorMemberIndex) {
-    const anchorMember = members[anchorMemberIndex];
-    const relatedMember = members[anchorMemberIndex === 0 ? 1 : 0];
-
-    if (anchorMember.entity === relatedMember.entity) {
-        const anchorMatches = row[anchorMember.key] === sourceId;
-        const relatedMatches = row[relatedMember.key] === sourceId;
-
-        if (anchorMatches && relatedMatches) {
-            return sourceId;
-        }
-
-        if (anchorMatches) {
-            return row[relatedMember.key];
-        }
-
-        if (relatedMatches) {
-            return row[anchorMember.key];
-        }
-
-        return null;
-    }
-
-    return row[relatedMember.key];
-}
 
 async function loadAssociatedRecords(relationName, relationDef, sourceId, anchorMemberIndex) {
     const members = getRelationMembers(relationDef);
@@ -94,13 +50,6 @@ async function loadAssociatedRecords(relationName, relationDef, sourceId, anchor
     }
 
     return relationRows;
-}
-
-function getRelationContext(members, anchorMemberIndex) {
-    return {
-        anchorMember: members[anchorMemberIndex],
-        relatedMember: members[anchorMemberIndex === 0 ? 1 : 0],
-    };
 }
 
 function buildRelationWhereCandidates({

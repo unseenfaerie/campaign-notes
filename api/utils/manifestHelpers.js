@@ -28,6 +28,28 @@ function coerceValueByType(type, value) {
     return value;
 }
 
+function omitKeys(record, keys) {
+    const normalized = { ...record };
+    for (const key of keys) {
+        delete normalized[key];
+    }
+    return normalized;
+}
+
+function dedupeRows(rows) {
+    const seen = new Set();
+    const deduped = [];
+
+    for (const row of rows) {
+        const key = JSON.stringify(row);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        deduped.push(row);
+    }
+
+    return deduped;
+}
+
 function getEntityByRoute(entityRoute, manifest = domainManifest) {
     for (const [entityName, entityDef] of Object.entries(manifest.entities)) {
         if (entityDef.route === entityRoute) {
@@ -80,6 +102,39 @@ function getRelationByRoutes(entityRoute, relatedRoute, manifest = domainManifes
     throw new Error(`Unknown related route for ${entityRoute}: ${relatedRoute}`);
 }
 
+function getRelationContext(members, anchorMemberIndex) {
+    return {
+        anchorMember: members[anchorMemberIndex],
+        relatedMember: members[anchorMemberIndex === 0 ? 1 : 0],
+    };
+}
+
+function getRelatedIdForRow(row, members, sourceId, anchorMemberIndex) {
+    const anchorMember = members[anchorMemberIndex];
+    const relatedMember = members[anchorMemberIndex === 0 ? 1 : 0];
+
+    if (anchorMember.entity === relatedMember.entity) {
+        const anchorMatches = row[anchorMember.key] === sourceId;
+        const relatedMatches = row[relatedMember.key] === sourceId;
+
+        if (anchorMatches && relatedMatches) {
+            return sourceId;
+        }
+
+        if (anchorMatches) {
+            return row[relatedMember.key];
+        }
+
+        if (relatedMatches) {
+            return row[anchorMember.key];
+        }
+
+        return null;
+    }
+
+    return row[relatedMember.key];
+}
+
 function conformObjectToEntity(obj, entityDef) {
     const normalized = {};
 
@@ -97,8 +152,12 @@ function conformObjectToEntity(obj, entityDef) {
 
 module.exports = {
     coerceValueByType,
+    omitKeys,
+    dedupeRows,
     getEntityByRoute,
     getRelationMembers,
     getRelationByRoutes,
+    getRelationContext,
+    getRelatedIdForRow,
     conformObjectToEntity,
 };
