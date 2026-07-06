@@ -102,8 +102,12 @@ router.post('/token', async (req, res) => {
     }
 
     const user = await get(
-      'SELECT id, username, password_hash, role, disabled FROM users WHERE username = ?',
-      [username]
+      `SELECT id, username, password_hash, role, disabled
+       FROM users
+       WHERE username = ? OR id = ?
+       ORDER BY CASE WHEN username = ? THEN 0 ELSE 1 END
+       LIMIT 1`,
+      [username, username, username]
     );
 
     if (!user || user.disabled) {
