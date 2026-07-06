@@ -2,7 +2,14 @@ const crypto = require('crypto');
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { get, run } = require('../data/sqliteAsync');
+const {
+  findUserByPrincipal,
+  findSessionById,
+  findUserById,
+  createRefreshSession,
+  rotateRefreshSession,
+  revokeRefreshSession,
+} = require('../data/authRepository');
 const { requireAuth } = require('../middleware/authMiddleware');
 
 const router = express.Router();
@@ -81,15 +88,18 @@ function buildRefreshResponse(accessToken) {
 
 async function insertRefreshSession({ sessionId, userId, refreshToken, rotatedFrom = null }) {
   const refreshHash = hashToken(refreshToken);
-  const nowIso = new Date().toISOString();
+  const createdAtIso = new Date().toISOString();
   const decoded = jwt.decode(refreshToken);
   const expiresIso = new Date((decoded.exp || 0) * 1000).toISOString();
 
-  await run(
-    `INSERT INTO refresh_sessions (id, user_id, refresh_hash, expires_at, revoked_at, rotated_from, rotated_to, created_at)
-     VALUES (?, ?, ?, ?, NULL, ?, NULL, ?)`,
-    [sessionId, userId, refreshHash, expiresIso, rotatedFrom, nowIso]
-  );
+  await createRefreshSession({
+    sessionId,
+    userId,
+    refreshHash,
+    expiresIso,
+    rotatedFrom,
+    createdAtIso,
+  });
 }
 
 router.post('/token', async (req, res) => {
@@ -101,14 +111,7 @@ router.post('/token', async (req, res) => {
       return res.status(400).json({ error: 'username and password are required' });
     }
 
-    const user = await get(
-      `SELECT id, username, password_hash, role, disabled
-       FROM users
-       WHERE username = ? OR id = ?
-       ORDER BY CASE WHEN username = ? THEN 0 ELSE 1 END
-       LIMIT 1`,
-      [username, username, username]
-    );
+    const user = await findUserByPrincipal(username);
 
     if (!user || user.disabled) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -154,10 +157,7 @@ router.post('/refresh', async (req, res) => {
       return res.status(401).json({ error: 'Invalid refresh token' });
     }
 
-    const session = await get(
-      'SELECT id, user_id, refresh_hash, expires_at, revoked_at, rotated_to FROM refresh_sessions WHERE id = ?',
-      [payload.sid]
-    );
+    const session = await findSessionById(payload.sid);
 
     if (!session) {
       return res.status(401).json({ error: 'Invalid refresh session' });
@@ -174,10 +174,7 @@ router.post('/refresh', async (req, res) => {
       return res.status(401).json({ error: 'Refresh session is not valid' });
     }
 
-    const user = await get(
-      'SELECT id, username, role, disabled FROM users WHERE id = ?',
-      [session.user_id]
-    );
+    const user = await findUserById(session.user_id);
 
     if (!user || user.disabled) {
       return res.status(401).json({ error: 'Invalid user session' });
@@ -187,11 +184,11 @@ router.post('/refresh', async (req, res) => {
     const newRefreshToken = signRefreshToken(user, newSessionId);
     const newAccessToken = signAccessToken(user, newSessionId);
 
-    await run('UPDATE refresh_sessions SET revoked_at = ?, rotated_to = ? WHERE id = ?', [
-      new Date().toISOString(),
+    await rotateRefreshSession({
+      oldSessionId: session.id,
       newSessionId,
-      session.id,
-    ]);
+      revokedAtIso: new Date().toISOString(),
+    });
 
     await insertRefreshSession({
       sessionId: newSessionId,
@@ -215,10 +212,10 @@ router.post('/logout', async (req, res) => {
       try {
         const payload = jwt.verify(refreshToken, REFRESH_SECRET);
         if (payload && payload.sid) {
-          await run('UPDATE refresh_sessions SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL', [
-            new Date().toISOString(),
-            payload.sid,
-          ]);
+          await revokeRefreshSession({
+            sessionId: payload.sid,
+            revokedAtIso: new Date().toISOString(),
+          });
         }
       } catch (_err) {
         // Ignore invalid token on logout; cookie is still cleared below.
@@ -234,7 +231,7 @@ router.post('/logout', async (req, res) => {
 
 router.get('/me', requireAuth, async (req, res) => {
   try {
-    const user = await get('SELECT id, username, role, disabled FROM users WHERE id = ?', [req.auth.userId]);
+    const user = await findUserById(req.auth.userId);
 
     if (!user || user.disabled) {
       return res.status(401).json({ error: 'Invalid user session' });

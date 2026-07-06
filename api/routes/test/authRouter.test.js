@@ -1,9 +1,13 @@
 const express = require('express');
 const request = require('supertest');
 
-jest.mock('../../data/sqliteAsync', () => ({
-    get: jest.fn(),
-    run: jest.fn(),
+jest.mock('../../data/authRepository', () => ({
+    findUserByPrincipal: jest.fn(),
+    findSessionById: jest.fn(),
+    findUserById: jest.fn(),
+    createRefreshSession: jest.fn(),
+    rotateRefreshSession: jest.fn(),
+    revokeRefreshSession: jest.fn(),
 }));
 
 jest.mock('bcryptjs', () => ({
@@ -16,7 +20,10 @@ jest.mock('jsonwebtoken', () => ({
     verify: jest.fn(),
 }));
 
-const { get, run } = require('../../data/sqliteAsync');
+const {
+    findUserByPrincipal,
+    createRefreshSession,
+} = require('../../data/authRepository');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const authRouter = require('../authRouter');
@@ -44,13 +51,13 @@ describe('authRouter', () => {
             exp: Math.floor(Date.now() / 1000) + 3600,
         });
 
-        run.mockResolvedValue({ changes: 1, lastID: 1 });
+        createRefreshSession.mockResolvedValue(undefined);
     });
 
     it('POST /api/auth/token accepts principal that matches user id', async () => {
         const app = createApp();
 
-        get.mockResolvedValueOnce({
+        findUserByPrincipal.mockResolvedValueOnce({
             id: 'dm-admin',
             username: '333344444',
             password_hash: '$2a$12$examplehash',
@@ -70,11 +77,8 @@ describe('authRouter', () => {
             expiresIn: '15m',
         });
 
-        expect(get).toHaveBeenCalledWith(
-            expect.stringContaining('WHERE username = ? OR id = ?'),
-            ['dm-admin', 'dm-admin', 'dm-admin']
-        );
+        expect(findUserByPrincipal).toHaveBeenCalledWith('dm-admin');
         expect(bcrypt.compare).toHaveBeenCalledWith('change-me-dm-password', '$2a$12$examplehash');
-        expect(run).toHaveBeenCalledTimes(1);
+        expect(createRefreshSession).toHaveBeenCalledTimes(1);
     });
 });
