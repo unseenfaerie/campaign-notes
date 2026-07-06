@@ -133,7 +133,7 @@ describe('manifestHelpers isolated unit tests', () => {
         const entityDef = {
             route: 'characters',
             fields: {
-                id: { type: 'string' },
+                id: { type: 'string', primary: true, format: 'slug' },
                 level: { type: 'number' },
                 active: { type: 'boolean' },
             },
@@ -165,6 +165,39 @@ describe('manifestHelpers isolated unit tests', () => {
                     entityDef
                 )
             ).toThrow('Unknown field for route characters: nickname');
+        });
+
+        it('enforces slug format for primary id when enabled', () => {
+            expect(() =>
+                conformObjectToEntity(
+                    {
+                        id: 'Bad ID',
+                    },
+                    entityDef,
+                    { enforcePrimaryIdFormat: true }
+                )
+            ).toThrow('Invalid slug id format for field id: Bad ID');
+
+            expect(
+                conformObjectToEntity(
+                    {
+                        id: 'good-id',
+                    },
+                    entityDef,
+                    { enforcePrimaryIdFormat: true }
+                )
+            ).toEqual({ id: 'good-id' });
+        });
+
+        it('does not enforce slug format when disabled', () => {
+            expect(
+                conformObjectToEntity(
+                    {
+                        id: 'Bad ID',
+                    },
+                    entityDef
+                )
+            ).toEqual({ id: 'Bad ID' });
         });
     });
 });

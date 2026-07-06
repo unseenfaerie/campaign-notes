@@ -147,6 +147,7 @@ const domainManifest = {
                 { entity: 'Deity', key: 'deity_id', route: 'characters' },
             ],
             historyKey: 'adopted_date',
+            historyEndKey: 'dissolution_date',
             keys: ['character_id', 'deity_id', 'adopted_date'],
             payload: {
                 adopted_date: { type: 'string', required: true },
@@ -164,6 +165,7 @@ const domainManifest = {
                 { entity: 'Item', key: 'item_id', route: 'characters' },
             ],
             historyKey: 'acquired_date',
+            historyEndKey: 'relinquished_date',
             keys: ['character_id', 'item_id', 'acquired_date'],
             payload: {
                 acquired_date: { type: 'string', required: true },
@@ -179,6 +181,7 @@ const domainManifest = {
                 { entity: 'Organization', key: 'organization_id', route: 'characters' },
             ],
             historyKey: 'joined_date',
+            historyEndKey: 'left_date',
             keys: ['character_id', 'organization_id', 'joined_date'],
             payload: {
                 joined_date: { type: 'string', required: true },
@@ -195,6 +198,7 @@ const domainManifest = {
                 { entity: 'Place', key: 'place_id', route: 'characters' },
             ],
             historyKey: 'arrived_date',
+            historyEndKey: 'left_date',
             keys: ['character_id', 'place_id', 'arrived_date'],
             payload: {
                 arrived_date: { type: 'string', required: true },
@@ -211,6 +215,7 @@ const domainManifest = {
                 { entity: 'Character', key: 'related_id', route: 'relationships' },
             ],
             historyKey: 'established_date',
+            historyEndKey: 'dissolution_date',
             keys: ['character_id', 'related_id', 'established_date'],
             payload: {
                 established_date: { type: 'string', required: true },

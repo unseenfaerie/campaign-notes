@@ -19,6 +19,7 @@ const {
     getValidatedHistorySelector,
     buildRelationInsertData,
     buildRelationWhere,
+    validateHistoryChronology,
 } = require('../utils/relationWriteHelpers');
 
 const router = express.Router();
@@ -271,7 +272,7 @@ function toHttpError(err) {
     }
 
     if (
-        /Invalid number value|Invalid boolean value|Unknown field for route|Unknown field for relation|Unknown query field for relation|Missing required query field|Cannot update primary key field|Primary key updates are not allowed|Data must be an object/i.test(
+        /Invalid number value|Invalid boolean value|Unknown field for route|Unknown field for relation|Unknown query field for relation|Missing required query field|Cannot update primary key field|Primary key updates are not allowed|Data must be an object|Invalid slug id format for field|Missing history start date value for chronology validation|Invalid history date format for field|History end date must be after history start date/i.test(
             message
         )
     ) {
@@ -316,7 +317,9 @@ function getEntityLookup(params) {
 router.post('/:entityRoute', async (req, res) => {
     try {
         const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
-        const validated = conformObjectToEntity(req.body, entityDef)
+        const validated = conformObjectToEntity(req.body, entityDef, {
+            enforcePrimaryIdFormat: true,
+        });
         const created = await manifestCrudService.insert(entityName, validated);
         res.status(201).json(created);
     } catch (err) {
@@ -427,6 +430,11 @@ router.post('/:entityRoute/:id/:relatedRoute', async (req, res) => {
 
         const { id: _, ...rawPayload } = req.body || {};
         const payload = normalizeRelationPayload(rawPayload, relationDef);
+        validateHistoryChronology({
+            relationDef,
+            startValue: relationDef.historyKey ? payload[relationDef.historyKey] : undefined,
+            endValue: relationDef.historyEndKey ? payload[relationDef.historyEndKey] : undefined,
+        });
         const relationData = buildRelationInsertData({
             relationDef,
             members,
@@ -583,6 +591,17 @@ router.patch('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
         }
 
         const updates = normalizeRelationUpdatePayload(req.body, relationDef);
+        if (
+            relationDef.kind === 'history' &&
+            relationDef.historyEndKey &&
+            Object.prototype.hasOwnProperty.call(updates, relationDef.historyEndKey)
+        ) {
+            validateHistoryChronology({
+                relationDef,
+                startValue: historyValue,
+                endValue: updates[relationDef.historyEndKey],
+            });
+        }
         const whereCandidates = buildRelationWhereCandidates({
             members,
             anchorMemberIndex,
