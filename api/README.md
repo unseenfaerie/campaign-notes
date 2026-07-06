@@ -86,13 +86,45 @@ Health check:
 curl http://localhost:3001/health
 ```
 
+## Auth Configuration
+
+Checked-in template:
+
+- [api/.env.example](/home/faerie/Source/campaign-notes/api/.env.example)
+
+For local development, create `api/.env` from that template.
+
+Set these environment variables before running in non-local environments:
+
+- `JWT_ACCESS_SECRET` (required for production)
+- `JWT_REFRESH_SECRET` (required for production)
+- `ACCESS_TOKEN_TTL` (default: `15m`)
+- `REFRESH_TOKEN_TTL` (default: `30d`)
+- `COOKIE_SECURE` (`true` in production over HTTPS)
+- `COOKIE_SAMESITE` (default: `strict`)
+
+Seeded development users (from `scripts/seed.js`):
+
+- `dm-admin` / `change-me-dm-password`
+- `player-one` / `change-me-player-password`
+- `viewer-one` / `change-me-viewer-password`
+
+Change these passwords immediately in shared environments.
+
 ## Router Overview
 
 - `GET /health`
 
+- `POST /api/auth/token`
+- `POST /api/auth/refresh`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+
 
 - `GET /api/data/resources`
 - `GET /api/data/:resource`
+
+- `GET /api/wiki/pages/:slug`
 
 
 - `POST /api/:entityRoute`
@@ -169,6 +201,58 @@ Fetch associated target records for a source entity.
 
 ```bash
 curl http://localhost:3001/api/characters/releas-neb/items
+```
+
+Note: direct domain mutation routes (`POST`, `PATCH`, `DELETE`) now require a `dm` role access token.
+
+## Auth Router (`/api/auth`)
+
+### `POST /api/auth/token`
+
+Authenticate with username/password and receive an access token plus refresh cookie.
+
+```bash
+curl -X POST http://localhost:3001/api/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"username":"dm-admin","password":"change-me-dm-password"}'
+```
+
+### `POST /api/auth/refresh`
+
+Rotate refresh token and receive a new access token.
+
+```bash
+curl -X POST http://localhost:3001/api/auth/refresh \
+  --cookie "refresh_token=<refresh-token>"
+```
+
+### `POST /api/auth/logout`
+
+Revoke current refresh session and clear refresh cookie.
+
+```bash
+curl -X POST http://localhost:3001/api/auth/logout \
+  --cookie "refresh_token=<refresh-token>"
+```
+
+### `GET /api/auth/me`
+
+Load current authenticated principal.
+
+```bash
+curl http://localhost:3001/api/auth/me \
+  -H "Authorization: Bearer <access-token>"
+```
+
+## Wiki Router (`/api/wiki`)
+
+### `GET /api/wiki/pages/:slug`
+
+Returns page sections filtered by API-enforced visibility policy.
+
+```bash
+curl http://localhost:3001/api/wiki/pages/coup-of-wavethorn \
+  -H "Authorization: Bearer <access-token>"
 ```
 
 ### `PATCH /api/:entityRoute/:id`
