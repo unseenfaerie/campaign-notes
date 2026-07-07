@@ -3,33 +3,32 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const bcrypt = require('bcryptjs');
 
+const { seedUsers } = loadSeedUsersModule();
+
+function loadSeedUsersModule() {
+  try {
+    return require('./seedUsers.local');
+  } catch (error) {
+    const isMissingLocalModule =
+      error &&
+      error.code === 'MODULE_NOT_FOUND' &&
+      typeof error.message === 'string' &&
+      error.message.includes('seedUsers.local');
+
+    if (!isMissingLocalModule) {
+      throw error;
+    }
+
+    return require('./seedUsers.defaults');
+  }
+}
+
 const dbPath = path.join(__dirname, '../campaign.db');
 const db = new sqlite3.Database(dbPath);
 
 db.serialize(() => {
   const nowIso = new Date().toISOString();
-  const dmPasswordHash = bcrypt.hashSync('change-me-dm-password', 12);
-  const playerPasswordHash = bcrypt.hashSync('change-me-player-password', 12);
-  const viewerPasswordHash = bcrypt.hashSync('change-me-viewer-password', 12);
-
-  console.log('Inserting users...');
-  db.run(
-    `INSERT INTO users (id, username, password_hash, role, disabled, created_at, updated_at) VALUES
-      ('dm-admin', 'dm-admin', ?, 'dm', 0, ?, ?),
-      ('player-one', 'player-one', ?, 'player', 0, ?, ?),
-      ('viewer-one', 'viewer-one', ?, 'viewer', 0, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET
-      username = excluded.username,
-      password_hash = excluded.password_hash,
-      role = excluded.role,
-      disabled = excluded.disabled,
-      updated_at = excluded.updated_at;`,
-    [
-      dmPasswordHash, nowIso, nowIso,
-      playerPasswordHash, nowIso, nowIso,
-      viewerPasswordHash, nowIso, nowIso,
-    ]
-  );
+  seedUsers({ db, bcrypt, nowIso });
 
   console.log('Inserting characters...');
   db.run(`INSERT OR IGNORE INTO characters (id, type, name, age, ancestry, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, short_description, long_explanation) VALUES

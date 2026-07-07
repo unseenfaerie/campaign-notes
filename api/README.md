@@ -29,6 +29,8 @@ Core files:
 - [data/db.js](data/db.js): DB connection and schema init orchestration
 - [data/schemaBuilder.js](data/schemaBuilder.js): SQL generation from manifest
 - [scripts/seed.js](scripts/seed.js): Example data seeding
+- [scripts/seedUsers.defaults.js](scripts/seedUsers.defaults.js): Default seeded auth users
+- [scripts/seedUsers.local.example.js](scripts/seedUsers.local.example.js): Local-only credentials template
 - [scripts/validateSeed.js](scripts/validateSeed.js): Seed row-value count validator
 
 ## Install
@@ -78,6 +80,14 @@ Run seed script:
 node scripts/seed.js
 ```
 
+Optional local credential override (kept out of git):
+
+```bash
+cp scripts/seedUsers.local.example.js scripts/seedUsers.local.js
+```
+
+Then edit `scripts/seedUsers.local.js` with your local nonprod usernames/passwords.
+
 Default port: `3001`
 
 Health check:
@@ -103,7 +113,7 @@ Set these environment variables before running in non-local environments:
 - `COOKIE_SECURE` (`true` in production over HTTPS)
 - `COOKIE_SAMESITE` (default: `strict`)
 
-Seeded development users (from `scripts/seed.js`):
+Seeded development users (from `scripts/seedUsers.defaults.js` unless overridden by `scripts/seedUsers.local.js`):
 
 - `dm-admin` / `change-me-dm-password`
 - `player-one` / `change-me-player-password`
