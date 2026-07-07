@@ -130,12 +130,21 @@ Change these passwords immediately in shared environments.
 - `POST /api/auth/logout`
 - `GET /api/auth/me`
 
+- `PATCH /api/admin/me/username`
+- `PATCH /api/admin/me/password`
+- `GET /api/admin/users`
+- `POST /api/admin/users`
+- `PATCH /api/admin/users/:userId`
+- `DELETE /api/admin/users/:userId`
+- `GET /api/admin/anchors/characters`
+- `GET /api/admin/users/:userId/anchors/characters`
+- `PUT /api/admin/users/:userId/anchors/characters/:characterId`
+- `DELETE /api/admin/users/:userId/anchors/characters/:characterId`
+- `POST /api/admin/users/:userId/revoke-sessions`
+
 
 - `GET /api/data/resources`
 - `GET /api/data/:resource`
-
-- `GET /api/wiki/pages/:slug`
-
 
 - `POST /api/:entityRoute`
 - `GET /api/:entityRoute`
@@ -215,6 +224,14 @@ curl http://localhost:3001/api/characters/releas-neb/items
 
 Note: direct domain mutation routes (`POST`, `PATCH`, `DELETE`) now require a `dm` role access token.
 
+Player mutation exception:
+
+- `player` users may call `PATCH` for fields that define `access.playerPatch` in `common/domainManifest.js`.
+- Current baseline grants player edits to:
+  - `Character.long_explanation` for characters anchored to that user.
+  - Relation `long_explanation` payload fields when the relation includes at least one anchored character for that user.
+- All non-marked fields remain canonical and `dm`-only.
+
 ## Auth Router (`/api/auth`)
 
 ### `POST /api/auth/token`
@@ -254,15 +271,127 @@ curl http://localhost:3001/api/auth/me \
   -H "Authorization: Bearer <access-token>"
 ```
 
-## Wiki Router (`/api/wiki`)
+## Admin Router (`/api/admin`)
 
-### `GET /api/wiki/pages/:slug`
+All `/api/admin` routes require `Authorization: Bearer <access-token>`.
 
-Returns page sections filtered by API-enforced visibility policy.
+DM-only routes are marked below.
+
+### `PATCH /api/admin/me/username`
+
+Update your own username.
 
 ```bash
-curl http://localhost:3001/api/wiki/pages/coup-of-wavethorn \
-  -H "Authorization: Bearer <access-token>"
+curl -X PATCH http://localhost:3001/api/admin/me/username \
+  -H "Authorization: Bearer <access-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"new-handle"}'
+```
+
+### `PATCH /api/admin/me/password`
+
+Update your own password.
+
+```bash
+curl -X PATCH http://localhost:3001/api/admin/me/password \
+  -H "Authorization: Bearer <access-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"currentPassword":"old-password","newPassword":"new-password-123"}'
+```
+
+### `GET /api/admin/users` (dm only)
+
+List users.
+
+```bash
+curl http://localhost:3001/api/admin/users \
+  -H "Authorization: Bearer <dm-access-token>"
+```
+
+### `POST /api/admin/users` (dm only)
+
+Create user.
+
+```bash
+curl -X POST http://localhost:3001/api/admin/users \
+  -H "Authorization: Bearer <dm-access-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "new-player",
+    "username": "new-player",
+    "password": "strong-pass-1",
+    "role": "player",
+    "disabled": false
+  }'
+```
+
+### `PATCH /api/admin/users/:userId` (dm only)
+
+Edit user fields (`username`, `role`, `disabled`, `password`).
+
+```bash
+curl -X PATCH http://localhost:3001/api/admin/users/player-one \
+  -H "Authorization: Bearer <dm-access-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "player-one-updated",
+    "disabled": false,
+    "role": "player"
+  }'
+```
+
+### `DELETE /api/admin/users/:userId` (dm only)
+
+Delete user.
+
+```bash
+curl -X DELETE http://localhost:3001/api/admin/users/viewer-one \
+  -H "Authorization: Bearer <dm-access-token>"
+```
+
+### `GET /api/admin/anchors/characters` (dm only)
+
+List all character-user anchors.
+
+```bash
+curl http://localhost:3001/api/admin/anchors/characters \
+  -H "Authorization: Bearer <dm-access-token>"
+```
+
+### `GET /api/admin/users/:userId/anchors/characters` (dm only)
+
+List character anchors for one user.
+
+```bash
+curl http://localhost:3001/api/admin/users/player-one/anchors/characters \
+  -H "Authorization: Bearer <dm-access-token>"
+```
+
+### `PUT /api/admin/users/:userId/anchors/characters/:characterId` (dm only)
+
+Anchor a character to a user.
+
+```bash
+curl -X PUT http://localhost:3001/api/admin/users/player-one/anchors/characters/releas-neb \
+  -H "Authorization: Bearer <dm-access-token>"
+```
+
+### `DELETE /api/admin/users/:userId/anchors/characters/:characterId` (dm only)
+
+Remove a character anchor.
+
+```bash
+curl -X DELETE http://localhost:3001/api/admin/users/player-one/anchors/characters/releas-neb \
+  -H "Authorization: Bearer <dm-access-token>"
+```
+
+### `POST /api/admin/users/:userId/revoke-sessions` (dm only)
+
+Revoke all refresh sessions for a user.
+
+```bash
+curl -X POST http://localhost:3001/api/admin/users/player-one/revoke-sessions \
+  -H "Authorization: Bearer <dm-access-token>"
 ```
 
 ### `PATCH /api/:entityRoute/:id`

@@ -42,6 +42,12 @@ db.serialize(() => {
     ('gereg', 'npc', 'Gereg', 41, 'human', 'Thief', '5', 'Neutral Evil', NULL, NULL, NULL, NULL, NULL, NULL, 20, 0, 'A resident of Wavethorn.', 'Long Explanation.');
   `);
 
+  console.log('Inserting user_character_anchors...');
+  db.run(`INSERT OR IGNORE INTO user_character_anchors (character_id, user_id, created_at) VALUES
+    ('alann-barnett', 'alice', ?),
+    ('releas-neb', 'keith', ?);
+  `, [nowIso, nowIso]);
+
   console.log('Inserting deities...');
   db.run(`INSERT OR IGNORE INTO deities (id, name, pantheon, alignment, short_description, long_explanation) VALUES
     ('achiel', 'Achiel', 'Main Human', 'Lawful Good', 'God of Light.', 'Long Explanation.'),

@@ -39,17 +39,14 @@ function getAuthCreateTableSql() {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_refresh_sessions_user_id ON refresh_sessions(user_id)`,
     `CREATE INDEX IF NOT EXISTS idx_refresh_sessions_expires_at ON refresh_sessions(expires_at)`,
-    `CREATE TABLE IF NOT EXISTS wiki_content_slices (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      page_slug TEXT NOT NULL,
-      section_key TEXT NOT NULL,
-      content_json TEXT NOT NULL,
-      visibility_policy TEXT NOT NULL,
+    `CREATE TABLE IF NOT EXISTS user_character_anchors (
+      character_id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
       created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      UNIQUE(page_slug, section_key)
+      FOREIGN KEY(user_id) REFERENCES users(id),
+      FOREIGN KEY(character_id) REFERENCES characters(id)
     )`,
-    `CREATE INDEX IF NOT EXISTS idx_wiki_content_slices_page_slug ON wiki_content_slices(page_slug)`,
+    `CREATE INDEX IF NOT EXISTS idx_user_character_anchors_user_id ON user_character_anchors(user_id)`,
   ];
 }
 

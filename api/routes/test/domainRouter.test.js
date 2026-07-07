@@ -11,6 +11,10 @@ jest.mock('../../data/genericCrudService', () => ({
     },
 }));
 
+jest.mock('../../data/authRepository', () => ({
+    listAnchoredCharacterIdsByUserId: jest.fn(),
+}));
+
 jest.mock('../../utils/manifestHelpers', () => ({
     coerceValueByType: jest.fn(),
     getEntityByRoute: jest.fn(),
@@ -96,12 +100,20 @@ jest.mock('../../../common/domainManifest', () => ({
 }));
 
 const { manifestCrudService } = require('../../data/genericCrudService');
+const { listAnchoredCharacterIdsByUserId } = require('../../data/authRepository');
 const manifestHelpers = require('../../utils/manifestHelpers');
 const router = require('../domainRouter');
 
 function createTestApp() {
     const app = express();
     app.use(express.json());
+    app.use((req, _res, next) => {
+        req.auth = {
+            userId: req.headers['x-test-user'] || 'dm-admin',
+            role: req.headers['x-test-role'] || 'dm',
+        };
+        next();
+    });
     app.use('/api', router);
     return app;
 }
@@ -122,7 +134,8 @@ function buildEntity(entityName, route, idType = 'string') {
 }
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
+    listAnchoredCharacterIdsByUserId.mockResolvedValue([]);
 
     manifestHelpers.coerceValueByType.mockImplementation((type, value) => {
         if (type === 'number') {
@@ -150,6 +163,55 @@ beforeEach(() => {
     });
 
     manifestHelpers.conformObjectToEntity.mockImplementation((obj) => obj);
+    manifestHelpers.omitKeys.mockImplementation((record, keys) => {
+        const normalized = { ...record };
+        for (const key of keys) {
+            delete normalized[key];
+        }
+        return normalized;
+    });
+    manifestHelpers.dedupeRows.mockImplementation((rows) => {
+        const seen = new Set();
+        const deduped = [];
+
+        for (const row of rows) {
+            const key = JSON.stringify(row);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            deduped.push(row);
+        }
+
+        return deduped;
+    });
+    manifestHelpers.getRelationContext.mockImplementation((members, anchorMemberIndex) => ({
+        anchorMember: members[anchorMemberIndex],
+        relatedMember: members[anchorMemberIndex === 0 ? 1 : 0],
+    }));
+    manifestHelpers.getRelatedIdForRow.mockImplementation((row, members, sourceId, anchorMemberIndex) => {
+        const anchorMember = members[anchorMemberIndex];
+        const relatedMember = members[anchorMemberIndex === 0 ? 1 : 0];
+
+        if (anchorMember.entity === relatedMember.entity) {
+            const anchorMatches = row[anchorMember.key] === sourceId;
+            const relatedMatches = row[relatedMember.key] === sourceId;
+
+            if (anchorMatches && relatedMatches) {
+                return sourceId;
+            }
+
+            if (anchorMatches) {
+                return row[relatedMember.key];
+            }
+
+            if (relatedMatches) {
+                return row[anchorMember.key];
+            }
+
+            return null;
+        }
+
+        return row[relatedMember.key];
+    });
 });
 
 describe('domainRouter isolated unit tests', () => {
@@ -565,6 +627,89 @@ describe('domainRouter isolated unit tests', () => {
         );
     });
 
+    it('PATCH /:entityRoute/:id allows player updates to anchored character long_explanation', async () => {
+        manifestHelpers.getEntityByRoute.mockImplementationOnce(() => ({
+            entityName: 'Character',
+            entityDef: {
+                route: 'characters',
+                idField: 'id',
+                fields: {
+                    id: { type: 'string' },
+                    long_explanation: {
+                        type: 'string',
+                        access: {
+                            playerPatch: {
+                                ownership: {
+                                    type: 'anchored-character',
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        }));
+        listAnchoredCharacterIdsByUserId.mockResolvedValueOnce(['char-1']);
+        manifestCrudService.update.mockResolvedValueOnce({
+            updated: 1,
+            record: { id: 'char-1', long_explanation: 'player text' },
+        });
+
+        const response = await request(app)
+            .patch('/api/characters/char-1')
+            .set('x-test-role', 'player')
+            .set('x-test-user', 'player-one')
+            .send({ long_explanation: 'player text' });
+
+        expect(response.status).toBe(200);
+        expect(listAnchoredCharacterIdsByUserId).toHaveBeenCalledWith('player-one');
+    });
+
+    it('PATCH /:entityRoute/:id blocks player updates to dm-only fields', async () => {
+        const response = await request(app)
+            .patch('/api/characters/char-1')
+            .set('x-test-role', 'player')
+            .set('x-test-user', 'player-one')
+            .send({ name: 'Nope' });
+
+        expect(response.status).toBe(403);
+        expect(response.body).toEqual({ error: 'Field is dm-only: name' });
+        expect(manifestCrudService.update).not.toHaveBeenCalled();
+    });
+
+    it('PATCH /:entityRoute/:id blocks player updates to unanchored character records', async () => {
+        manifestHelpers.getEntityByRoute.mockImplementationOnce(() => ({
+            entityName: 'Character',
+            entityDef: {
+                route: 'characters',
+                idField: 'id',
+                fields: {
+                    id: { type: 'string' },
+                    long_explanation: {
+                        type: 'string',
+                        access: {
+                            playerPatch: {
+                                ownership: {
+                                    type: 'anchored-character',
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        }));
+        listAnchoredCharacterIdsByUserId.mockResolvedValueOnce(['char-2']);
+
+        const response = await request(app)
+            .patch('/api/characters/char-1')
+            .set('x-test-role', 'player')
+            .set('x-test-user', 'player-one')
+            .send({ long_explanation: 'player text' });
+
+        expect(response.status).toBe(403);
+        expect(response.body).toEqual({ error: 'Players may only patch anchored character records' });
+        expect(manifestCrudService.update).not.toHaveBeenCalled();
+    });
+
     it('PATCH /:entityRoute/:id returns 404 when update affects no record', async () => {
         manifestCrudService.update.mockResolvedValueOnce({ updated: 0, record: null });
 
@@ -628,7 +773,17 @@ describe('domainRouter isolated unit tests', () => {
                 ],
                 payload: {
                     short_description: { type: 'string', required: true },
-                    long_explanation: { type: 'string' },
+                    long_explanation: {
+                        type: 'string',
+                        access: {
+                            playerPatch: {
+                                ownership: {
+                                    type: 'anchored-character',
+                                    relationMemberEntity: 'Character',
+                                },
+                            },
+                        },
+                    },
                 },
             },
             anchorMemberIndex: 0,
@@ -665,6 +820,93 @@ describe('domainRouter isolated unit tests', () => {
             { character_id: 'char-1', item_id: 'item-1' },
             { short_description: 'updated context' }
         );
+    });
+
+    it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId allows player updates for anchored character relation long_explanation', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'EventItem',
+            relationDef: {
+                kind: 'relationship',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {
+                    long_explanation: {
+                        type: 'string',
+                        access: {
+                            playerPatch: {
+                                ownership: {
+                                    type: 'anchored-character',
+                                    relationMemberEntity: 'Character',
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            anchorMemberIndex: 0,
+        });
+        listAnchoredCharacterIdsByUserId.mockResolvedValueOnce(['char-1']);
+        manifestCrudService.getOne
+            .mockResolvedValueOnce({ id: 'char-1' })
+            .mockResolvedValueOnce({ id: 'char-1' });
+        manifestCrudService.update.mockResolvedValueOnce({
+            updated: 1,
+            record: { character_id: 'char-1', item_id: 'char-1', long_explanation: 'player text' },
+        });
+
+        const response = await request(app)
+            .patch('/api/characters/char-1/items/char-1')
+            .set('x-test-role', 'player')
+            .set('x-test-user', 'player-one')
+            .send({ long_explanation: 'player text' });
+
+        expect(response.status).toBe(200);
+        expect(listAnchoredCharacterIdsByUserId).toHaveBeenCalledWith('player-one');
+    });
+
+    it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId blocks player updates when relation is not tied to anchored character', async () => {
+        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
+            relationName: 'EventItem',
+            relationDef: {
+                kind: 'relationship',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+                payload: {
+                    long_explanation: {
+                        type: 'string',
+                        access: {
+                            playerPatch: {
+                                ownership: {
+                                    type: 'anchored-character',
+                                    relationMemberEntity: 'Character',
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            anchorMemberIndex: 0,
+        });
+        listAnchoredCharacterIdsByUserId.mockResolvedValueOnce(['char-9']);
+        manifestCrudService.getOne
+            .mockResolvedValueOnce({ id: 'char-1' })
+            .mockResolvedValueOnce({ id: 'char-1' });
+
+        const response = await request(app)
+            .patch('/api/characters/char-1/items/char-1')
+            .set('x-test-role', 'player')
+            .set('x-test-user', 'player-one')
+            .send({ long_explanation: 'player text' });
+
+        expect(response.status).toBe(403);
+        expect(response.body).toEqual({
+            error: 'Players may only patch relation records tied to anchored characters',
+        });
+        expect(manifestCrudService.update).not.toHaveBeenCalled();
     });
 
     it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId updates a specific history record by query selector', async () => {
