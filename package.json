@@ -6,6 +6,9 @@
   ],
   "scripts": {
     "api:start": "npm --workspace api run start",
-    "api:test": "npm --workspace api run test"
+    "api:test": "npm --workspace api run test",
+    "wiki:start": "npm --prefix wiki run dev",
+    "wiki:build": "npm --prefix wiki run build",
+    "wiki:preview": "npm --prefix wiki run preview"
   }
 }
