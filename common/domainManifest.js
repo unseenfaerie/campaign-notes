@@ -27,7 +27,16 @@ const domainManifest = {
                 total_health: { type: 'number' },
                 deceased: { type: 'number', required: true },
                 short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
+                long_explanation: {
+                    type: 'string',
+                    access: {
+                        playerPatch: {
+                            ownership: {
+                                type: 'anchored-character',
+                            },
+                        },
+                    },
+                },
             },
         },
         Deity: {
@@ -154,7 +163,17 @@ const domainManifest = {
                 dissolution_date: { type: 'string' },
                 relationship_type: { type: 'string' },
                 short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
+                long_explanation: {
+                    type: 'string',
+                    access: {
+                        playerPatch: {
+                            ownership: {
+                                type: 'anchored-character',
+                                relationMemberEntity: 'Character',
+                            },
+                        },
+                    },
+                },
             },
         },
         CharacterItem: {
@@ -187,7 +206,17 @@ const domainManifest = {
                 joined_date: { type: 'string', required: true },
                 left_date: { type: 'string' },
                 short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
+                long_explanation: {
+                    type: 'string',
+                    access: {
+                        playerPatch: {
+                            ownership: {
+                                type: 'anchored-character',
+                                relationMemberEntity: 'Character',
+                            },
+                        },
+                    },
+                },
             },
         },
         CharacterPlace: {
@@ -204,7 +233,17 @@ const domainManifest = {
                 arrived_date: { type: 'string', required: true },
                 left_date: { type: 'string' },
                 short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
+                long_explanation: {
+                    type: 'string',
+                    access: {
+                        playerPatch: {
+                            ownership: {
+                                type: 'anchored-character',
+                                relationMemberEntity: 'Character',
+                            },
+                        },
+                    },
+                },
             },
         },
         CharacterRelationship: {
@@ -222,7 +261,17 @@ const domainManifest = {
                 dissolution_date: { type: 'string' },
                 relationship_type: { type: 'string', required: true },
                 short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
+                long_explanation: {
+                    type: 'string',
+                    access: {
+                        playerPatch: {
+                            ownership: {
+                                type: 'anchored-character',
+                                relationMemberEntity: 'Character',
+                            },
+                        },
+                    },
+                },
             },
         },
         DeitySphere: {
@@ -245,7 +294,17 @@ const domainManifest = {
             keys: ['event_id', 'character_id'],
             payload: {
                 short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
+                long_explanation: {
+                    type: 'string',
+                    access: {
+                        playerPatch: {
+                            ownership: {
+                                type: 'anchored-character',
+                                relationMemberEntity: 'Character',
+                            },
+                        },
+                    },
+                },
             },
         },
         EventDeity: {
