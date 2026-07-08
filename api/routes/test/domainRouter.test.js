@@ -96,6 +96,22 @@ jest.mock('../../../common/domainManifest', () => ({
                 fields: { id: { type: 'number' } },
             },
         },
+        relations: {
+            CharacterItem: {
+                kind: 'history',
+                members: [
+                    { entity: 'Character', key: 'character_id', route: 'items' },
+                    { entity: 'Item', key: 'item_id', route: 'characters' },
+                ],
+            },
+            EventCharacter: {
+                kind: 'relationship',
+                members: [
+                    { entity: 'Deity', key: 'deity_id', route: 'characters' },
+                    { entity: 'Character', key: 'character_id', route: 'deities' },
+                ],
+            },
+        },
     },
 }));
 
@@ -265,6 +281,72 @@ describe('domainRouter isolated unit tests', () => {
 
         expect(response.status).toBe(400);
         expect(response.body).toEqual({ error: 'Invalid number value: not-a-number' });
+    });
+
+    it('GET /:entityRoute/:id/full returns entity plus all related groups for that route', async () => {
+        manifestCrudService.getOne.mockImplementation(async (resourceName, where) => {
+            if (resourceName === 'Character' && where.id === 'char-1') {
+                return { id: 'char-1', name: 'Hero' };
+            }
+            if (resourceName === 'Item' && where.id === 'item-1') {
+                return { id: 'item-1', name: 'Sword' };
+            }
+            if (resourceName === 'Deity' && where.id === 'deity-1') {
+                return { id: 'deity-1', name: 'Sun God' };
+            }
+            return null;
+        });
+
+        manifestCrudService.getMany
+            .mockResolvedValueOnce([
+                {
+                    character_id: 'char-1',
+                    item_id: 'item-1',
+                    acquired_date: 'jan-01-200',
+                    relinquished_date: null,
+                    short_description: 'Current possession',
+                },
+            ])
+            .mockResolvedValueOnce([
+                {
+                    deity_id: 'deity-1',
+                    character_id: 'char-1',
+                    short_description: 'Favored by the dawn',
+                },
+            ]);
+
+        const response = await request(app).get('/api/characters/char-1/full');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({
+            entity: { id: 'char-1', name: 'Hero' },
+            related: {
+                items: [
+                    {
+                        id: 'item-1',
+                        name: 'Sword',
+                        history: [
+                            {
+                                acquired_date: 'jan-01-200',
+                                relinquished_date: null,
+                                short_description: 'Current possession',
+                            },
+                        ],
+                    },
+                ],
+                deities: [
+                    {
+                        id: 'deity-1',
+                        name: 'Sun God',
+                        relationship: {
+                            short_description: 'Favored by the dawn',
+                        },
+                    },
+                ],
+            },
+        });
+        expect(manifestCrudService.getMany).toHaveBeenNthCalledWith(1, 'CharacterItem', { character_id: 'char-1' });
+        expect(manifestCrudService.getMany).toHaveBeenNthCalledWith(2, 'EventCharacter', { character_id: 'char-1' });
     });
 
     it('GET /:entityRoute/:id/:relatedRoute returns 404 on unknown related route', async () => {

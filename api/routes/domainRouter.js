@@ -54,6 +54,34 @@ async function loadAssociatedRecords(relationName, relationDef, sourceId, anchor
     return relationRows;
 }
 
+function getFullRelationsForEntityRoute(entityRoute) {
+    const relations = [];
+
+    for (const [relationName, relationDef] of Object.entries(domainManifest.relations || {})) {
+        const members = getRelationMembers(relationDef);
+
+        for (let anchorMemberIndex = 0; anchorMemberIndex < members.length; anchorMemberIndex += 1) {
+            const anchorMember = members[anchorMemberIndex];
+            const anchorEntityDef = domainManifest.entities[anchorMember.entity];
+
+            if (!anchorEntityDef || anchorEntityDef.route !== entityRoute) {
+                continue;
+            }
+
+            relations.push({
+                relationName,
+                relationDef,
+                anchorMemberIndex,
+                relatedRoute: anchorMember.route,
+            });
+
+            break;
+        }
+    }
+
+    return relations;
+}
+
 function buildRelationWhereCandidates({
     members,
     anchorMemberIndex,
@@ -632,6 +660,40 @@ router.post('/:entityRoute/:id/:relatedRoute', async (req, res) => {
             return res.status(404).json({ error: 'Record not found' });
         }
 
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
+router.get('/:entityRoute/:id/full', async (req, res) => {
+    try {
+        const { entityName, idField, idValue } = getEntityLookup(req.params);
+
+        const record = await manifestCrudService.getOne(entityName, {
+            [idField]: idValue,
+        });
+
+        if (!record) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        const related = {};
+        const relations = getFullRelationsForEntityRoute(req.params.entityRoute);
+
+        for (const relation of relations) {
+            related[relation.relatedRoute] = await loadAssociatedRecords(
+                relation.relationName,
+                relation.relationDef,
+                idValue,
+                relation.anchorMemberIndex
+            );
+        }
+
+        return res.json({
+            entity: record,
+            related,
+        });
+    } catch (err) {
         const httpErr = toHttpError(err);
         return res.status(httpErr.status).json({ error: httpErr.message });
     }

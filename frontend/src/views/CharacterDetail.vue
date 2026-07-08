@@ -124,12 +124,16 @@ export default {
 			const id = this.$route.params.id;
 			getFullCharacterById(id)
 				.then(data => {
-					this.character = data;
-					this.editCharacter = { ...data };
-					this.deities = data.deities || [];
-					this.organizations = data.organizations || [];
-					this.items = data.items || [];
-					this.relationships = data.relationships || [];
+					const entity = data.entity || null;
+					const related = data.related || {};
+
+					this.character = entity;
+					this.editCharacter = entity ? { ...entity } : null;
+					this.deities = related.deities || [];
+					this.organizations = related.organizations || [];
+					this.items = related.items || [];
+					this.events = related.events || [];
+					this.relationships = related.relationships || [];
 				})
 				.catch(err => {
 					console.error('Error fetching character:', err);
