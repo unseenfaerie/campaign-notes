@@ -2,6 +2,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const { initializeDatabase } = require('../data/db');
 
 const { seedUsers } = loadSeedUsersModule();
 
@@ -26,12 +27,40 @@ function loadSeedUsersModule() {
 const dbPath = path.join(__dirname, '../campaign.db');
 const db = new sqlite3.Database(dbPath);
 
-db.serialize(() => {
-  const nowIso = new Date().toISOString();
-  seedUsers({ db, bcrypt, nowIso });
+function runSql(label, sql, params = []) {
+  return new Promise((resolve, reject) => {
+    console.log(label);
+    db.run(sql, params, (error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
 
-  console.log('Inserting characters...');
-  db.run(`INSERT OR IGNORE INTO characters (id, type, name, age, ancestry, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, short_description, long_explanation) VALUES
+      resolve();
+    });
+  });
+}
+
+function closeDatabase() {
+  return new Promise((resolve, reject) => {
+    db.close((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve();
+    });
+  });
+}
+
+async function main() {
+  await initializeDatabase(db);
+
+  const nowIso = new Date().toISOString();
+  await seedUsers({ bcrypt, nowIso, runSql });
+
+  await runSql(`Inserting characters...`, `INSERT OR IGNORE INTO characters (id, type, name, age, ancestry, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, short_description, long_explanation) VALUES
     ('alann-barnett', 'pc', 'Alann Barnett', 32, 'human', 'Cleric', '4', 'Neutral Good', 13, 8, 11, 10, 14, 11, 20, 0, 'A thoughtful and strong-willed adventurer.', 'Long Explanation.'),
     ('releas-neb', 'pc', 'Releas Neb', 28, 'human', 'Magic User', '7', 'Chaotic Good', 5, 14, 10, 18, 13, 9, 16, 0, 'A clever and resourceful wizard.', 'Long Explanation.'),
     ('appolonia-palleday', 'pc', 'Appolonia Palleday', 16, 'human', 'Magic User', '5', 'Neutral Good', 13, 8, 11, 18, 14, 11, 18, 0, 'A bright and curious spellcaster.', 'Long Explanation.'),
@@ -42,14 +71,12 @@ db.serialize(() => {
     ('gereg', 'npc', 'Gereg', 41, 'human', 'Thief', '5', 'Neutral Evil', NULL, NULL, NULL, NULL, NULL, NULL, 20, 0, 'A resident of Wavethorn.', 'Long Explanation.');
   `);
 
-  console.log('Inserting user_character_anchors...');
-  db.run(`INSERT OR IGNORE INTO user_character_anchors (character_id, user_id, created_at) VALUES
+  await runSql(`Inserting user_character_anchors...`, `INSERT OR IGNORE INTO user_character_anchors (character_id, user_id, created_at) VALUES
     ('alann-barnett', 'alice', ?),
     ('releas-neb', 'keith', ?);
   `, [nowIso, nowIso]);
 
-  console.log('Inserting deities...');
-  db.run(`INSERT OR IGNORE INTO deities (id, name, pantheon, alignment, short_description, long_explanation) VALUES
+  await runSql(`Inserting deities...`, `INSERT OR IGNORE INTO deities (id, name, pantheon, alignment, short_description, long_explanation) VALUES
     ('achiel', 'Achiel', 'Main Human', 'Lawful Good', 'God of Light.', 'Long Explanation.'),
     ('idona', 'Idona', 'Main Human', 'Chaotic Good', 'Goddess of Humanity.', 'The patron goddess of and mother to Humankind. Her nurturing guidance shows us what we need to know to thrive. Those that worship Idona are numerous within the Othlorin. She is primarily worshipped as Achiels Wife, deserving of respect and credence. There are some women who have dedicated their lives to interpreting the messages of the moon as those are what Idona intends.'),
     ('ponat', 'Ponat', 'Main Human', 'Lawful Good', 'God of Fortress and protection.', 'Long Explanation.'),
@@ -60,21 +87,18 @@ db.serialize(() => {
     ('doh', 'Doh', 'Main Human', 'Lawful Neutral', 'God of Law.', 'Long Explanation.');
   `);
 
-  console.log('Inserting events...');
-  db.run(`INSERT OR IGNORE INTO events (id, name, real_world_date, in_game_time, previous_event_id, next_event_id, short_description, long_explanation) VALUES
-    ('coup-of-wavethorn', 'The Coup of Wavethorn', '2025-08-01', 'OMAR 1', NULL, 'night-of-spiders', 'Rel, Cormac, Alann, and Durchir arrive in Othlorin at the port city of Wavethorn and upend the local government.', 'Approximately 200 years after the fall of Vokdjinn... A new adventuring party takes shape. Rel, Durchir, Alann, and Cormac come to Othlorin from Gatûn. Some seek the riches that lie in the ruins of the old elven homeland. They settle into Wavethorn, a merchant''s city on the edge of the sea. Before long, they are suspected of murder. Their confidant Bert Verinwort is later framed for a demonic ritual murder of several prominent figures in town, including his uncle Phil Verinwort. After being kidnapped by Wyvernfang bandits, the party understands the conspiracy to remove political threats to those that the Wyvernfang have installed on the council. Brae Novan and Daniel Hillstop are connected to the gang. After gathering evidence against these parties, the party clears a nearby dungeon of Wyvernfang and uses a massive amount of money they found to bankroll a coup of the government. The coup succeeds and a new, more balanced, three-council-oligarchy is implemented by Bert. This endeavor was made possible by an underground crime lord named Gereg. Due to his involvement, the party was obliged to put him into power on the Mercantile council. Brae and Daniel escaped execution by fleeing the town before the new regime was enacted.'),
-    ('night-of-spiders', 'The Night of Spiders', '2025-08-02', 'OMAR 2', 'coup-of-wavethorn', NULL, 'Rel, Cormac, Alann, and Durchir track down a bounty for the Adventurer''s Guild and uncover sinsiter evil.', 'Rel, Cormac, Alann, and Durchir join the Adventurer''s Guild! Their first quest is to bring three purported outlaws to justice. These women have been seen impersonating Winged Blades of Wyaris and harassing Ponat worshippers. The party tracks down the individuals and brings them to jail in Wavethorn. After doing this, they hear word that other adventurers from the guild is in trouble in the ruins of Aranil. Naturally they investigate. Upon entering, the party is subjected to a horrifying spider illusion dungeon. Walls of spiders with a horrifying human form flowing through them chase the party down endless halls. After finding and slaying a witch in a crimson robe, they save the weakened other party. They return to Wavethorn to find out that the trial of the three that they had captured was an absolute bloodbath. Every single person in the courtroom was killed. Seeking these three once again the party heads to some coastal caves. They find a strange and magical experimentation lab set up. The place is abandoned, save for a man composed of spiders. As Durchir strikes this man with his sword, he disintegrates part by part into tiny spiders and crawls apart.');
+  await runSql(`Inserting events...`, `INSERT OR IGNORE INTO events (id, name, real_world_date, in_game_time, previous_event_id, next_event_id, short_description, long_explanation) VALUES
+    ('coup-of-wavethorn', 'The Coup of Wavethorn', '2025-08-01', 'oct-03-200', NULL, 'night-of-spiders', 'Rel, Cormac, Alann, and Durchir arrive in Othlorin at the port city of Wavethorn and upend the local government.', 'Approximately 200 years after the fall of Vokdjinn... A new adventuring party takes shape. Rel, Durchir, Alann, and Cormac come to Othlorin from Gatûn. Some seek the riches that lie in the ruins of the old elven homeland. They settle into Wavethorn, a merchant''s city on the edge of the sea. Before long, they are suspected of murder. Their confidant Bert Verinwort is later framed for a demonic ritual murder of several prominent figures in town, including his uncle Phil Verinwort. After being kidnapped by Wyvernfang bandits, the party understands the conspiracy to remove political threats to those that the Wyvernfang have installed on the council. Brae Novan and Daniel Hillstop are connected to the gang. After gathering evidence against these parties, the party clears a nearby dungeon of Wyvernfang and uses a massive amount of money they found to bankroll a coup of the government. The coup succeeds and a new, more balanced, three-council-oligarchy is implemented by Bert. This endeavor was made possible by an underground crime lord named Gereg. Due to his involvement, the party was obliged to put him into power on the Mercantile council. Brae and Daniel escaped execution by fleeing the town before the new regime was enacted.'),
+    ('night-of-spiders', 'The Night of Spiders', '2025-08-02', 'oct-27-200', 'coup-of-wavethorn', NULL, 'Rel, Cormac, Alann, and Durchir track down a bounty for the Adventurer''s Guild and uncover sinsiter evil.', 'Rel, Cormac, Alann, and Durchir join the Adventurer''s Guild! Their first quest is to bring three purported outlaws to justice. These women have been seen impersonating Winged Blades of Wyaris and harassing Ponat worshippers. The party tracks down the individuals and brings them to jail in Wavethorn. After doing this, they hear word that other adventurers from the guild is in trouble in the ruins of Aranil. Naturally they investigate. Upon entering, the party is subjected to a horrifying spider illusion dungeon. Walls of spiders with a horrifying human form flowing through them chase the party down endless halls. After finding and slaying a witch in a crimson robe, they save the weakened other party. They return to Wavethorn to find out that the trial of the three that they had captured was an absolute bloodbath. Every single person in the courtroom was killed. Seeking these three once again the party heads to some coastal caves. They find a strange and magical experimentation lab set up. The place is abandoned, save for a man composed of spiders. As Durchir strikes this man with his sword, he disintegrates part by part into tiny spiders and crawls apart.');
   `);
 
-  console.log('Inserting items...');
-  db.run(`INSERT OR IGNORE INTO items (id, name, short_description, long_explanation) VALUES
+  await runSql(`Inserting items...`, `INSERT OR IGNORE INTO items (id, name, short_description, long_explanation) VALUES
     ('cormac-s-spellbook', 'Cormac''s Spellbook', 'The first spellbook belonging to Cormac.', 'Long Explanation.'),
     ('rel-s-spellbook', 'Rel''s Spellbook', 'The first spellbook belonging to Releas.', 'Rel was afforded the best spells his mentor could afford to show him, as Rel was his most promising (and most morally evolved) of his students.'),
     ('polly-s-spellbook', 'Polly''s Spellbook', 'The first spellbook belonging to Polly.', 'This spellbook is a relic of a mysterious order of mages.');
   `);
 
-  console.log('Inserting organizations...');
-  db.run(`INSERT OR IGNORE INTO organizations (id, name, type, short_description, long_explanation) VALUES
+  await runSql(`Inserting organizations...`, `INSERT OR IGNORE INTO organizations (id, name, type, short_description, long_explanation) VALUES
     ('church-of-achiels-light', 'Church of Achiel''s Light', 'religion', 'The main church of Achiel.', 'Long Explanation.'),
     ('order-of-the-iron-duch', 'The Order of the Iron Düch', 'adventuring party', 'A party of heroes.', 'Long Explanation.'),
     ('wyvernfang', 'Wyvernfang', 'adventuring party', 'A group based in Wavethorn.', 'Long Explanation.'),
@@ -84,8 +108,7 @@ db.serialize(() => {
     ('adventurers-guild', 'The Adventurer''s Guild', 'guild', 'A guild for adventurers in Novafell and Wavethorn.', 'Long Explanation.');
   `);
 
-  console.log('Inserting places...');
-  db.run(`INSERT OR IGNORE INTO places (id, name, type, parent_id, short_description, long_explanation) VALUES
+  await runSql(`Inserting places...`, `INSERT OR IGNORE INTO places (id, name, type, parent_id, short_description, long_explanation) VALUES
     ('the-world', 'The World', 'planet', NULL, 'The world of mists.', 'Long Explanation.'),
     ('otlorin', 'Othlorin', 'continent', 'the-world', 'The old land of the elves, now a rapidly burgeoning human territory.', 'Long Explanation.'),
     ('wavethorn', 'Wavethorn', 'city-state', 'othlorin', 'A city-state on the coast.', 'Long Explanation.'),
@@ -94,8 +117,7 @@ db.serialize(() => {
     ('anash', 'Anash', 'city', 'weinmere', 'A city in the Weinmere.', 'Long Explanation.');
   `);
 
-  console.log('Inserting spells...');
-  db.run(`INSERT OR IGNORE INTO spells (id, type, name, level, school, casting_time, range, components, materials, duration, description) VALUES
+  await runSql(`Inserting spells...`, `INSERT OR IGNORE INTO spells (id, type, name, level, school, casting_time, range, components, materials, duration, description) VALUES
     ('fireball', 'arcane', 'Fireball', 3, 'Evocation', '1 action', '150 feet', 'V,S,M', 'Bat guano.','Instantaneous', 'A bright streak flashes to a point you choose.'),
     ('raise-dead', 'divine', 'Raise Dead', 5, NULL, '1 hour', 'Touch', 'V, S, M', 'Mummy wrappings, some kind of salve.', 'Instantaneous', 'Return a dead creature to life.'),
     ('lightning-bolt', 'arcane', 'Lightning Bolt', 3, 'Evocation', '1 action', '100 feet', 'V,S,M', 'A small bit of fulgurite.', 'Instantaneous', 'A stroke of lightning forming a line 100 feet long and 5 feet wide blasts out from you.'),
@@ -106,8 +128,7 @@ db.serialize(() => {
     ('magic-missile', 'arcane', 'Magic Missile', 1, 'Evocation', '1 action', '120 feet', 'V,S', NULL, 'Instantaneous', 'Creates three glowing darts of magical force. 1d4+1 damage per bolt.');
   `);
 
-  console.log('Inserting spheres...');
-  db.run(`INSERT OR IGNORE INTO spheres (id, name, short_description) VALUES
+  await runSql(`Inserting spheres...`, `INSERT OR IGNORE INTO spheres (id, name, short_description) VALUES
     ('all', 'All', 'Sphere of All.'),
     ('animal', 'Animal', 'Sphere of Animal.'),
     ('astral', 'Astral', 'Sphere of Astral.'),
@@ -128,8 +149,7 @@ db.serialize(() => {
 
   // // Join Tables
 
-  console.log('Inserting character_deities...');
-  db.run(`INSERT OR IGNORE INTO character_deities (character_id, deity_id, adopted_date, dissolution_date, relationship_type, short_description, long_explanation) VALUES
+  await runSql(`Inserting character_deities...`, `INSERT OR IGNORE INTO character_deities (character_id, deity_id, adopted_date, dissolution_date, relationship_type, short_description, long_explanation) VALUES
     ('alann-barnett', 'achiel', 'jan-01-200', '', 'patron', 'Short description.', 'Long Explanation.'),
     ('alann-barnett', 'doh', 'jan-01-200', '', 'patron', 'Short description.', 'Long Explanation.'),
     ('releas-neb', 'wyaris', 'jan-01-200', 'dec-31-200', 'patron', 'Short description.', 'Long Explanation.'),
@@ -139,16 +159,14 @@ db.serialize(() => {
     ('cormac', 'idona', 'jan-01-200', '', 'patron', 'Short description.', 'Long Explanation.');
   `);
 
-  console.log('Inserting character_items...');
-  db.run(`INSERT OR IGNORE INTO character_items (character_id, item_id, acquired_date, relinquished_date, short_description) VALUES
+  await runSql(`Inserting character_items...`, `INSERT OR IGNORE INTO character_items (character_id, item_id, acquired_date, relinquished_date, short_description) VALUES
     ('releas-neb', 'rel-s-spellbook', 'feb-06-195', 'mar-06-200', 'Gained from his reclusive master in GatUn, then stolen by ruffians in Wavethorn.'),
     ('releas-neb', 'rel-s-spellbook', 'may-10-200', '', 'Recovered from street ruffians.'),
     ('apollonia-palleday', 'polly-s-spellbook', 'jul-21-200', '', 'Received from her betrothed, Alaric Evermoon.'),
     ('cormac', 'cormac-s-spellbook', 'jun-12-195', '', 'Received from his master.');
   `);
 
-  console.log('Inserting character_organizations...');
-  db.run(`INSERT OR IGNORE INTO character_organizations (character_id, organization_id, joined_date, left_date, short_description, long_explanation) VALUES
+  await runSql(`Inserting character_organizations...`, `INSERT OR IGNORE INTO character_organizations (character_id, organization_id, joined_date, left_date, short_description, long_explanation) VALUES
     ('alann-barnett', 'adventurers-guild', 'jan-01-200', 'dec-31-200', 'Joined the Adventurers Guild to protect Wavethorn, left after the Night of Spiders.', 'Long Explanation.'),
     ('alann-barnett', 'adventurers-guild', 'jan-01-201', '', 'Rejoined due to pressure from the party.', 'Long Explanation.'),
     ('releas-neb', 'adventurers-guild', 'feb-01-200', '', 'Became a member of the Adventurers Guild.', 'Long Explanation.'),
@@ -156,16 +174,14 @@ db.serialize(() => {
     ('cormac', 'adventurers-guild', 'apr-01-200', '', 'Sworn to protect the realm as a knight.', 'Long Explanation.');
   `);
 
-  console.log('Inserting character_places...');
-  db.run(`INSERT OR IGNORE INTO character_places (character_id, place_id, arrived_date, left_date, short_description, long_explanation) VALUES
+  await runSql(`Inserting character_places...`, `INSERT OR IGNORE INTO character_places (character_id, place_id, arrived_date, left_date, short_description, long_explanation) VALUES
     ('alann-barnett', 'wavethorn', 'jan-01-200', 'dec-31-200', 'Hometown and primary setting for early adventures.', 'Long Explanation.'),
     ('releas-neb', 'gatun', 'feb-01-200', 'mar-01-200', 'Met his mentor here.', 'Long Explanation.'),
     ('durchir', 'wavethorn', 'mar-01-200', 'apr-01-200', 'Frequent visitor due to guild activities.', 'Long Explanation.'),
     ('cormac', 'wavethorn', 'apr-01-200', 'may-01-200', 'Sworn to protect the town.', 'Long Explanation.');
   `);
 
-  console.log('Inserting character_relationships...');
-  db.run(`INSERT OR IGNORE INTO character_relationships (character_id, related_id, established_date, dissolution_date, relationship_type, short_description, long_explanation) VALUES
+  await runSql(`Inserting character_relationships...`, `INSERT OR IGNORE INTO character_relationships (character_id, related_id, established_date, dissolution_date, relationship_type, short_description, long_explanation) VALUES
     ('alann-barnett', 'releas-neb', 'jan-01-200', 'dec-31-200', 'ally', 'Short description.', 'Long Explanation.'),
     ('alann-barnett', 'durchir', 'jan-01-200', 'dec-31-200', 'ally', 'Short description.', 'Long Explanation.'),
     ('alann-barnett', 'cormac', 'jan-01-200', 'dec-31-200', 'ally', 'Short description.', 'Long Explanation.'),
@@ -180,65 +196,55 @@ db.serialize(() => {
     ('cormac', 'alann-barnett', 'jan-01-200', 'dec-31-200', 'ally', 'Short description.', 'Long Explanation.');
   `);
 
-  console.log('Inserting deity_spheres...');
-  db.run(`INSERT OR IGNORE INTO deity_spheres (deity_id, sphere_id) VALUES
+  await runSql(`Inserting deity_spheres...`, `INSERT OR IGNORE INTO deity_spheres (deity_id, sphere_id) VALUES
     ('achiel', 'healing'),
     ('achiel', 'creation'),
     ('wyaris', 'combat'),
     ('danaris', 'death');
   `);
 
-  console.log('Inserting event_characters...');
-  db.run(`INSERT OR IGNORE INTO event_characters (event_id, character_id, short_description, long_explanation) VALUES
+  await runSql(`Inserting event_characters...`, `INSERT OR IGNORE INTO event_characters (event_id, character_id, short_description, long_explanation) VALUES
     ('coup-of-wavethorn', 'alann-barnett', 'Short description.', 'Long Explanation.'),
     ('coup-of-wavethorn', 'releas-neb', 'Short description.', 'Long Explanation.');
   `);
 
-  console.log('Inserting event_deities...');
-  db.run(`INSERT OR IGNORE INTO event_deities (event_id, deity_id, short_description, long_explanation) VALUES
+  await runSql(`Inserting event_deities...`, `INSERT OR IGNORE INTO event_deities (event_id, deity_id, short_description, long_explanation) VALUES
     ('coup-of-wavethorn', 'achiel', 'Short description.', 'Long Explanation.'),
     ('coup-of-wavethorn', 'wyaris', 'Short description.', 'Long Explanation.');
   `);
 
-  console.log('Inserting event_items...');
-  db.run(`INSERT OR IGNORE INTO event_items (event_id, item_id, short_description, long_explanation) VALUES
+  await runSql(`Inserting event_items...`, `INSERT OR IGNORE INTO event_items (event_id, item_id, short_description, long_explanation) VALUES
     ('coup-of-wavethorn', 'rel-s-spellbook', 'Short description.', 'Long Explanation.'),
     ('coup-of-wavethorn', 'cormac-s-spellbook', 'Short description.', 'Long Explanation.');
   `);
 
-  console.log('Inserting event_organizations...');
-  db.run(`INSERT OR IGNORE INTO event_organizations (event_id, organization_id, short_description, long_explanation) VALUES
+  await runSql(`Inserting event_organizations...`, `INSERT OR IGNORE INTO event_organizations (event_id, organization_id, short_description, long_explanation) VALUES
     ('coup-of-wavethorn', 'wavethorn-guard', 'Short description.', 'Long Explanation.'),
     ('coup-of-wavethorn', 'mages-guild', 'Short description.', 'Long Explanation.');
   `);
 
-  console.log('Inserting event_places...');
-  db.run(`INSERT OR IGNORE INTO event_places (event_id, place_id, short_description, long_explanation) VALUES
+  await runSql(`Inserting event_places...`, `INSERT OR IGNORE INTO event_places (event_id, place_id, short_description, long_explanation) VALUES
     ('coup-of-wavethorn', 'wavethorn', 'Short description.', 'Long Explanation.');
   `);
 
-  console.log('Inserting organization_places...');
-  db.run(`INSERT OR IGNORE INTO organization_places (organization_id, place_id, short_description, long_explanation) VALUES
+  await runSql(`Inserting organization_places...`, `INSERT OR IGNORE INTO organization_places (organization_id, place_id, short_description, long_explanation) VALUES
     ('adventurers-guild', 'wavethorn', 'Short description.', 'Long Explanation.'),
     ('wyvernfang', 'wavethorn', 'Short description.', 'Long Explanation.');
   `);
 
-  console.log('Inserting item_spells...');
-  db.run(`INSERT OR IGNORE INTO item_spells (item_id, spell_id) VALUES
+  await runSql(`Inserting item_spells...`, `INSERT OR IGNORE INTO item_spells (item_id, spell_id) VALUES
     ('rel-s-spellbook', 'fireball'),
     ('rel-s-spellbook', 'magic-missile'),
     ('cormac-s-spellbook', 'change-self'),
     ('cormac-s-spellbook', 'audible-glamer');
   `);
 
-  console.log('Inserting spell_spheres...');
-  db.run(`INSERT OR IGNORE INTO spell_spheres (spell_id, sphere_id) VALUES
+  await runSql(`Inserting spell_spheres...`, `INSERT OR IGNORE INTO spell_spheres (spell_id, sphere_id) VALUES
     ('raise-dead', 'necromantic'),
     ('healing-word', 'healing');
   `);
 
-  console.log('Inserting aliases...');
-  db.run(`INSERT OR IGNORE INTO aliases (entity_type, entity_id, alias) VALUES
+  await runSql(`Inserting aliases...`, `INSERT OR IGNORE INTO aliases (entity_type, entity_id, alias) VALUES
     ('character', 'alann-barnett', 'Alann'),
     ('character', 'releas-neb', 'Rel'),
     ('deity', 'achiel', 'Achiel, God of Light'),
@@ -247,6 +253,18 @@ db.serialize(() => {
   `);
 
   console.log('Example data inserted.');
-});
+}
 
-db.close();
+main()
+  .catch((error) => {
+    console.error('Seed failed:', error.message);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    try {
+      await closeDatabase();
+    } catch (error) {
+      console.error('Failed to close database:', error.message);
+      process.exitCode = 1;
+    }
+  });

@@ -1,10 +1,10 @@
-function seedUsers({ db, bcrypt, nowIso }) {
+async function seedUsers({ bcrypt, nowIso, runSql }) {
     const dmPasswordHash = bcrypt.hashSync('change-me-dm-password', 12);
     const playerPasswordHash = bcrypt.hashSync('change-me-player-password', 12);
     const viewerPasswordHash = bcrypt.hashSync('change-me-viewer-password', 12);
 
-    console.log('Inserting default users...');
-    db.run(
+    await runSql(
+        'Inserting default users...',
         `INSERT INTO users (id, username, password_hash, role, disabled, created_at, updated_at) VALUES
       ('dm-admin', 'dm-admin', ?, 'dm', 0, ?, ?),
       ('player-one', 'player-one', ?, 'player', 0, ?, ?),

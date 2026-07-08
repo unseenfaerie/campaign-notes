@@ -6,9 +6,9 @@ const { buildAllCreateTableSql } = require('./schemaBuilder');
 const dbPath = path.join(__dirname, '../campaign.db');
 const db = new sqlite3.Database(dbPath);
 
-function runStatement(sql) {
+function runStatement(database, sql) {
   return new Promise((resolve, reject) => {
-    db.run(sql, (err) => {
+    database.run(sql, (err) => {
       if (err) return reject(err);
       resolve();
     });
@@ -50,14 +50,14 @@ function getAuthCreateTableSql() {
   ];
 }
 
-async function initializeDatabase() {
+async function initializeDatabase(database = db) {
   const statements = [...buildAllCreateTableSql(), ...getAuthCreateTableSql()];
 
   // Keep FK enforcement aligned with table definitions at runtime.
-  await runStatement('PRAGMA foreign_keys = ON');
+  await runStatement(database, 'PRAGMA foreign_keys = ON');
 
   for (const sql of statements) {
-    await runStatement(sql);
+    await runStatement(database, sql);
 
     const tableMatch = sql.match(/CREATE TABLE IF NOT EXISTS\s+([a-zA-Z0-9_]+)/i);
     if (tableMatch) {
@@ -80,5 +80,6 @@ if (require.main === module) {
 
 module.exports = {
   db,
+  getAuthCreateTableSql,
   initializeDatabase,
 };
