@@ -68,7 +68,6 @@ watch(() => props.entityRoute, loadList)
   <section>
     <header class="view-header">
       <h2>{{ title }}</h2>
-      <p>Browse every {{ title.toLowerCase() }} record from the current campaign manifest.</p>
     </header>
 
     <p v-if="loading" class="status-card">Loading records...</p>

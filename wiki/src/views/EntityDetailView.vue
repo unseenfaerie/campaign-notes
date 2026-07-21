@@ -21,28 +21,34 @@ const errorMessage = ref('')
 const fullData = ref<FullState | null>(null)
 
 const entityTitle = computed(() => entityLabelFromRoute(props.entityRoute))
+const entityPageTitle = computed(() => {
+  const entity = fullData.value?.entity
+  if (!entity) {
+    return loading.value ? 'Loading...' : entityTitle.value
+  }
+
+  if (typeof entity.name === 'string' && entity.name.trim()) {
+    return entity.name
+  }
+
+  if (typeof entity.alias === 'string' && entity.alias.trim()) {
+    return entity.alias
+  }
+
+  return entityTitle.value
+})
+
+const entityDisplayData = computed(() => withoutIdField(fullData.value?.entity || {}))
 
 const sortedRelatedSections = computed(() => {
   if (!fullData.value) {
     return [] as Array<[string, DomainEntity[]]>
   }
 
-  return Object.entries(fullData.value.related || {}).sort(([left], [right]) => left.localeCompare(right))
+  return Object.entries(fullData.value.related || {})
+    .filter(([, records]) => Array.isArray(records) && records.length > 0)
+    .sort(([left], [right]) => left.localeCompare(right))
 })
-
-function stripMetaFields(record: DomainEntity): DomainEntity {
-  const output: DomainEntity = {}
-
-  for (const [key, value] of Object.entries(record)) {
-    if (key === 'relationship' || key === 'history') {
-      continue
-    }
-
-    output[key] = value
-  }
-
-  return output
-}
 
 function relationPayload(record: DomainEntity): DomainEntity {
   const candidate = record.relationship
@@ -62,6 +68,18 @@ function historyPayload(record: DomainEntity): DomainEntity[] {
   return candidate.filter((entry): entry is DomainEntity => Boolean(entry && typeof entry === 'object'))
 }
 
+function withoutIdField(record: DomainEntity): DomainEntity {
+  return Object.fromEntries(Object.entries(record).filter(([key]) => key !== 'id'))
+}
+
+function relationDisplayPayload(record: DomainEntity): DomainEntity {
+  return withoutIdField(relationPayload(record))
+}
+
+function historyDisplayPayload(record: DomainEntity): DomainEntity[] {
+  return historyPayload(record).map(withoutIdField).filter((entry) => Object.keys(entry).length > 0)
+}
+
 function relatedRecordLabel(record: DomainEntity): string {
   if (typeof record.name === 'string' && record.name.trim()) {
     return record.name
@@ -71,11 +89,15 @@ function relatedRecordLabel(record: DomainEntity): string {
     return record.alias
   }
 
-  if (record.id !== undefined && record.id !== null && record.id !== '') {
-    return String(record.id)
+  return 'Related entry'
+}
+
+function relatedRecordId(record: DomainEntity): string {
+  if (record.id === undefined || record.id === null || record.id === '') {
+    return ''
   }
 
-  return 'Related entry'
+  return String(record.id)
 }
 
 async function loadDetail() {
@@ -102,56 +124,65 @@ watch(() => [props.entityRoute, props.id], loadDetail)
 <template>
   <section>
     <header class="view-header">
-      <h2>{{ entityTitle }} Detail</h2>
-      <p>Viewing {{ props.id }}</p>
+      <h1>{{ entityPageTitle }}</h1>
     </header>
 
     <p v-if="loading" class="status-card">Loading entity detail...</p>
     <p v-else-if="errorMessage" class="status-card error">{{ errorMessage }}</p>
 
-    <template v-else-if="fullData">
-      <article class="status-card" style="margin-bottom: 1rem">
-        <h3 style="margin-top: 0">Core Data</h3>
-        <FieldList :data="fullData.entity" empty-message="No entity fields are available." />
-      </article>
+    <article v-else-if="fullData" class="wiki-article">
+      <section>
+        <h3>Core data</h3>
+        <FieldList :data="entityDisplayData" empty-message="No entity fields are available." />
+      </section>
 
-      <div class="section-stack">
-        <CollapseSection
-          v-for="[relatedRoute, records] in sortedRelatedSections"
-          :key="relatedRoute"
-          :title="entityLabelFromRoute(relatedRoute)"
-          :count="records.length"
-          :initially-open="records.length > 0"
-        >
-          <p v-if="records.length === 0" class="status-card">No related records in this section.</p>
+      <CollapseSection
+        v-for="[relatedRoute, records] in sortedRelatedSections"
+        :key="relatedRoute"
+        class="article-section"
+        :title="entityLabelFromRoute(relatedRoute)"
+        :count="records.length"
+        :initially-open="false"
+      >
+        <div>
+          <article v-for="(record, index) in records" :key="`${relatedRoute}-${index}`" class="related-record">
+            <h4>
+              <RouterLink
+                v-if="relatedRecordId(record)"
+                :to="{
+                  name: 'entity-detail',
+                  params: { entityRoute: relatedRoute, id: relatedRecordId(record) },
+                }"
+              >
+                {{ relatedRecordLabel(record) }}
+              </RouterLink>
+              <template v-else>{{ relatedRecordLabel(record) }}</template>
+            </h4>
 
-          <div v-else class="section-stack">
-            <article v-for="(record, index) in records" :key="`${relatedRoute}-${index}`" class="entity-card">
-              <h3>{{ relatedRecordLabel(record) }}</h3>
+            <template v-if="Object.keys(relationDisplayPayload(record)).length > 0">
+              <FieldList :data="relationDisplayPayload(record)" />
+            </template>
 
-              <FieldList :data="stripMetaFields(record)" empty-message="No direct fields." />
+            <template v-if="historyDisplayPayload(record).length > 0">
+              <p class="meta-title">History records</p>
+              <article
+                v-for="(historyEntry, historyIndex) in historyDisplayPayload(record)"
+                :key="`${relatedRoute}-${index}-history-${historyIndex}`"
+                class="history-record"
+              >
+                <FieldList :data="historyEntry" />
+              </article>
+            </template>
 
-              <template v-if="Object.keys(relationPayload(record)).length > 0">
-                <p class="meta-title">Relationship metadata</p>
-                <FieldList :data="relationPayload(record)" />
-              </template>
-
-              <template v-if="historyPayload(record).length > 0">
-                <p class="meta-title">History records</p>
-                <div class="section-stack">
-                  <article
-                    v-for="(historyEntry, historyIndex) in historyPayload(record)"
-                    :key="`${relatedRoute}-${index}-history-${historyIndex}`"
-                    class="status-card"
-                  >
-                    <FieldList :data="historyEntry" />
-                  </article>
-                </div>
-              </template>
-            </article>
-          </div>
-        </CollapseSection>
-      </div>
-    </template>
+            <p
+              v-if="Object.keys(relationDisplayPayload(record)).length === 0 && historyDisplayPayload(record).length === 0"
+              class="article-note"
+            >
+              No relationship metadata or history records for this entry.
+            </p>
+          </article>
+        </div>
+      </CollapseSection>
+    </article>
   </section>
 </template>
