@@ -46,9 +46,51 @@ const sortedRelatedSections = computed(() => {
   }
 
   return Object.entries(fullData.value.related || {})
+    .map(([relatedRoute, records]) => [relatedRoute, dedupeRelatedRecords(records || [])] as [string, DomainEntity[]])
     .filter(([, records]) => Array.isArray(records) && records.length > 0)
     .sort(([left], [right]) => left.localeCompare(right))
 })
+
+function titleCaseLabel(label: string): string {
+  if (!label) {
+    return ''
+  }
+
+  return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
+function relatedRecordIdentity(record: DomainEntity): string {
+  if (record.id !== undefined && record.id !== null && record.id !== '') {
+    return `id:${String(record.id)}`
+  }
+
+  if (typeof record.name === 'string' && record.name.trim()) {
+    return `name:${record.name.trim().toLowerCase()}`
+  }
+
+  if (typeof record.alias === 'string' && record.alias.trim()) {
+    return `alias:${record.alias.trim().toLowerCase()}`
+  }
+
+  return `record:${JSON.stringify(record)}`
+}
+
+function dedupeRelatedRecords(records: DomainEntity[]): DomainEntity[] {
+  const seen = new Set<string>()
+  const unique: DomainEntity[] = []
+
+  for (const record of records) {
+    const identity = relatedRecordIdentity(record)
+    if (seen.has(identity)) {
+      continue
+    }
+
+    seen.add(identity)
+    unique.push(record)
+  }
+
+  return unique
+}
 
 function relationPayload(record: DomainEntity): DomainEntity {
   const candidate = record.relationship
@@ -72,12 +114,45 @@ function withoutIdField(record: DomainEntity): DomainEntity {
   return Object.fromEntries(Object.entries(record).filter(([key]) => key !== 'id'))
 }
 
+function domainEntitySignature(record: DomainEntity): string {
+  return JSON.stringify(
+    Object.entries(record).sort(([left], [right]) => left.localeCompare(right))
+  )
+}
+
 function relationDisplayPayload(record: DomainEntity): DomainEntity {
   return withoutIdField(relationPayload(record))
 }
 
 function historyDisplayPayload(record: DomainEntity): DomainEntity[] {
-  return historyPayload(record).map(withoutIdField).filter((entry) => Object.keys(entry).length > 0)
+  const seen = new Set<string>()
+  const uniqueEntries: DomainEntity[] = []
+
+  for (const entry of historyPayload(record).map(withoutIdField)) {
+    if (Object.keys(entry).length === 0) {
+      continue
+    }
+
+    const signature = domainEntitySignature(entry)
+    if (seen.has(signature)) {
+      continue
+    }
+
+    seen.add(signature)
+    uniqueEntries.push(entry)
+  }
+
+  return uniqueEntries
+}
+
+function showRelationMetadata(record: DomainEntity): boolean {
+  const relation = relationDisplayPayload(record)
+  if (Object.keys(relation).length === 0) {
+    return false
+  }
+
+  const relationSignature = domainEntitySignature(relation)
+  return !historyDisplayPayload(record).some((entry) => domainEntitySignature(entry) === relationSignature)
 }
 
 function relatedRecordLabel(record: DomainEntity): string {
@@ -140,7 +215,7 @@ watch(() => [props.entityRoute, props.id], loadDetail)
         v-for="[relatedRoute, records] in sortedRelatedSections"
         :key="relatedRoute"
         class="article-section"
-        :title="entityLabelFromRoute(relatedRoute)"
+        :title="titleCaseLabel(entityLabelFromRoute(relatedRoute))"
         :count="records.length"
         :initially-open="false"
       >
@@ -159,7 +234,7 @@ watch(() => [props.entityRoute, props.id], loadDetail)
               <template v-else>{{ relatedRecordLabel(record) }}</template>
             </h4>
 
-            <template v-if="Object.keys(relationDisplayPayload(record)).length > 0">
+            <template v-if="showRelationMetadata(record)">
               <FieldList :data="relationDisplayPayload(record)" />
             </template>
 
@@ -175,7 +250,7 @@ watch(() => [props.entityRoute, props.id], loadDetail)
             </template>
 
             <p
-              v-if="Object.keys(relationDisplayPayload(record)).length === 0 && historyDisplayPayload(record).length === 0"
+              v-if="!showRelationMetadata(record) && historyDisplayPayload(record).length === 0"
               class="article-note"
             >
               No relationship metadata or history records for this entry.
