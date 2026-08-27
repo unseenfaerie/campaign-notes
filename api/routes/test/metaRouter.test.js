@@ -90,7 +90,7 @@ describe('metaRouter', () => {
         });
     });
 
-    it('exposes widget hints so forms can render the right control', async () => {
+    it('exposes boolean fields so forms can render a checkbox control', async () => {
         const res = await request(app)
             .get('/api/meta')
             .set('Authorization', bearerToken());
@@ -100,13 +100,12 @@ describe('metaRouter', () => {
         const character = res.body.entities.find((entity) => entity.route === 'characters');
         const deceasedField = character.fields.find((field) => field.name === 'deceased');
         expect(deceasedField).toMatchObject({
-            type: 'number',
+            type: 'boolean',
             required: true,
             primary: false,
-            widget: 'checkbox',
         });
 
         const ageField = character.fields.find((field) => field.name === 'age');
-        expect(ageField.widget).toBeUndefined();
+        expect(ageField.type).toBe('number');
     });
 });

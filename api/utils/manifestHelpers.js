@@ -152,7 +152,6 @@ function buildEntityFormSchemas(manifest = domainManifest) {
 
             if (fieldDef.format) field.format = fieldDef.format;
             if (fieldDef.autoIncrement) field.autoIncrement = true;
-            if (fieldDef.widget) field.widget = fieldDef.widget;
 
             fields.push(field);
         }

@@ -78,7 +78,7 @@ async function loadSchema() {
 
     const initialValues: Record<string, any> = {}
     for (const field of found.fields) {
-      initialValues[field.name] = field.type === 'boolean' || field.widget === 'checkbox' ? false : ''
+      initialValues[field.name] = field.type === 'boolean' ? false : ''
     }
     formValues.value = initialValues
   } catch (error) {
@@ -97,13 +97,6 @@ function buildPayload(): Record<string, unknown> {
 
   for (const field of visibleFields.value) {
     const rawValue = formValues.value[field.name]
-
-    if (field.widget === 'checkbox') {
-      if (rawValue === true || field.required) {
-        payload[field.name] = field.type === 'number' ? (rawValue === true ? 1 : 0) : rawValue === true
-      }
-      continue
-    }
 
     if (field.type === 'boolean') {
       if (rawValue === true || field.required) {
@@ -190,7 +183,7 @@ watch(
         </label>
 
         <input
-          v-if="field.widget === 'checkbox'"
+          v-if="field.type === 'boolean'"
           :id="`create-field-${field.name}`"
           v-model="formValues[field.name]"
           type="checkbox"
@@ -210,12 +203,6 @@ watch(
           rows="4"
           :required="field.required"
         ></textarea>
-        <input
-          v-else-if="field.type === 'boolean'"
-          :id="`create-field-${field.name}`"
-          v-model="formValues[field.name]"
-          type="checkbox"
-        />
         <input
           v-else
           :id="`create-field-${field.name}`"

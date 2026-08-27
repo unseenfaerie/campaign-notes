@@ -7,7 +7,6 @@ export type EntityFieldSchema = {
     primary: boolean
     format?: string
     autoIncrement?: boolean
-    widget?: string
 }
 
 export type EntitySchema = {
