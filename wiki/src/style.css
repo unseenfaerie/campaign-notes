@@ -173,6 +173,11 @@ a:hover {
     gap: 1rem;
 }
 
+.row-actions-end {
+    display: flex;
+    justify-content: flex-end;
+}
+
 .status-card {
     border: 1px solid var(--line-soft);
     border-radius: var(--radius);

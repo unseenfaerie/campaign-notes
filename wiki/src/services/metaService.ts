@@ -21,6 +21,7 @@ export type RelationFormSchema = {
     relationName: string
     kind: 'simple' | 'relationship' | 'history'
     relatedEntityRoute: string
+    historyKey?: string | null
     fields: EntityFieldSchema[]
 }
 

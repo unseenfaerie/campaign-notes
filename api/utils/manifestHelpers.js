@@ -217,7 +217,12 @@ function buildRelationFormSchemas(manifest = domainManifest) {
                 relationName: relation.relationName,
                 kind: relation.relationDef.kind,
                 relatedEntityRoute: relation.relatedEntityRoute,
-                fields: mapFieldDefs(relation.relationDef.payload),
+                historyKey: relation.relationDef.historyKey || null,
+                fields: mapFieldDefs(relation.relationDef.payload).map((field) =>
+                    relation.relationDef.historyKey && field.name === relation.relationDef.historyKey
+                        ? { ...field, primary: true }
+                        : field
+                ),
             })
         );
     }

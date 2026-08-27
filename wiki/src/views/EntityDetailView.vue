@@ -5,7 +5,7 @@ import CollapseSection from '../components/CollapseSection.vue'
 import FieldList from '../components/FieldList.vue'
 import { entityLabelFromRoute } from '../config/entities'
 import { ApiError } from '../services/apiClient'
-import { getEntityFull, updateEntity, type DomainEntity } from '../services/domainService'
+import { getEntityFull, updateEntity, updateRelation, type DomainEntity } from '../services/domainService'
 import { getEntitySchema, getRelationSchemas, type EntityFieldSchema, type RelationFormSchema } from '../services/metaService'
 import { useAuthStore } from '../stores/auth'
 
@@ -34,6 +34,17 @@ const saveError = ref('')
 const relationSchemas = ref<RelationFormSchema[]>([])
 const openAddFormRoute = ref<string | null>(null)
 const showingNewRelatedPicker = ref(false)
+
+const editingRelationKey = ref<string | null>(null)
+const relationEditValues = ref<Record<string, any>>({})
+const relationEditSaving = ref(false)
+const relationEditError = ref('')
+
+const editingHistoryKey = ref<string | null>(null)
+const historyEditValues = ref<Record<string, any>>({})
+const historyEditOriginalSelector = ref<{ key: string; value: string } | null>(null)
+const historyEditSaving = ref(false)
+const historyEditError = ref('')
 
 const entityTitle = computed(() => entityLabelFromRoute(props.entityRoute))
 const entityPageTitle = computed(() => {
@@ -201,6 +212,8 @@ async function loadDetail() {
   isEditing.value = false
   openAddFormRoute.value = null
   showingNewRelatedPicker.value = false
+  editingRelationKey.value = null
+  editingHistoryKey.value = null
 
   try {
     const [full, relations] = await Promise.all([
@@ -225,8 +238,172 @@ function relationSchemaForRoute(relatedRoute: string): RelationFormSchema[] {
   return schema ? [schema] : []
 }
 
+function findRelationSchema(relatedRoute: string): RelationFormSchema | undefined {
+  return relationSchemas.value.find((entry) => entry.relatedRoute === relatedRoute)
+}
+
+function isSimpleRelation(relatedRoute: string): boolean {
+  return findRelationSchema(relatedRoute)?.kind === 'simple'
+}
+
+function isRelationshipKind(relatedRoute: string): boolean {
+  return findRelationSchema(relatedRoute)?.kind === 'relationship'
+}
+
+function editableFields(fields: EntityFieldSchema[]): EntityFieldSchema[] {
+  return fields.filter((field) => !field.primary)
+}
+
+function primaryFields(fields: EntityFieldSchema[]): EntityFieldSchema[] {
+  return fields.filter((field) => field.primary)
+}
+
+function primaryFieldValues(relatedRoute: string, sourceRecord: DomainEntity): DomainEntity {
+  const schema = findRelationSchema(relatedRoute)
+  if (!schema) {
+    return {}
+  }
+
+  const values: DomainEntity = {}
+  for (const field of primaryFields(schema.fields)) {
+    values[field.name] = sourceRecord[field.name]
+  }
+  return values
+}
+
+function fieldValuesFromRecord(fields: EntityFieldSchema[], record: DomainEntity): Record<string, any> {
+  const values: Record<string, any> = {}
+  for (const field of fields) {
+    const currentValue = record[field.name]
+    if (field.type === 'boolean') {
+      values[field.name] = currentValue === true
+    } else {
+      values[field.name] = currentValue === undefined || currentValue === null ? '' : String(currentValue)
+    }
+  }
+  return values
+}
+
+function buildFieldsPayload(fields: EntityFieldSchema[], values: Record<string, any>): Record<string, unknown> {
+  const payload: Record<string, unknown> = {}
+
+  for (const field of fields) {
+    const rawValue = values[field.name]
+
+    if (field.type === 'boolean') {
+      payload[field.name] = rawValue === true
+      continue
+    }
+
+    const text = typeof rawValue === 'string' ? rawValue.trim() : ''
+    if (text === '') {
+      if (field.required) {
+        throw new Error(`${prettyFieldName(field.name)} is required.`)
+      }
+      continue
+    }
+
+    payload[field.name] = field.type === 'number' ? Number(text) : text
+  }
+
+  return payload
+}
+
+function startEditRelation(relatedRoute: string, record: DomainEntity) {
+  const schema = findRelationSchema(relatedRoute)
+  if (!schema) {
+    return
+  }
+
+  relationEditError.value = ''
+  relationEditValues.value = fieldValuesFromRecord(editableFields(schema.fields), relationPayload(record))
+  editingRelationKey.value = `${relatedRoute}::${relatedRecordId(record)}`
+}
+
+function cancelEditRelation() {
+  editingRelationKey.value = null
+  relationEditError.value = ''
+}
+
+async function saveEditRelation(relatedRoute: string, record: DomainEntity) {
+  const schema = findRelationSchema(relatedRoute)
+  if (!schema) {
+    return
+  }
+
+  relationEditError.value = ''
+  relationEditSaving.value = true
+
+  try {
+    const payload = buildFieldsPayload(editableFields(schema.fields), relationEditValues.value)
+    await updateRelation(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), payload)
+    editingRelationKey.value = null
+    await loadDetail()
+  } catch (error) {
+    if (error instanceof ApiError || error instanceof Error) {
+      relationEditError.value = error.message
+    } else {
+      relationEditError.value = 'Could not save changes.'
+    }
+  } finally {
+    relationEditSaving.value = false
+  }
+}
+
+function startEditHistory(relatedRoute: string, historyEntry: DomainEntity, historyKey: string) {
+  const schema = findRelationSchema(relatedRoute)
+  if (!schema || !schema.historyKey) {
+    return
+  }
+
+  const originalValue = historyEntry[schema.historyKey]
+
+  historyEditError.value = ''
+  historyEditValues.value = fieldValuesFromRecord(editableFields(schema.fields), historyEntry)
+  historyEditOriginalSelector.value = { key: schema.historyKey, value: String(originalValue ?? '') }
+  editingHistoryKey.value = historyKey
+}
+
+function cancelEditHistory() {
+  editingHistoryKey.value = null
+  historyEditError.value = ''
+}
+
+async function saveEditHistory(relatedRoute: string, record: DomainEntity) {
+  const schema = findRelationSchema(relatedRoute)
+  if (!schema || !historyEditOriginalSelector.value) {
+    return
+  }
+
+  historyEditError.value = ''
+  historyEditSaving.value = true
+
+  try {
+    const payload = buildFieldsPayload(editableFields(schema.fields), historyEditValues.value)
+    await updateRelation(
+      props.entityRoute,
+      props.id,
+      relatedRoute,
+      relatedRecordId(record),
+      payload,
+      historyEditOriginalSelector.value
+    )
+    editingHistoryKey.value = null
+    await loadDetail()
+  } catch (error) {
+    if (error instanceof ApiError || error instanceof Error) {
+      historyEditError.value = error.message
+    } else {
+      historyEditError.value = 'Could not save changes.'
+    }
+  } finally {
+    historyEditSaving.value = false
+  }
+}
+
 type CollapseSectionInstance = { expand: () => void }
 const collapseSectionRefs = new Map<string, CollapseSectionInstance>()
+
 
 function setCollapseSectionRef(relatedRoute: string, instance: unknown) {
   if (instance) {
@@ -271,17 +448,7 @@ async function startEdit() {
   }
 
   editFields.value = schema.fields.filter((field) => !field.primary)
-
-  const initialValues: Record<string, any> = {}
-  for (const field of editFields.value) {
-    const currentValue = entity[field.name]
-    if (field.type === 'boolean') {
-      initialValues[field.name] = currentValue === true
-    } else {
-      initialValues[field.name] = currentValue === undefined || currentValue === null ? '' : String(currentValue)
-    }
-  }
-  editValues.value = initialValues
+  editValues.value = fieldValuesFromRecord(editFields.value, entity)
 
   isEditing.value = true
 }
@@ -292,26 +459,7 @@ function cancelEdit() {
 }
 
 function buildEditPayload(): Record<string, unknown> {
-  const payload: Record<string, unknown> = {}
-
-  for (const field of editFields.value) {
-    const rawValue = editValues.value[field.name]
-
-    if (field.type === 'boolean') {
-      payload[field.name] = rawValue === true
-      continue
-    }
-
-    const text = typeof rawValue === 'string' ? rawValue.trim() : ''
-    if (text === '') {
-      if (field.required) {
-        throw new Error(`${prettyFieldName(field.name)} is required.`)
-      }
-      continue
-    }
-
-    payload[field.name] = field.type === 'number' ? Number(text) : text
-  }
+  const payload = buildFieldsPayload(editFields.value, editValues.value)
 
   return payload
 }
@@ -440,20 +588,97 @@ watch(() => [props.entityRoute, props.id], loadDetail)
           />
 
           <article v-for="(record, index) in records" :key="`${relatedRoute}-${index}`" class="related-record">
-            <h4>
-              <RouterLink
-                v-if="relatedRecordId(record)"
-                :to="{
-                  name: 'entity-detail',
-                  params: { entityRoute: relatedRoute, id: relatedRecordId(record) },
-                }"
+            <div class="section-heading-row">
+              <h4>
+                <RouterLink
+                  v-if="relatedRecordId(record)"
+                  :to="{
+                    name: 'entity-detail',
+                    params: { entityRoute: relatedRoute, id: relatedRecordId(record) },
+                  }"
+                >
+                  {{ relatedRecordLabel(record) }}
+                </RouterLink>
+                <template v-else>{{ relatedRecordLabel(record) }}</template>
+              </h4>
+              <button
+                v-if="auth.isAdmin.value && isRelationshipKind(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}`"
+                type="button"
+                class="secondary-button"
+                @click="startEditRelation(relatedRoute, record)"
               >
-                {{ relatedRecordLabel(record) }}
-              </RouterLink>
-              <template v-else>{{ relatedRecordLabel(record) }}</template>
-            </h4>
+                Edit
+              </button>
+            </div>
 
-            <template v-if="showRelationMetadata(record)">
+            <form
+              v-if="editingRelationKey === `${relatedRoute}::${relatedRecordId(record)}`"
+              class="entity-form"
+              @submit.prevent="saveEditRelation(relatedRoute, record)"
+            >
+              <FieldList
+                v-if="Object.keys(primaryFieldValues(relatedRoute, relationPayload(record))).length > 0"
+                :data="primaryFieldValues(relatedRoute, relationPayload(record))"
+              />
+
+              <div
+                v-for="field in editableFields(relationSchemaForRoute(relatedRoute)[0]?.fields ?? [])"
+                :key="field.name"
+                class="form-row"
+              >
+                <label :for="`edit-relation-${relatedRoute}-${index}-${field.name}`">
+                  {{ prettyFieldName(field.name) }}
+                  <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
+                </label>
+
+                <input
+                  v-if="field.type === 'boolean'"
+                  :id="`edit-relation-${relatedRoute}-${index}-${field.name}`"
+                  v-model="relationEditValues[field.name]"
+                  type="checkbox"
+                />
+                <input
+                  v-else-if="field.type === 'number'"
+                  :id="`edit-relation-${relatedRoute}-${index}-${field.name}`"
+                  v-model="relationEditValues[field.name]"
+                  type="number"
+                  step="any"
+                  :required="field.required"
+                />
+                <textarea
+                  v-else-if="isLongTextField(field)"
+                  :id="`edit-relation-${relatedRoute}-${index}-${field.name}`"
+                  v-model="relationEditValues[field.name]"
+                  rows="4"
+                  :required="field.required"
+                ></textarea>
+                <input
+                  v-else
+                  :id="`edit-relation-${relatedRoute}-${index}-${field.name}`"
+                  v-model="relationEditValues[field.name]"
+                  type="text"
+                  :required="field.required"
+                />
+              </div>
+
+              <div class="form-actions">
+                <button class="primary-button" type="submit" :disabled="relationEditSaving">
+                  {{ relationEditSaving ? 'Saving...' : 'Save' }}
+                </button>
+                <button
+                  class="secondary-button"
+                  type="button"
+                  :disabled="relationEditSaving"
+                  @click="cancelEditRelation"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <p v-if="relationEditError" class="status-card error">{{ relationEditError }}</p>
+            </form>
+
+            <template v-else-if="showRelationMetadata(record)">
               <FieldList :data="relationDisplayPayload(record)" />
             </template>
 
@@ -464,12 +689,96 @@ watch(() => [props.entityRoute, props.id], loadDetail)
                 :key="`${relatedRoute}-${index}-history-${historyIndex}`"
                 class="history-record"
               >
-                <FieldList :data="historyEntry" />
+                <div v-if="auth.isAdmin.value" class="row-actions-end">
+                  <button
+                    v-if="editingHistoryKey !== `${relatedRoute}-${index}-history-${historyIndex}`"
+                    type="button"
+                    class="secondary-button"
+                    @click="
+                      startEditHistory(relatedRoute, historyEntry, `${relatedRoute}-${index}-history-${historyIndex}`)
+                    "
+                  >
+                    Edit
+                  </button>
+                </div>
+
+                <form
+                  v-if="editingHistoryKey === `${relatedRoute}-${index}-history-${historyIndex}`"
+                  class="entity-form"
+                  @submit.prevent="saveEditHistory(relatedRoute, record)"
+                >
+                  <FieldList
+                    v-if="Object.keys(primaryFieldValues(relatedRoute, historyEntry)).length > 0"
+                    :data="primaryFieldValues(relatedRoute, historyEntry)"
+                  />
+
+                  <div
+                    v-for="field in editableFields(relationSchemaForRoute(relatedRoute)[0]?.fields ?? [])"
+                    :key="field.name"
+                    class="form-row"
+                  >
+                    <label :for="`edit-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`">
+                      {{ prettyFieldName(field.name) }}
+                      <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
+                    </label>
+
+                    <input
+                      v-if="field.type === 'boolean'"
+                      :id="`edit-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
+                      v-model="historyEditValues[field.name]"
+                      type="checkbox"
+                    />
+                    <input
+                      v-else-if="field.type === 'number'"
+                      :id="`edit-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
+                      v-model="historyEditValues[field.name]"
+                      type="number"
+                      step="any"
+                      :required="field.required"
+                    />
+                    <textarea
+                      v-else-if="isLongTextField(field)"
+                      :id="`edit-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
+                      v-model="historyEditValues[field.name]"
+                      rows="4"
+                      :required="field.required"
+                    ></textarea>
+                    <input
+                      v-else
+                      :id="`edit-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
+                      v-model="historyEditValues[field.name]"
+                      type="text"
+                      :required="field.required"
+                    />
+                  </div>
+
+                  <div class="form-actions">
+                    <button class="primary-button" type="submit" :disabled="historyEditSaving">
+                      {{ historyEditSaving ? 'Saving...' : 'Save' }}
+                    </button>
+                    <button
+                      class="secondary-button"
+                      type="button"
+                      :disabled="historyEditSaving"
+                      @click="cancelEditHistory"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                  <p v-if="historyEditError" class="status-card error">{{ historyEditError }}</p>
+                </form>
+                <FieldList v-else :data="historyEntry" />
               </article>
             </template>
 
+
             <p
-              v-if="!showRelationMetadata(record) && historyDisplayPayload(record).length === 0"
+              v-if="
+                !isSimpleRelation(relatedRoute) &&
+                !showRelationMetadata(record) &&
+                historyDisplayPayload(record).length === 0
+              "
               class="article-note"
             >
               No relationship metadata or history records for this entry.

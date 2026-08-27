@@ -38,3 +38,21 @@ export async function createRelation(
         { method: 'POST', body: data }
     )
 }
+
+export async function updateRelation(
+    entityRoute: string,
+    id: string,
+    relatedRoute: string,
+    relatedId: string,
+    data: DomainEntity,
+    historySelector?: { key: string; value: string }
+): Promise<{ updated: number; record: DomainEntity }> {
+    const query = historySelector
+        ? `?${encodeURIComponent(historySelector.key)}=${encodeURIComponent(historySelector.value)}`
+        : ''
+
+    return requestJson<{ updated: number; record: DomainEntity }>(
+        `/${entityRoute}/${encodeURIComponent(id)}/${relatedRoute}/${encodeURIComponent(relatedId)}${query}`,
+        { method: 'PATCH', body: data }
+    )
+}
