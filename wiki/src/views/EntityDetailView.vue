@@ -225,8 +225,24 @@ function relationSchemaForRoute(relatedRoute: string): RelationFormSchema[] {
   return schema ? [schema] : []
 }
 
+type CollapseSectionInstance = { expand: () => void }
+const collapseSectionRefs = new Map<string, CollapseSectionInstance>()
+
+function setCollapseSectionRef(relatedRoute: string, instance: unknown) {
+  if (instance) {
+    collapseSectionRefs.set(relatedRoute, instance as CollapseSectionInstance)
+  } else {
+    collapseSectionRefs.delete(relatedRoute)
+  }
+}
+
 function toggleAddForm(relatedRoute: string) {
-  openAddFormRoute.value = openAddFormRoute.value === relatedRoute ? null : relatedRoute
+  const opening = openAddFormRoute.value !== relatedRoute
+  openAddFormRoute.value = opening ? relatedRoute : null
+
+  if (opening) {
+    collapseSectionRefs.get(relatedRoute)?.expand()
+  }
 }
 
 async function onRelationCreated() {
@@ -401,6 +417,7 @@ watch(() => [props.entityRoute, props.id], loadDetail)
       <CollapseSection
         v-for="[relatedRoute, records] in sortedRelatedSections"
         :key="relatedRoute"
+        :ref="(instance) => setCollapseSectionRef(relatedRoute, instance)"
         class="article-section"
         :title="titleCaseLabel(entityLabelFromRoute(relatedRoute))"
         :count="records.length"

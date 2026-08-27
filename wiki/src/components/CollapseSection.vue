@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+
 type Props = {
   title: string
   count: number
@@ -8,10 +10,20 @@ type Props = {
 const props = withDefaults(defineProps<Props>(), {
   initiallyOpen: false,
 })
+
+const detailsRef = ref<HTMLDetailsElement | null>(null)
+
+function expand() {
+  if (detailsRef.value) {
+    detailsRef.value.open = true
+  }
+}
+
+defineExpose({ expand })
 </script>
 
 <template>
-  <details class="collapsible" :open="props.initiallyOpen">
+  <details ref="detailsRef" class="collapsible" :open="props.initiallyOpen">
     <summary>
       <span class="collapsible-heading">
         <span>{{ props.title }}</span>
