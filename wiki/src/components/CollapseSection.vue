@@ -13,8 +13,13 @@ const props = withDefaults(defineProps<Props>(), {
 <template>
   <details class="collapsible" :open="props.initiallyOpen">
     <summary>
-      <span>{{ props.title }}</span>
-      <span class="badge">{{ props.count }}</span>
+      <span class="collapsible-heading">
+        <span>{{ props.title }}</span>
+        <span class="badge">{{ props.count }}</span>
+      </span>
+      <span v-if="$slots['header-actions']" class="collapsible-header-actions" @click.stop @mousedown.stop>
+        <slot name="header-actions" />
+      </span>
     </summary>
     <div class="collapsible-body">
       <slot />

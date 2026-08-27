@@ -108,4 +108,35 @@ describe('metaRouter', () => {
         const ageField = character.fields.find((field) => field.name === 'age');
         expect(ageField.type).toBe('number');
     });
+
+    it('exposes relation form schemas keyed by entity route', async () => {
+        const res = await request(app)
+            .get('/api/meta')
+            .set('Authorization', bearerToken());
+
+        expect(res.status).toBe(200);
+        expect(res.body.relationsByEntityRoute).toBeDefined();
+
+        const characterRelations = res.body.relationsByEntityRoute.characters;
+        expect(Array.isArray(characterRelations)).toBe(true);
+
+        const itemsRelation = characterRelations.find((relation) => relation.relatedRoute === 'items');
+        expect(itemsRelation).toMatchObject({
+            relationName: 'CharacterItem',
+            kind: 'history',
+            relatedEntityRoute: 'items',
+        });
+
+        const fieldNames = itemsRelation.fields.map((field) => field.name);
+        expect(fieldNames).toEqual(
+            expect.arrayContaining(['acquired_date', 'relinquished_date', 'short_description'])
+        );
+
+        const selfRelation = characterRelations.find((relation) => relation.relatedRoute === 'relationships');
+        expect(selfRelation).toMatchObject({
+            relationName: 'CharacterRelationship',
+            kind: 'history',
+            relatedEntityRoute: 'characters',
+        });
+    });
 });

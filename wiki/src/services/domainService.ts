@@ -26,3 +26,15 @@ export async function updateEntity(entityRoute: string, id: string, data: Domain
     )
     return response.record
 }
+
+export async function createRelation(
+    entityRoute: string,
+    id: string,
+    relatedRoute: string,
+    data: DomainEntity
+): Promise<DomainEntity> {
+    return requestJson<DomainEntity>(
+        `/${entityRoute}/${encodeURIComponent(id)}/${relatedRoute}`,
+        { method: 'POST', body: data }
+    )
+}

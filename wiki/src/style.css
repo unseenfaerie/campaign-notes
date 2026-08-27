@@ -258,6 +258,16 @@ a:hover {
     display: none;
 }
 
+.collapsible-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.collapsible-header-actions {
+    cursor: default;
+}
+
 .collapsible-body {
     padding: 0.65rem 0.8rem;
 }
@@ -316,6 +326,12 @@ a:hover {
 .related-record {
     margin: 0;
     padding: 0.7rem 0;
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.add-relation-form {
+    padding-bottom: 0.7rem;
+    margin-bottom: 0.7rem;
     border-bottom: 1px solid var(--line-soft);
 }
 

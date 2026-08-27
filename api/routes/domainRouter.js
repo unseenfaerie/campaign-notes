@@ -12,6 +12,7 @@ const {
     dedupeRows,
     getRelationContext,
     getRelatedIdForRow,
+    getRelationsForEntityRoute,
 } = require('../utils/manifestHelpers');
 const {
     getRelatedMemberInfo,
@@ -55,31 +56,7 @@ async function loadAssociatedRecords(relationName, relationDef, sourceId, anchor
 }
 
 function getFullRelationsForEntityRoute(entityRoute) {
-    const relations = [];
-
-    for (const [relationName, relationDef] of Object.entries(domainManifest.relations || {})) {
-        const members = getRelationMembers(relationDef);
-
-        for (let anchorMemberIndex = 0; anchorMemberIndex < members.length; anchorMemberIndex += 1) {
-            const anchorMember = members[anchorMemberIndex];
-            const anchorEntityDef = domainManifest.entities[anchorMember.entity];
-
-            if (!anchorEntityDef || anchorEntityDef.route !== entityRoute) {
-                continue;
-            }
-
-            relations.push({
-                relationName,
-                relationDef,
-                anchorMemberIndex,
-                relatedRoute: anchorMember.route,
-            });
-
-            break;
-        }
-    }
-
-    return relations;
+    return getRelationsForEntityRoute(entityRoute, domainManifest);
 }
 
 function buildRelationWhereCandidates({

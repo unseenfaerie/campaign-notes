@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import AddRelatedEntityForm from '../components/AddRelatedEntityForm.vue'
 import CollapseSection from '../components/CollapseSection.vue'
 import FieldList from '../components/FieldList.vue'
 import { entityLabelFromRoute } from '../config/entities'
 import { ApiError } from '../services/apiClient'
 import { getEntityFull, updateEntity, type DomainEntity } from '../services/domainService'
-import { getEntitySchema, type EntityFieldSchema } from '../services/metaService'
+import { getEntitySchema, getRelationSchemas, type EntityFieldSchema, type RelationFormSchema } from '../services/metaService'
 import { useAuthStore } from '../stores/auth'
 
 type FullState = {
@@ -29,6 +30,10 @@ const editFields = ref<EntityFieldSchema[]>([])
 const editValues = ref<Record<string, any>>({})
 const saving = ref(false)
 const saveError = ref('')
+
+const relationSchemas = ref<RelationFormSchema[]>([])
+const openAddFormRoute = ref<string | null>(null)
+const showingNewRelatedPicker = ref(false)
 
 const entityTitle = computed(() => entityLabelFromRoute(props.entityRoute))
 const entityPageTitle = computed(() => {
@@ -59,6 +64,11 @@ const sortedRelatedSections = computed(() => {
     .map(([relatedRoute, records]) => [relatedRoute, dedupeRelatedRecords(records || [])] as [string, DomainEntity[]])
     .filter(([, records]) => Array.isArray(records) && records.length > 0)
     .sort(([left], [right]) => left.localeCompare(right))
+})
+
+const missingRelationSections = computed(() => {
+  const related = fullData.value?.related || {}
+  return relationSchemas.value.filter((schema) => (related[schema.relatedRoute] || []).length === 0)
 })
 
 function titleCaseLabel(label: string): string {
@@ -189,9 +199,16 @@ async function loadDetail() {
   loading.value = true
   errorMessage.value = ''
   isEditing.value = false
+  openAddFormRoute.value = null
+  showingNewRelatedPicker.value = false
 
   try {
-    fullData.value = await getEntityFull(props.entityRoute, props.id)
+    const [full, relations] = await Promise.all([
+      getEntityFull(props.entityRoute, props.id),
+      getRelationSchemas(props.entityRoute),
+    ])
+    fullData.value = full
+    relationSchemas.value = relations
   } catch (error) {
     if (error instanceof ApiError) {
       errorMessage.value = error.message
@@ -201,6 +218,19 @@ async function loadDetail() {
   } finally {
     loading.value = false
   }
+}
+
+function relationSchemaForRoute(relatedRoute: string): RelationFormSchema[] {
+  const schema = relationSchemas.value.find((entry) => entry.relatedRoute === relatedRoute)
+  return schema ? [schema] : []
+}
+
+function toggleAddForm(relatedRoute: string) {
+  openAddFormRoute.value = openAddFormRoute.value === relatedRoute ? null : relatedRoute
+}
+
+async function onRelationCreated() {
+  await loadDetail()
 }
 
 function prettyFieldName(name: string): string {
@@ -376,7 +406,22 @@ watch(() => [props.entityRoute, props.id], loadDetail)
         :count="records.length"
         :initially-open="false"
       >
+        <template v-if="auth.isAdmin.value" #header-actions>
+          <button type="button" class="secondary-button" @click="toggleAddForm(relatedRoute)">
+            {{ openAddFormRoute === relatedRoute ? 'Cancel' : 'New' }}
+          </button>
+        </template>
+
         <div>
+          <AddRelatedEntityForm
+            v-if="openAddFormRoute === relatedRoute"
+            :entity-route="entityRoute"
+            :id="id"
+            :options="relationSchemaForRoute(relatedRoute)"
+            @created="onRelationCreated"
+            @cancel="openAddFormRoute = null"
+          />
+
           <article v-for="(record, index) in records" :key="`${relatedRoute}-${index}`" class="related-record">
             <h4>
               <RouterLink
@@ -415,6 +460,26 @@ watch(() => [props.entityRoute, props.id], loadDetail)
           </article>
         </div>
       </CollapseSection>
+
+      <section v-if="auth.isAdmin.value && missingRelationSections.length > 0" class="article-section">
+        <button
+          v-if="!showingNewRelatedPicker"
+          type="button"
+          class="secondary-button"
+          @click="showingNewRelatedPicker = true"
+        >
+          New Related Entity
+        </button>
+
+        <AddRelatedEntityForm
+          v-else
+          :entity-route="entityRoute"
+          :id="id"
+          :options="missingRelationSections"
+          @created="onRelationCreated"
+          @cancel="showingNewRelatedPicker = false"
+        />
+      </section>
     </article>
   </section>
 </template>
