@@ -18,3 +18,11 @@ export async function getEntityFull(entityRoute: string, id: string): Promise<En
 export async function createEntity(entityRoute: string, data: DomainEntity): Promise<DomainEntity> {
     return requestJson<DomainEntity>(`/${entityRoute}`, { method: 'POST', body: data })
 }
+
+export async function updateEntity(entityRoute: string, id: string, data: DomainEntity): Promise<DomainEntity> {
+    const response = await requestJson<{ updated: number; record: DomainEntity }>(
+        `/${entityRoute}/${encodeURIComponent(id)}`,
+        { method: 'PATCH', body: data }
+    )
+    return response.record
+}

@@ -166,6 +166,13 @@ a:hover {
     color: var(--ink-700);
 }
 
+.section-heading-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
 .status-card {
     border: 1px solid var(--line-soft);
     border-radius: var(--radius);

@@ -4,7 +4,9 @@ import CollapseSection from '../components/CollapseSection.vue'
 import FieldList from '../components/FieldList.vue'
 import { entityLabelFromRoute } from '../config/entities'
 import { ApiError } from '../services/apiClient'
-import { getEntityFull, type DomainEntity } from '../services/domainService'
+import { getEntityFull, updateEntity, type DomainEntity } from '../services/domainService'
+import { getEntitySchema, type EntityFieldSchema } from '../services/metaService'
+import { useAuthStore } from '../stores/auth'
 
 type FullState = {
   entity: DomainEntity
@@ -16,9 +18,17 @@ const props = defineProps<{
   id: string
 }>()
 
+const auth = useAuthStore()
+
 const loading = ref(true)
 const errorMessage = ref('')
 const fullData = ref<FullState | null>(null)
+
+const isEditing = ref(false)
+const editFields = ref<EntityFieldSchema[]>([])
+const editValues = ref<Record<string, any>>({})
+const saving = ref(false)
+const saveError = ref('')
 
 const entityTitle = computed(() => entityLabelFromRoute(props.entityRoute))
 const entityPageTitle = computed(() => {
@@ -178,6 +188,7 @@ function relatedRecordId(record: DomainEntity): string {
 async function loadDetail() {
   loading.value = true
   errorMessage.value = ''
+  isEditing.value = false
 
   try {
     fullData.value = await getEntityFull(props.entityRoute, props.id)
@@ -189,6 +200,95 @@ async function loadDetail() {
     }
   } finally {
     loading.value = false
+  }
+}
+
+function prettyFieldName(name: string): string {
+  return name
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+function isLongTextField(field: EntityFieldSchema): boolean {
+  return field.type === 'string' && /description|explanation|notes/i.test(field.name)
+}
+
+async function startEdit() {
+  saveError.value = ''
+
+  const schema = await getEntitySchema(props.entityRoute)
+  const entity = fullData.value?.entity
+  if (!schema || !entity) {
+    return
+  }
+
+  editFields.value = schema.fields.filter((field) => !field.primary)
+
+  const initialValues: Record<string, any> = {}
+  for (const field of editFields.value) {
+    const currentValue = entity[field.name]
+    if (field.type === 'boolean') {
+      initialValues[field.name] = currentValue === true
+    } else {
+      initialValues[field.name] = currentValue === undefined || currentValue === null ? '' : String(currentValue)
+    }
+  }
+  editValues.value = initialValues
+
+  isEditing.value = true
+}
+
+function cancelEdit() {
+  isEditing.value = false
+  saveError.value = ''
+}
+
+function buildEditPayload(): Record<string, unknown> {
+  const payload: Record<string, unknown> = {}
+
+  for (const field of editFields.value) {
+    const rawValue = editValues.value[field.name]
+
+    if (field.type === 'boolean') {
+      payload[field.name] = rawValue === true
+      continue
+    }
+
+    const text = typeof rawValue === 'string' ? rawValue.trim() : ''
+    if (text === '') {
+      if (field.required) {
+        throw new Error(`${prettyFieldName(field.name)} is required.`)
+      }
+      continue
+    }
+
+    payload[field.name] = field.type === 'number' ? Number(text) : text
+  }
+
+  return payload
+}
+
+async function saveEdit() {
+  saveError.value = ''
+  saving.value = true
+
+  try {
+    const payload = buildEditPayload()
+    const updated = await updateEntity(props.entityRoute, props.id, payload)
+    if (fullData.value) {
+      fullData.value.entity = { ...fullData.value.entity, ...updated }
+    }
+    isEditing.value = false
+  } catch (error) {
+    if (error instanceof ApiError || error instanceof Error) {
+      saveError.value = error.message
+    } else {
+      saveError.value = 'Could not save changes.'
+    }
+  } finally {
+    saving.value = false
   }
 }
 
@@ -207,8 +307,65 @@ watch(() => [props.entityRoute, props.id], loadDetail)
 
     <article v-else-if="fullData" class="wiki-article">
       <section>
-        <h3>Core data</h3>
-        <FieldList :data="entityDisplayData" empty-message="No entity fields are available." />
+        <div class="section-heading-row">
+          <h3>Core data</h3>
+          <button
+            v-if="auth.isAdmin.value && !isEditing"
+            type="button"
+            class="secondary-button"
+            @click="startEdit"
+          >
+            Edit
+          </button>
+        </div>
+
+        <form v-if="isEditing" class="entity-form" @submit.prevent="saveEdit">
+          <div v-for="field in editFields" :key="field.name" class="form-row">
+            <label :for="`edit-field-${field.name}`">
+              {{ prettyFieldName(field.name) }}
+              <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
+            </label>
+
+            <input
+              v-if="field.type === 'boolean'"
+              :id="`edit-field-${field.name}`"
+              v-model="editValues[field.name]"
+              type="checkbox"
+            />
+            <input
+              v-else-if="field.type === 'number'"
+              :id="`edit-field-${field.name}`"
+              v-model="editValues[field.name]"
+              type="number"
+              step="any"
+              :required="field.required"
+            />
+            <textarea
+              v-else-if="isLongTextField(field)"
+              :id="`edit-field-${field.name}`"
+              v-model="editValues[field.name]"
+              rows="4"
+              :required="field.required"
+            ></textarea>
+            <input
+              v-else
+              :id="`edit-field-${field.name}`"
+              v-model="editValues[field.name]"
+              type="text"
+              :required="field.required"
+            />
+          </div>
+
+          <div class="form-actions">
+            <button class="primary-button" type="submit" :disabled="saving">
+              {{ saving ? 'Saving...' : 'Save' }}
+            </button>
+            <button class="secondary-button" type="button" :disabled="saving" @click="cancelEdit">Cancel</button>
+          </div>
+
+          <p v-if="saveError" class="status-card error">{{ saveError }}</p>
+        </form>
+        <FieldList v-else :data="entityDisplayData" empty-message="No entity fields are available." />
       </section>
 
       <CollapseSection
