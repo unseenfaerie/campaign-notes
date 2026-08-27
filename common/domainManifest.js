@@ -11,7 +11,7 @@ const domainManifest = {
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
-                type: { type: 'string', required: true },
+                player_character: { type: 'boolean', required: true },
                 name: { type: 'string', required: true },
                 age: { type: 'number' },
                 ancestry: { type: 'string' },

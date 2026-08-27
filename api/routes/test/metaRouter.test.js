@@ -53,7 +53,7 @@ describe('metaRouter', () => {
         expect(character.idField).toBe('id');
 
         const fieldNames = character.fields.map((field) => field.name);
-        expect(fieldNames.slice(0, 3)).toEqual(['id', 'type', 'name']);
+        expect(fieldNames.slice(0, 3)).toEqual(['id', 'player_character', 'name']);
 
         const idField = character.fields.find((field) => field.name === 'id');
         expect(idField).toMatchObject({

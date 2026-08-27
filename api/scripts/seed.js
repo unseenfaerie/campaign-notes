@@ -60,15 +60,15 @@ async function main() {
   const nowIso = new Date().toISOString();
   await seedUsers({ bcrypt, nowIso, runSql });
 
-  await runSql(`Inserting characters...`, `INSERT OR IGNORE INTO characters (id, type, name, age, ancestry, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, short_description, long_explanation) VALUES
-    ('alann-barnett', 'pc', 'Alann Barnett', 32, 'human', 'Cleric', '4', 'Neutral Good', 13, 8, 11, 10, 14, 11, 20, 0, 'A thoughtful and strong-willed adventurer.', 'Long Explanation.'),
-    ('releas-neb', 'pc', 'Releas Neb', 28, 'human', 'Magic User', '7', 'Chaotic Good', 5, 14, 10, 18, 13, 9, 16, 0, 'A clever and resourceful wizard.', 'Long Explanation.'),
-    ('appolonia-palleday', 'pc', 'Appolonia Palleday', 16, 'human', 'Magic User', '5', 'Neutral Good', 13, 8, 11, 18, 14, 11, 18, 0, 'A bright and curious spellcaster.', 'Long Explanation.'),
-    ('durchir', 'pc', 'Durchir', 35, 'half-elf', 'Fighter/Enchanter', '2/Enchanter', 'Lawful Evil', 18, 10, 12, 15, 10, 11, 22, 1, 'Durchir of the Angry Orchard, fallen hero.', 'Long Explanation.'),
-    ('cormac', 'pc', 'Cormac', 27, 'half-elf', 'Thief/Illusionist', '5/4', 'Chaotic Good', 9, 16, 7, 15, 14, 7, 15, 0, 'A clever and nimble adventurer.', 'Long Explanation.'),
-    ('bert-verinwort', 'npc', 'Bert Verinwort', 54, 'human', NULL, NULL, 'Lawful Neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'A local notable in Wavethorn.', 'Long Explanation.'),
-    ('sieg-ordoss', 'npc', 'Sieg Ordoss', 57, 'human', NULL, NULL, 'Lawful Neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 'A mysterious figure.', 'Long Explanation.'),
-    ('gereg', 'npc', 'Gereg', 41, 'human', 'Thief', '5', 'Neutral Evil', NULL, NULL, NULL, NULL, NULL, NULL, 20, 0, 'A resident of Wavethorn.', 'Long Explanation.');
+  await runSql(`Inserting characters...`, `INSERT OR IGNORE INTO characters (id, player_character, name, age, ancestry, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, short_description, long_explanation) VALUES
+    ('alann-barnett', true, 'Alann Barnett', 32, 'human', 'Cleric', '4', 'Neutral Good', 13, 8, 11, 10, 14, 11, 20, false, 'A thoughtful and strong-willed adventurer.', 'Long Explanation.'),
+    ('releas-neb', true, 'Releas Neb', 28, 'human', 'Magic User', '7', 'Chaotic Good', 5, 14, 10, 18, 13, 9, 16, false, 'A clever and resourceful wizard.', 'Long Explanation.'),
+    ('appolonia-palleday', true, 'Appolonia Palleday', 16, 'human', 'Magic User', '5', 'Neutral Good', 13, 8, 11, 18, 14, 11, 18, false, 'A bright and curious spellcaster.', 'Long Explanation.'),
+    ('durchir', true, 'Durchir', 35, 'half-elf', 'Fighter/Enchanter', '2/Enchanter', 'Lawful Evil', 18, 10, 12, 15, 10, 11, 22, true, 'Durchir of the Angry Orchard, fallen hero.', 'Long Explanation.'),
+    ('cormac', true, 'Cormac', 27, 'half-elf', 'Thief/Illusionist', '5/4', 'Chaotic Good', 9, 16, 7, 15, 14, 7, 15, false, 'A clever and nimble adventurer.', 'Long Explanation.'),
+    ('bert-verinwort', false, 'Bert Verinwort', 54, 'human', NULL, NULL, 'Lawful Neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, 'A local notable in Wavethorn.', 'Long Explanation.'),
+    ('sieg-ordoss', false, 'Sieg Ordoss', 57, 'human', NULL, NULL, 'Lawful Neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, true, 'A mysterious figure.', 'Long Explanation.'),
+    ('gereg', false, 'Gereg', 41, 'human', 'Thief', '5', 'Neutral Evil', NULL, NULL, NULL, NULL, NULL, NULL, 20, false, 'A resident of Wavethorn.', 'Long Explanation.');
   `);
 
   await runSql(`Inserting user_character_anchors...`, `INSERT OR IGNORE INTO user_character_anchors (character_id, user_id, created_at) VALUES
