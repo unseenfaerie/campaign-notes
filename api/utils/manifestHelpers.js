@@ -136,6 +136,38 @@ function getRelatedIdForRow(row, members, sourceId, anchorMemberIndex) {
     return row[relatedMember.key];
 }
 
+function buildEntityFormSchemas(manifest = domainManifest) {
+    const entities = [];
+
+    for (const [entityName, entityDef] of Object.entries(manifest.entities)) {
+        const fields = [];
+
+        for (const [fieldName, fieldDef] of Object.entries(entityDef.fields || {})) {
+            const field = {
+                name: fieldName,
+                type: fieldDef.type,
+                required: Boolean(fieldDef.required),
+                primary: Boolean(fieldDef.primary),
+            };
+
+            if (fieldDef.format) field.format = fieldDef.format;
+            if (fieldDef.autoIncrement) field.autoIncrement = true;
+            if (fieldDef.widget) field.widget = fieldDef.widget;
+
+            fields.push(field);
+        }
+
+        entities.push({
+            name: entityName,
+            route: entityDef.route,
+            idField: entityDef.idField,
+            fields,
+        });
+    }
+
+    return { entities };
+}
+
 function conformObjectToEntity(obj, entityDef, options = {}) {
     const { enforcePrimaryIdFormat = false } = options;
     const normalized = {};
@@ -173,4 +205,5 @@ module.exports = {
     getRelationContext,
     getRelatedIdForRow,
     conformObjectToEntity,
+    buildEntityFormSchemas,
 };

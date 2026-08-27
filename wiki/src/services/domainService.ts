@@ -14,3 +14,7 @@ export async function listEntities(entityRoute: string): Promise<DomainEntity[]>
 export async function getEntityFull(entityRoute: string, id: string): Promise<EntityFullResponse> {
     return requestJson<EntityFullResponse>(`/${entityRoute}/${encodeURIComponent(id)}/full`)
 }
+
+export async function createEntity(entityRoute: string, data: DomainEntity): Promise<DomainEntity> {
+    return requestJson<DomainEntity>(`/${entityRoute}`, { method: 'POST', body: data })
+}

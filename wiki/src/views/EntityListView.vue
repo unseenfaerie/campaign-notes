@@ -1,19 +1,23 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { entityLabelFromRoute } from '../config/entities'
+import { entityLabelFromRoute, entitySingularLabelFromRoute } from '../config/entities'
 import { ApiError } from '../services/apiClient'
 import { listEntities, type DomainEntity } from '../services/domainService'
+import { useAuthStore } from '../stores/auth'
 
 const props = defineProps<{
   entityRoute: string
 }>()
+
+const auth = useAuthStore()
 
 const loading = ref(true)
 const errorMessage = ref('')
 const records = ref<DomainEntity[]>([])
 
 const title = computed(() => entityLabelFromRoute(props.entityRoute))
+const singularLabel = computed(() => entitySingularLabelFromRoute(props.entityRoute))
 
 const sortedRecords = computed(() => {
   return [...records.value].sort((a, b) => {
@@ -66,8 +70,15 @@ watch(() => props.entityRoute, loadList)
 
 <template>
   <section>
-    <header class="view-header">
+    <header class="view-header list-header">
       <h2>{{ title }}</h2>
+      <RouterLink
+        v-if="auth.isAdmin.value"
+        class="create-button"
+        :to="{ name: 'entity-create', params: { entityRoute: props.entityRoute } }"
+      >
+        Create {{ singularLabel }}
+      </RouterLink>
     </header>
 
     <p v-if="loading" class="status-card">Loading records...</p>

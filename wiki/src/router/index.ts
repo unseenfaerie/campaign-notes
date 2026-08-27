@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { DEFAULT_ENTITY_ROUTE, isKnownEntityRoute } from '../config/entities'
 import { useAuthStore } from '../stores/auth'
+import EntityCreateView from '../views/EntityCreateView.vue'
 import EntityDetailView from '../views/EntityDetailView.vue'
 import EntityListView from '../views/EntityListView.vue'
 import LoginView from '../views/LoginView.vue'
@@ -18,6 +19,14 @@ const router = createRouter({
         {
             path: '/',
             redirect: `/${DEFAULT_ENTITY_ROUTE}`,
+        },
+        {
+            path: '/:entityRoute/new',
+            name: 'entity-create',
+            component: EntityCreateView,
+            props: (route) => ({
+                entityRoute: String(route.params.entityRoute),
+            }),
         },
         {
             path: '/:entityRoute/:id',
@@ -68,8 +77,13 @@ router.beforeEach(async (to) => {
         }
     }
 
-    if ((to.name === 'entity-list' || to.name === 'entity-detail') && !isKnownEntityRoute(String(to.params.entityRoute))) {
+    const entityRouteNames = ['entity-list', 'entity-detail', 'entity-create']
+    if (entityRouteNames.includes(String(to.name)) && !isKnownEntityRoute(String(to.params.entityRoute))) {
         return { name: 'not-found' }
+    }
+
+    if (to.name === 'entity-create' && !auth.isAdmin.value) {
+        return { name: 'entity-list', params: { entityRoute: String(to.params.entityRoute) } }
     }
 
     return true

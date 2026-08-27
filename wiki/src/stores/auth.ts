@@ -115,6 +115,7 @@ export function useAuthStore() {
         user: computed(() => state.user),
         initialized: computed(() => state.initialized),
         isAuthenticated: computed(() => Boolean(state.accessToken) && Boolean(state.user)),
+        isAdmin: computed(() => state.user?.role === 'dm'),
         bootstrap,
         login,
         logout,

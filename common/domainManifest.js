@@ -25,7 +25,7 @@ const domainManifest = {
                 wisdom: { type: 'number' },
                 charisma: { type: 'number' },
                 total_health: { type: 'number' },
-                deceased: { type: 'number', required: true },
+                deceased: { type: 'number', required: true, widget: 'checkbox' },
                 short_description: { type: 'string', required: true },
                 long_explanation: {
                     type: 'string',
