@@ -1,6 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { DEFAULT_ENTITY_ROUTE, isKnownEntityRoute } from '../config/entities'
 import { useAuthStore } from '../stores/auth'
+import AdminUserCreateView from '../views/AdminUserCreateView.vue'
+import AdminUserDetailView from '../views/AdminUserDetailView.vue'
+import AdminUsersView from '../views/AdminUsersView.vue'
 import EntityCreateView from '../views/EntityCreateView.vue'
 import EntityDetailView from '../views/EntityDetailView.vue'
 import EntityListView from '../views/EntityListView.vue'
@@ -36,6 +39,27 @@ const router = createRouter({
                 entityRoute: String(route.params.entityRoute),
                 id: String(route.params.id),
             }),
+        },
+        {
+            path: '/admin/users',
+            name: 'admin-users',
+            component: AdminUsersView,
+            meta: { requiresAdmin: true },
+        },
+        {
+            path: '/admin/users/new',
+            name: 'admin-user-create',
+            component: AdminUserCreateView,
+            meta: { requiresAdmin: true },
+        },
+        {
+            path: '/admin/users/:userId',
+            name: 'admin-user-detail',
+            component: AdminUserDetailView,
+            props: (route) => ({
+                userId: String(route.params.userId),
+            }),
+            meta: { requiresAdmin: true },
         },
         {
             path: '/:entityRoute',
@@ -84,6 +108,10 @@ router.beforeEach(async (to) => {
 
     if (to.name === 'entity-create' && !auth.isAdmin.value) {
         return { name: 'entity-list', params: { entityRoute: String(to.params.entityRoute) } }
+    }
+
+    if (to.meta.requiresAdmin && !auth.isAdmin.value) {
+        return { path: `/${DEFAULT_ENTITY_ROUTE}` }
     }
 
     return true

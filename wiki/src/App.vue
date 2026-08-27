@@ -37,6 +37,10 @@ async function handleLogout() {
           </RouterLink>
         </nav>
 
+        <nav v-if="auth.isAdmin.value" aria-label="Admin navigation" class="nav-links admin-nav">
+          <RouterLink :to="{ name: 'admin-users' }" class="nav-link">Manage Users</RouterLink>
+        </nav>
+
         <button class="logout-button" type="button" @click="handleLogout">Logout</button>
       </aside>
 
