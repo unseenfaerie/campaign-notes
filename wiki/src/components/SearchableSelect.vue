@@ -30,6 +30,7 @@ const emit = defineEmits<{
 const root = ref<HTMLElement | null>(null)
 const isOpen = ref(false)
 const searchText = ref('')
+const emptyOptionSelected = ref(false)
 
 const selectedOption = computed(() => props.options.find((option) => option.value === props.modelValue))
 const filteredOptions = computed(() => {
@@ -42,6 +43,11 @@ const filteredOptions = computed(() => {
 })
 
 function syncSearchText() {
+  if (props.modelValue === '' && !emptyOptionSelected.value) {
+    searchText.value = ''
+    return
+  }
+
   searchText.value = selectedOption.value?.label ?? ''
 }
 
@@ -52,6 +58,7 @@ function openOptions() {
 }
 
 function selectOption(option: SearchableSelectOption) {
+  emptyOptionSelected.value = option.value === ''
   emit('update:modelValue', option.value)
   searchText.value = option.label
   isOpen.value = false
@@ -64,7 +71,16 @@ function handleDocumentPointerDown(event: PointerEvent) {
   }
 }
 
-watch(() => [props.modelValue, props.options], syncSearchText, { immediate: true })
+watch(
+  () => [props.modelValue, props.options],
+  ([modelValue, options], previous) => {
+    if (modelValue !== '' || options !== previous?.[1]) {
+      emptyOptionSelected.value = false
+    }
+    syncSearchText()
+  },
+  { immediate: true }
+)
 onMounted(() => document.addEventListener('pointerdown', handleDocumentPointerDown))
 onBeforeUnmount(() => document.removeEventListener('pointerdown', handleDocumentPointerDown))
 </script>
