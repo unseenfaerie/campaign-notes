@@ -3,6 +3,8 @@
 // relationship - association between two entities with metadata
 // history - association between two entities with metadata and a date key, 
 // meaning that there may be many records for a given pair
+const { getEnumValues } = require('./enums');
+
 const domainManifest = {
     entities: {
         Character: {
@@ -17,7 +19,7 @@ const domainManifest = {
                 ancestry: { type: 'string' },
                 class: { type: 'string' },
                 level: { type: 'string' },
-                alignment: { type: 'string' },
+                alignment: { type: 'string', enum: 'alignment' },
                 strength: { type: 'number' },
                 dexterity: { type: 'number' },
                 constitution: { type: 'number' },
@@ -47,7 +49,7 @@ const domainManifest = {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
                 name: { type: 'string', required: true },
                 pantheon: { type: 'string' },
-                alignment: { type: 'string' },
+                alignment: { type: 'string', enum: 'alignment' },
                 short_description: { type: 'string', required: true },
                 long_explanation: { type: 'string' },
             },
@@ -61,8 +63,8 @@ const domainManifest = {
                 name: { type: 'string', required: true },
                 real_world_date: { type: 'string' },
                 in_game_time: { type: 'loreDate' },
-                previous_event_id: { type: 'string' },
-                next_event_id: { type: 'string' },
+                previous_event_id: { type: 'string', ref: 'Event' },
+                next_event_id: { type: 'string', ref: 'Event' },
                 short_description: { type: 'string', required: true },
                 long_explanation: { type: 'string' },
             },
@@ -97,8 +99,8 @@ const domainManifest = {
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
                 name: { type: 'string', required: true },
-                type: { type: 'string', required: true },
-                parent_id: { type: 'string' },
+                type: { type: 'string', required: true, enum: 'placeType' },
+                parent_id: { type: 'string', ref: 'Place' },
                 short_description: { type: 'string', required: true },
                 long_explanation: { type: 'string' },
             },
@@ -483,6 +485,7 @@ function normalizeFieldSchema(fields) {
         };
 
         if (fieldDef.format) normalized[fieldName].format = fieldDef.format;
+        if (fieldDef.enum) normalized[fieldName].enum = [...getEnumValues(fieldDef.enum)];
         if (fieldDef.autoIncrement) normalized[fieldName].autoIncrement = true;
     }
 

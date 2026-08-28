@@ -5,6 +5,7 @@ import { createRelation, listEntities, type DomainEntity } from '../services/dom
 import { entityLabelFromRoute } from '../config/entities'
 import type { EntityFieldSchema, RelationFormSchema } from '../services/metaService'
 import LoreDateInput from './LoreDateInput.vue'
+import SearchableSelect from './SearchableSelect.vue'
 
 const props = defineProps<{
   entityRoute: string
@@ -33,6 +34,13 @@ function prettyFieldName(name: string): string {
   return name
     .split('_')
     .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+function prettyEnumValue(value: string): string {
+  return value
+    .split('-')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ')
 }
@@ -167,21 +175,22 @@ watch(selectedRelatedRoute, () => {
   <form class="entity-form add-relation-form" @submit.prevent="submit">
     <div v-if="options.length > 1" class="form-row">
       <label for="add-relation-type">Relation type</label>
-      <select id="add-relation-type" v-model="selectedRelatedRoute">
-        <option v-for="option in options" :key="option.relatedRoute" :value="option.relatedRoute">
-          {{ entityLabelFromRoute(option.relatedRoute) }}
-        </option>
-      </select>
+      <SearchableSelect
+        id="add-relation-type"
+        v-model="selectedRelatedRoute"
+        :options="options.map((option) => ({ value: option.relatedRoute, label: entityLabelFromRoute(option.relatedRoute) }))"
+      />
     </div>
 
     <div class="form-row">
       <label for="add-relation-target">{{ entityLabelFromRoute(selectedRelatedRoute) }}</label>
-      <select id="add-relation-target" v-model="selectedTargetId" :disabled="loadingTargets">
-        <option value="" disabled>{{ loadingTargets ? 'Loading...' : 'Select one' }}</option>
-        <option v-for="target in targets" :key="String(target.id)" :value="String(target.id)">
-          {{ targetLabel(target) }}
-        </option>
-      </select>
+      <SearchableSelect
+        id="add-relation-target"
+        v-model="selectedTargetId"
+        :options="targets.map((target) => ({ value: String(target.id), label: targetLabel(target) }))"
+        :disabled="loadingTargets"
+        :placeholder="loadingTargets ? 'Loading...' : 'Select one'"
+      />
     </div>
 
     <div v-for="field in selectedSchema?.fields ?? []" :key="field.name" class="form-row">
@@ -195,6 +204,16 @@ watch(selectedRelatedRoute, () => {
         :id="`add-relation-field-${field.name}`"
         v-model="formValues[field.name]"
         type="checkbox"
+      />
+      <SearchableSelect
+        v-else-if="field.enum"
+        :id="`add-relation-field-${field.name}`"
+        v-model="formValues[field.name]"
+        :options="[
+          ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
+          ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
+        ]"
+        :required="field.required"
       />
       <input
         v-else-if="field.type === 'number'"

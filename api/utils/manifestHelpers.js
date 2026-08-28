@@ -1,8 +1,9 @@
 const { domainManifest } = require('../../common/domainManifest');
 const { validateIdFormat } = require('./idUtils');
 const { isValidLoreDate } = require('../../common/dateSystem');
+const { getEnumValues } = require('../../common/enums');
 
-function coerceValueByType(type, value) {
+function coerceValueByType(type, value, enumValues) {
     if (value === undefined || value === null) return value;
 
     if (type === 'loreDate') {
@@ -31,7 +32,11 @@ function coerceValueByType(type, value) {
     }
 
     if (type === 'string') {
-        return String(value);
+        const normalized = String(value);
+        if (enumValues && !enumValues.includes(normalized)) {
+            throw new Error(`Invalid value: expected one of ${enumValues.join(', ')}`);
+        }
+        return normalized;
     }
 
     return value;
@@ -156,12 +161,27 @@ function mapFieldDefs(fieldsObj) {
         };
 
         if (fieldDef.format) field.format = fieldDef.format;
+        if (fieldDef.enum) field.enum = [...getEnumValues(fieldDef.enum)];
         if (fieldDef.autoIncrement) field.autoIncrement = true;
+        if (fieldDef.ref) {
+            const referencedEntity = Object.entries(domainManifest.entities).find(
+                ([entityName, entityDef]) => entityName === fieldDef.ref || entityDef.route === fieldDef.ref
+            );
+            field.ref = referencedEntity?.[1].route || fieldDef.ref;
+        }
 
         fields.push(field);
     }
 
     return fields;
+}
+
+function orderEntityFields(fields, idField) {
+    const nameField = fields.find((field) => field.name === 'name');
+    const entityIdField = fields.find((field) => field.name === idField);
+    const remainingFields = fields.filter((field) => field !== nameField && field !== entityIdField);
+
+    return [nameField, entityIdField, ...remainingFields].filter(Boolean);
 }
 
 function buildEntityFormSchemas(manifest = domainManifest) {
@@ -172,7 +192,7 @@ function buildEntityFormSchemas(manifest = domainManifest) {
             name: entityName,
             route: entityDef.route,
             idField: entityDef.idField,
-            fields: mapFieldDefs(entityDef.fields),
+            fields: orderEntityFields(mapFieldDefs(entityDef.fields), entityDef.idField),
         });
     }
 
@@ -248,7 +268,7 @@ function conformObjectToEntity(obj, entityDef, options = {}) {
             throw new Error(`Unknown field for route ${entityDef.route}: ${field}`);
         }
 
-        normalized[field] = coerceValueByType(fieldDef.type, rawValue);
+        normalized[field] = coerceValueByType(fieldDef.type, rawValue, getEnumValues(fieldDef.enum));
 
         if (
             enforcePrimaryIdFormat &&

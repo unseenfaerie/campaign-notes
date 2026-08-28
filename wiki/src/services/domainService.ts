@@ -5,6 +5,7 @@ export type DomainEntity = Record<string, unknown>
 export type EntityFullResponse = {
     entity: DomainEntity
     related: Record<string, DomainEntity[]>
+    children?: DomainEntity[]
 }
 
 export async function listEntities(entityRoute: string): Promise<DomainEntity[]> {

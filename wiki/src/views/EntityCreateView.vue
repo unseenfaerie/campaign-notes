@@ -3,9 +3,10 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { entitySingularLabelFromRoute } from '../config/entities'
 import { ApiError } from '../services/apiClient'
-import { createEntity } from '../services/domainService'
+import { createEntity, listEntities, type DomainEntity } from '../services/domainService'
 import { getEntitySchema, type EntityFieldSchema, type EntitySchema } from '../services/metaService'
 import LoreDateInput from '../components/LoreDateInput.vue'
+import SearchableSelect from '../components/SearchableSelect.vue'
 
 const props = defineProps<{
   entityRoute: string
@@ -18,6 +19,7 @@ const submitting = ref(false)
 const errorMessage = ref('')
 const schema = ref<EntitySchema | undefined>()
 const formValues = ref<Record<string, any>>({})
+const placeOptions = ref<DomainEntity[]>([])
 const slugTouched = ref(false)
 
 const singularLabel = computed(() => entitySingularLabelFromRoute(props.entityRoute))
@@ -49,6 +51,13 @@ function prettyFieldName(name: string): string {
     .join(' ')
 }
 
+function prettyEnumValue(value: string): string {
+  return value
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
 function slugify(value: string): string {
   return value
     .toLowerCase()
@@ -66,6 +75,7 @@ async function loadSchema() {
   errorMessage.value = ''
   schema.value = undefined
   formValues.value = {}
+  placeOptions.value = []
   slugTouched.value = false
 
   try {
@@ -76,6 +86,12 @@ async function loadSchema() {
     }
 
     schema.value = found
+
+    if (props.entityRoute === 'places') {
+      placeOptions.value = (await listEntities('places')).sort((left, right) =>
+        String(left.name || left.id).localeCompare(String(right.name || right.id))
+      )
+    }
 
     const initialValues: Record<string, any> = {}
     for (const field of found.fields) {
@@ -188,6 +204,25 @@ watch(
           :id="`create-field-${field.name}`"
           v-model="formValues[field.name]"
           type="checkbox"
+        />
+        <SearchableSelect
+          v-else-if="entityRoute === 'places' && field.name === 'parent_id'"
+          :id="`create-field-${field.name}`"
+          v-model="formValues[field.name]"
+          :options="[
+            { value: '', label: 'No parent' },
+            ...placeOptions.map((place) => ({ value: String(place.id), label: String(place.name || place.id) })),
+          ]"
+        />
+        <SearchableSelect
+          v-else-if="field.enum"
+          :id="`create-field-${field.name}`"
+          v-model="formValues[field.name]"
+          :options="[
+            ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
+            ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
+          ]"
+          :required="field.required"
         />
         <input
           v-else-if="field.type === 'number'"

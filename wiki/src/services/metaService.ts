@@ -6,8 +6,10 @@ export type EntityFieldSchema = {
     type: 'string' | 'number' | 'boolean' | 'loreDate'
     required: boolean
     primary: boolean
+    ref?: string
     format?: string
     autoIncrement?: boolean
+    enum?: string[]
 }
 
 export type EntitySchema = {

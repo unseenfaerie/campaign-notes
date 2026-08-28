@@ -1,6 +1,13 @@
 const { domainManifest } = require('../../common/domainManifest');
 const { coerceValueByType, getRelationMembers } = require('./manifestHelpers');
 const { isValidLoreDate, compareLoreDates } = require('../../common/dateSystem');
+const { getEnumValues } = require('../../common/enums');
+
+function coerceFieldValue(meta, value) {
+    return meta.enum
+        ? coerceValueByType(meta.type, value, getEnumValues(meta.enum))
+        : coerceValueByType(meta.type, value);
+}
 
 function getRelatedMemberInfo(relationDef, anchorMemberIndex) {
     const members = getRelationMembers(relationDef);
@@ -36,7 +43,7 @@ function normalizeRelationPayload(rawPayload, relationDef) {
             throw new Error(`Unknown field for relation: ${field}`);
         }
 
-        normalized[field] = coerceValueByType(meta.type, rawValue);
+        normalized[field] = coerceFieldValue(meta, rawValue);
     }
 
     return normalized;
@@ -67,7 +74,7 @@ function normalizeRelationUpdatePayload(rawPayload, relationDef) {
             throw new Error(`Unknown field for relation: ${field}`);
         }
 
-        normalized[field] = coerceValueByType(meta.type, rawValue);
+        normalized[field] = coerceFieldValue(meta, rawValue);
     }
 
     return normalized;
@@ -98,7 +105,7 @@ function getValidatedHistorySelector(query, relationDef, { required = false } = 
 
     const historyMeta = relationDef.payload && relationDef.payload[historyKey];
     const historyType = historyMeta && historyMeta.type ? historyMeta.type : 'string';
-    return coerceValueByType(historyType, historyRaw);
+    return coerceFieldValue(historyMeta || { type: historyType }, historyRaw);
 }
 
 function buildRelationInsertData({

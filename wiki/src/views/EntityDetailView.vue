@@ -5,14 +5,22 @@ import CollapseSection from '../components/CollapseSection.vue'
 import FieldList from '../components/FieldList.vue'
 import { entityLabelFromRoute } from '../config/entities'
 import { ApiError } from '../services/apiClient'
-import { getEntityFull, updateEntity, updateRelation, type DomainEntity } from '../services/domainService'
-import { getEntitySchema, getRelationSchemas, type EntityFieldSchema, type RelationFormSchema } from '../services/metaService'
+import { getEntityFull, listEntities, updateEntity, updateRelation, type DomainEntity } from '../services/domainService'
+import {
+  getEntitySchema,
+  getRelationSchemas,
+  type EntityFieldSchema,
+  type EntitySchema,
+  type RelationFormSchema,
+} from '../services/metaService'
 import LoreDateInput from '../components/LoreDateInput.vue'
+import SearchableSelect from '../components/SearchableSelect.vue'
 import { useAuthStore } from '../stores/auth'
 
 type FullState = {
   entity: DomainEntity
   related: Record<string, DomainEntity[]>
+  children?: DomainEntity[]
 }
 
 const props = defineProps<{
@@ -33,6 +41,8 @@ const saving = ref(false)
 const saveError = ref('')
 
 const relationSchemas = ref<RelationFormSchema[]>([])
+const entitySchema = ref<EntitySchema | null>(null)
+const placeOptions = ref<DomainEntity[]>([])
 const openAddFormRoute = ref<string | null>(null)
 const showingNewRelatedPicker = ref(false)
 
@@ -217,12 +227,19 @@ async function loadDetail() {
   editingHistoryKey.value = null
 
   try {
-    const [full, relations] = await Promise.all([
+    const [full, schema, relations] = await Promise.all([
       getEntityFull(props.entityRoute, props.id),
+      getEntitySchema(props.entityRoute),
       getRelationSchemas(props.entityRoute),
     ])
     fullData.value = full
+    entitySchema.value = schema || null
     relationSchemas.value = relations
+    placeOptions.value = props.entityRoute === 'places'
+      ? (await listEntities('places'))
+          .filter((place) => String(place.id) !== props.id)
+          .sort((left, right) => String(left.name || left.id).localeCompare(String(right.name || right.id)))
+      : []
   } catch (error) {
     if (error instanceof ApiError) {
       errorMessage.value = error.message
@@ -288,7 +305,7 @@ function fieldValuesFromRecord(fields: EntityFieldSchema[], record: DomainEntity
 function buildFieldsPayload(
   fields: EntityFieldSchema[],
   values: Record<string, any>,
-  { clearOptionalLoreDates = false } = {}
+  { clearOptionalLoreDates = false, clearOptionalReferences = false } = {}
 ): Record<string, unknown> {
   const payload: Record<string, unknown> = {}
 
@@ -306,6 +323,9 @@ function buildFieldsPayload(
         throw new Error(`${prettyFieldName(field.name)} is required.`)
       }
       if (clearOptionalLoreDates && field.type === 'loreDate') {
+        payload[field.name] = null
+      }
+      if (clearOptionalReferences && field.ref) {
         payload[field.name] = null
       }
       continue
@@ -446,6 +466,13 @@ function prettyFieldName(name: string): string {
     .join(' ')
 }
 
+function prettyEnumValue(value: string): string {
+  return value
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
 function isLongTextField(field: EntityFieldSchema): boolean {
   return field.type === 'string' && /description|explanation|notes/i.test(field.name)
 }
@@ -453,13 +480,13 @@ function isLongTextField(field: EntityFieldSchema): boolean {
 async function startEdit() {
   saveError.value = ''
 
-  const schema = await getEntitySchema(props.entityRoute)
+  const schema = entitySchema.value || await getEntitySchema(props.entityRoute)
   const entity = fullData.value?.entity
   if (!schema || !entity) {
     return
   }
 
-  editFields.value = schema.fields.filter((field) => !field.primary)
+  editFields.value = schema.fields
   editValues.value = fieldValuesFromRecord(editFields.value, entity)
 
   isEditing.value = true
@@ -471,8 +498,9 @@ function cancelEdit() {
 }
 
 function buildEditPayload(): Record<string, unknown> {
-  const payload = buildFieldsPayload(editFields.value, editValues.value, {
+  const payload = buildFieldsPayload(editableFields(editFields.value), editValues.value, {
     clearOptionalLoreDates: true,
+    clearOptionalReferences: true,
   })
 
   return payload
@@ -539,6 +567,26 @@ watch(() => [props.entityRoute, props.id], loadDetail)
               :id="`edit-field-${field.name}`"
               v-model="editValues[field.name]"
               type="checkbox"
+              :disabled="field.primary"
+            />
+            <SearchableSelect
+              v-else-if="field.enum"
+              :id="`edit-field-${field.name}`"
+              v-model="editValues[field.name]"
+              :options="[
+                ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
+                ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
+              ]"
+              :required="field.required"
+            />
+            <SearchableSelect
+              v-else-if="entityRoute === 'places' && field.name === 'parent_id'"
+              :id="`edit-field-${field.name}`"
+              v-model="editValues[field.name]"
+              :options="[
+                { value: '', label: 'No parent' },
+                ...placeOptions.map((place) => ({ value: String(place.id), label: String(place.name || place.id) })),
+              ]"
             />
             <input
               v-else-if="field.type === 'number'"
@@ -547,6 +595,7 @@ watch(() => [props.entityRoute, props.id], loadDetail)
               type="number"
               step="any"
               :required="field.required"
+              :readonly="field.primary"
             />
             <textarea
               v-else-if="isLongTextField(field)"
@@ -566,6 +615,7 @@ watch(() => [props.entityRoute, props.id], loadDetail)
               v-model="editValues[field.name]"
               type="text"
               :required="field.required"
+              :readonly="field.primary"
             />
           </div>
 
@@ -578,7 +628,45 @@ watch(() => [props.entityRoute, props.id], loadDetail)
 
           <p v-if="saveError" class="status-card error">{{ saveError }}</p>
         </form>
-        <FieldList v-else :data="entityDisplayData" empty-message="No entity fields are available." />
+        <FieldList
+          v-else
+          :data="entityDisplayData"
+          :fields="entitySchema?.fields"
+          empty-message="No entity fields are available."
+        >
+          <template #after-field="{ fieldKey }">
+            <template v-if="entityRoute === 'places' && fieldKey === 'parent_id' && fullData.children?.length">
+              <dt>Children</dt>
+              <dd>
+                <template v-for="(child, index) in fullData.children" :key="String(child.id)">
+                  <span v-if="index > 0">, </span>
+                  <RouterLink
+                    v-if="child.id !== undefined && child.id !== null && child.id !== ''"
+                    :to="{ name: 'entity-detail', params: { entityRoute: 'places', id: String(child.id) } }"
+                  >
+                    {{ relatedRecordLabel(child) }}
+                  </RouterLink>
+                </template>
+              </dd>
+            </template>
+          </template>
+          <template #after-fields>
+            <template v-if="entityRoute === 'places' && !entityDisplayData.parent_id && fullData.children?.length">
+              <dt>Children</dt>
+              <dd>
+                <template v-for="(child, index) in fullData.children" :key="String(child.id)">
+                  <span v-if="index > 0">, </span>
+                  <RouterLink
+                    v-if="child.id !== undefined && child.id !== null && child.id !== ''"
+                    :to="{ name: 'entity-detail', params: { entityRoute: 'places', id: String(child.id) } }"
+                  >
+                    {{ relatedRecordLabel(child) }}
+                  </RouterLink>
+                </template>
+              </dd>
+            </template>
+          </template>
+        </FieldList>
       </section>
 
       <CollapseSection
@@ -655,6 +743,16 @@ watch(() => [props.entityRoute, props.id], loadDetail)
                   :id="`edit-relation-${relatedRoute}-${index}-${field.name}`"
                   v-model="relationEditValues[field.name]"
                   type="checkbox"
+                />
+                <SearchableSelect
+                  v-else-if="field.enum"
+                  :id="`edit-relation-${relatedRoute}-${index}-${field.name}`"
+                  v-model="relationEditValues[field.name]"
+                  :options="[
+                    ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
+                    ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
+                  ]"
+                  :required="field.required"
                 />
                 <input
                   v-else-if="field.type === 'number'"
@@ -751,6 +849,16 @@ watch(() => [props.entityRoute, props.id], loadDetail)
                       :id="`edit-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
                       v-model="historyEditValues[field.name]"
                       type="checkbox"
+                    />
+                    <SearchableSelect
+                      v-else-if="field.enum"
+                      :id="`edit-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
+                      v-model="historyEditValues[field.name]"
+                      :options="[
+                        ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
+                        ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
+                      ]"
+                      :required="field.required"
                     />
                     <input
                       v-else-if="field.type === 'number'"

@@ -14,7 +14,9 @@ function coerceWhere(resourceName, where) {
       throw new Error(`Unknown where field for ${resourceName}: ${field}`);
     }
 
-    normalized[field] = coerceValueByType(fieldDef.type, rawValue);
+    normalized[field] = fieldDef.enum
+      ? coerceValueByType(fieldDef.type, rawValue, fieldDef.enum)
+      : coerceValueByType(fieldDef.type, rawValue);
   }
 
   return normalized;
@@ -28,7 +30,7 @@ function toHttpError(err) {
   }
 
   if (
-    /Unknown field|Unknown where field|Missing required field|Invalid type|Data must be an object|Where clause|Primary key updates are not allowed|Invalid number value|Invalid boolean value/i.test(
+    /Unknown field|Unknown where field|Missing required field|Invalid type|Invalid value|Data must be an object|Where clause|Primary key updates are not allowed|Invalid number value|Invalid boolean value/i.test(
       message
     )
   ) {

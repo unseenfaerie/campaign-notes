@@ -40,7 +40,7 @@ describe('metaRouter', () => {
         expect(res.body.entities.length).toBeGreaterThan(0);
     });
 
-    it('projects field metadata in definition order', async () => {
+    it('projects entity identity fields first', async () => {
         const res = await request(app)
             .get('/api/meta')
             .set('Authorization', bearerToken());
@@ -53,7 +53,7 @@ describe('metaRouter', () => {
         expect(character.idField).toBe('id');
 
         const fieldNames = character.fields.map((field) => field.name);
-        expect(fieldNames.slice(0, 3)).toEqual(['id', 'player_character', 'name']);
+        expect(fieldNames.slice(0, 3)).toEqual(['name', 'id', 'player_character']);
 
         const idField = character.fields.find((field) => field.name === 'id');
         expect(idField).toMatchObject({
@@ -69,6 +69,45 @@ describe('metaRouter', () => {
             required: false,
             primary: false,
         });
+    });
+
+    it('exposes referenced entity routes for entity fields', async () => {
+        const res = await request(app)
+            .get('/api/meta')
+            .set('Authorization', bearerToken());
+
+        expect(res.status).toBe(200);
+
+        const event = res.body.entities.find((entity) => entity.route === 'events');
+        const previousEventField = event.fields.find((field) => field.name === 'previous_event_id');
+        expect(previousEventField.ref).toBe('events');
+
+        const place = res.body.entities.find((entity) => entity.route === 'places');
+        const parentField = place.fields.find((field) => field.name === 'parent_id');
+        expect(parentField.ref).toBe('places');
+    });
+
+    it('exposes all place type enum values', async () => {
+        const res = await request(app)
+            .get('/api/meta')
+            .set('Authorization', bearerToken());
+
+        expect(res.status).toBe(200);
+
+        const place = res.body.entities.find((entity) => entity.route === 'places');
+        const typeField = place.fields.find((field) => field.name === 'type');
+        expect(typeField.enum).toEqual([
+            'universe',
+            'plane',
+            'planet',
+            'continent',
+            'country',
+            'region',
+            'city-state',
+            'city',
+            'town',
+            'site',
+        ]);
     });
 
     it('marks autoIncrement primary keys so forms can skip them', async () => {
@@ -107,6 +146,22 @@ describe('metaRouter', () => {
 
         const ageField = character.fields.find((field) => field.name === 'age');
         expect(ageField.type).toBe('number');
+    });
+
+    it('exposes alignment enum values for character and deity forms', async () => {
+        const res = await request(app)
+            .get('/api/meta')
+            .set('Authorization', bearerToken());
+
+        expect(res.status).toBe(200);
+
+        for (const route of ['characters', 'deities']) {
+            const entity = res.body.entities.find((item) => item.route === route);
+            const alignmentField = entity.fields.find((field) => field.name === 'alignment');
+            expect(alignmentField.enum).toHaveLength(9);
+            expect(alignmentField.enum).toContain('lawful-good');
+            expect(alignmentField.enum).toContain('chaotic-evil');
+        }
     });
 
     it('exposes relation form schemas keyed by entity route', async () => {

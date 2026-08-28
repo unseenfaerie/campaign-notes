@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
+import { listEntities, type DomainEntity } from '../services/domainService'
 import { getDateSystem, type EntityFieldSchema } from '../services/metaService'
 import { formatLoreDate, isCanonicalLoreDate, type DateSystem } from '../utils/loreDate'
 
@@ -14,9 +16,27 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const dateSystem = ref<DateSystem | null>(null)
+const referenceNames = ref<Record<string, Record<string, string>>>({})
 
 onMounted(async () => {
-  dateSystem.value = await getDateSystem()
+  const referencedRoutes = [...new Set((props.fields || []).flatMap((field) => (field.ref ? [field.ref] : [])))]
+
+  const [loadedDateSystem, ...referencedEntities] = await Promise.all([
+    getDateSystem(),
+    ...referencedRoutes.map((route) => listEntities(route).catch(() => [] as DomainEntity[])),
+  ])
+
+  dateSystem.value = loadedDateSystem
+  referenceNames.value = Object.fromEntries(
+    referencedRoutes.map((route, index) => [
+      route,
+      Object.fromEntries(
+        referencedEntities[index]
+          .filter((entity) => entity.id !== undefined && entity.id !== null && typeof entity.name === 'string')
+          .map((entity) => [String(entity.id), entity.name as string])
+      ),
+    ])
+  )
 })
 
 const entries = computed(() =>
@@ -29,11 +49,50 @@ function prettyKey(key: string): string {
     .replace(/\b\w/g, (match) => match.toUpperCase())
 }
 
+function fieldLabel(key: string): string {
+  const labelKey = fieldReferenceRoute(key) ? key.replace(/_id$/, '') : key
+  return prettyKey(labelKey)
+}
+
 function fieldType(key: string): string | undefined {
   return props.fields?.find((field) => field.name === key)?.type
 }
 
+function fieldEnumValues(key: string): string[] | undefined {
+  return props.fields?.find((field) => field.name === key)?.enum
+}
+
+function fieldReferenceRoute(key: string): string | undefined {
+  return props.fields?.find((field) => field.name === key)?.ref
+}
+
+function fieldReferenceId(value: unknown): string {
+  if (value === undefined || value === null || value === '') {
+    return ''
+  }
+
+  return String(value)
+}
+
+function fieldReferenceName(key: string, value: unknown): string {
+  const route = fieldReferenceRoute(key)
+  const id = fieldReferenceId(value)
+  return (route && referenceNames.value[route]?.[id]) || id
+}
+
+function prettyEnumValue(value: string): string {
+  return value
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
 function prettyValue(key: string, value: unknown): string {
+  const enumValues = fieldEnumValues(key)
+  if (enumValues && enumValues.includes(String(value))) {
+    return prettyEnumValue(String(value))
+  }
+
   if (Array.isArray(value)) {
     return value.map((entry) => String(entry)).join(', ')
   }
@@ -55,9 +114,22 @@ function prettyValue(key: string, value: unknown): string {
     <p v-if="entries.length === 0" class="status-card">{{ props.emptyMessage }}</p>
     <dl v-else class="field-list">
       <template v-for="[key, value] in entries" :key="key">
-        <dt>{{ prettyKey(key) }}</dt>
-        <dd>{{ prettyValue(key, value) }}</dd>
+        <dt>{{ fieldLabel(key) }}</dt>
+        <dd>
+          <RouterLink
+            v-if="fieldReferenceRoute(key) && fieldReferenceId(value)"
+            :to="{
+              name: 'entity-detail',
+              params: { entityRoute: fieldReferenceRoute(key), id: fieldReferenceId(value) },
+            }"
+          >
+            {{ fieldReferenceName(key, value) }}
+          </RouterLink>
+          <template v-else>{{ prettyValue(key, value) }}</template>
+        </dd>
+        <slot name="after-field" :field-key="key" />
       </template>
+      <slot name="after-fields" />
     </dl>
   </div>
 </template>

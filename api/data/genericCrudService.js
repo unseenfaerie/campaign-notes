@@ -1,5 +1,6 @@
 const { db } = require('./db');
 const { domainManifest } = require('../../common/domainManifest');
+const { getEnumValues } = require('../../common/enums');
 
 function getRelationMembers(relationDef) {
   if (Array.isArray(relationDef.members) && relationDef.members.length === 2) {
@@ -19,7 +20,12 @@ function getRelationMembers(relationDef) {
 function toResourceDefinition(resourceName, manifest = domainManifest) {
   const entityDef = manifest.entities[resourceName];
   if (entityDef) {
-    const fields = { ...entityDef.fields };
+    const fields = Object.fromEntries(
+      Object.entries(entityDef.fields).map(([fieldName, field]) => [
+        fieldName,
+        field.enum ? { ...field, enum: getEnumValues(field.enum) } : field,
+      ])
+    );
     const primaryKeys = Object.entries(fields)
       .filter(([, meta]) => meta.primary)
       .map(([field]) => field);
@@ -43,6 +49,10 @@ function toResourceDefinition(resourceName, manifest = domainManifest) {
       ...(relationDef.payload || {}),
     };
 
+    for (const [fieldName, field] of Object.entries(fields)) {
+      if (field.enum) fields[fieldName] = { ...field, enum: getEnumValues(field.enum) };
+    }
+
     if (relationDef.historyKey && fields[relationDef.historyKey]) {
       fields[relationDef.historyKey] = {
         ...fields[relationDef.historyKey],
@@ -64,7 +74,7 @@ function toResourceDefinition(resourceName, manifest = domainManifest) {
   throw new Error(`Unknown resource: ${resourceName}`);
 }
 
-function assertValidType(fieldName, value, type) {
+function assertValidType(fieldName, value, type, enumValues) {
   if (value === null || value === undefined) return;
 
   if (type === 'string' && typeof value !== 'string') {
@@ -77,6 +87,10 @@ function assertValidType(fieldName, value, type) {
 
   if (type === 'boolean' && typeof value !== 'boolean') {
     throw new Error(`Invalid type for ${fieldName}: expected boolean`);
+  }
+
+  if (enumValues && !enumValues.includes(value)) {
+    throw new Error(`Invalid value for ${fieldName}: expected one of ${enumValues.join(', ')}`);
   }
 }
 
@@ -102,7 +116,7 @@ function validateData(def, data, { partial = false } = {}) {
     }
 
     if (isMissing) continue;
-    assertValidType(fieldName, value, meta.type);
+    assertValidType(fieldName, value, meta.type, meta.enum);
     validated[fieldName] = value;
   }
 
@@ -122,7 +136,7 @@ function validateWhere(def, where, { allowEmpty = false } = {}) {
   for (const key of keys) {
     const meta = def.fields[key];
     if (!meta) throw new Error(`Unknown where field for ${def.name}: ${key}`);
-    assertValidType(key, where[key], meta.type);
+    assertValidType(key, where[key], meta.type, meta.enum);
   }
 
   return where;
