@@ -5,6 +5,7 @@ import { entitySingularLabelFromRoute } from '../config/entities'
 import { ApiError } from '../services/apiClient'
 import { createEntity, listEntities, type DomainEntity } from '../services/domainService'
 import { getEntitySchema, type EntityFieldSchema, type EntitySchema } from '../services/metaService'
+import { prettyEnumValue, prettyFieldName } from '../utils/formatting'
 import LoreDateInput from '../components/LoreDateInput.vue'
 import SearchableSelect from '../components/SearchableSelect.vue'
 
@@ -41,21 +42,6 @@ const nameField = computed(() => {
 
 function isLongTextField(field: EntityFieldSchema): boolean {
   return field.type === 'string' && /description|explanation|notes/i.test(field.name)
-}
-
-function prettyFieldName(name: string): string {
-  return name
-    .split('_')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ')
-}
-
-function prettyEnumValue(value: string): string {
-  return value
-    .split('-')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ')
 }
 
 function slugify(value: string): string {
