@@ -399,12 +399,26 @@ a:hover {
     font-weight: 700;
 }
 
-.form-row input {
+.form-row input,
+.form-row select {
     border: 1px solid var(--line);
     background: var(--paper);
     border-radius: var(--radius-sm);
     font: inherit;
     padding: 0.62rem 0.72rem;
+}
+
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+}
+
+.filter-bar .form-row {
+    margin-top: 0;
+    min-width: 12rem;
 }
 
 .searchable-select {
