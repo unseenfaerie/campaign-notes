@@ -93,9 +93,10 @@ async function main() {
   `);
 
   await runSql(`Inserting items...`, `INSERT OR IGNORE INTO items (id, name, short_description, long_explanation) VALUES
-    ('cormac-s-spellbook', 'Cormac''s Spellbook', 'The first spellbook belonging to Cormac.', 'Long Explanation.'),
-    ('rel-s-spellbook', 'Rel''s Spellbook', 'The first spellbook belonging to Releas.', 'Rel was afforded the best spells his mentor could afford to show him, as Rel was his most promising (and most morally evolved) of his students.'),
-    ('polly-s-spellbook', 'Polly''s Spellbook', 'The first spellbook belonging to Polly.', 'This spellbook is a relic of a mysterious order of mages.');
+    ('cormacs-spellbook', 'Cormac''s Spellbook', 'The first spellbook belonging to Cormac.', 'Long Explanation.'),
+    ('rels-spellbook', 'Rel''s Spellbook', 'The first spellbook belonging to Releas.', 'Rel was afforded the best spells his mentor could afford to show him, as Rel was his most promising (and most morally evolved) of his students.'),
+    ('narisse-amulet', 'Nar''isse Amulet', 'A green glass chunk fastened to a leather neck strap by thin copper wire.', 'Expending a charge allows the user to completely blend in to natural settings if they remain completely still. 3 charges remain.'),
+    ('pollys-spellbook', 'Polly''s Spellbook', 'The first spellbook belonging to Polly.', 'This spellbook is a relic of a mysterious order of mages.');
   `);
 
   await runSql(`Inserting organizations...`, `INSERT OR IGNORE INTO organizations (id, name, type, short_description, long_explanation) VALUES
