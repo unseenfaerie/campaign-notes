@@ -655,6 +655,9 @@ router.get('/:entityRoute/:id/full', async (req, res) => {
         }
 
         const related = {};
+        const children = entityName === 'Place'
+            ? await manifestCrudService.getMany('Place', { parent_id: idValue })
+            : undefined;
         const relations = getFullRelationsForEntityRoute(req.params.entityRoute);
 
         for (const relation of relations) {
@@ -666,10 +669,16 @@ router.get('/:entityRoute/:id/full', async (req, res) => {
             );
         }
 
-        return res.json({
+        const response = {
             entity: record,
             related,
-        });
+        };
+
+        if (children) {
+            response.children = children;
+        }
+
+        return res.json(response);
     } catch (err) {
         const httpErr = toHttpError(err);
         return res.status(httpErr.status).json({ error: httpErr.message });

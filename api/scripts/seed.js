@@ -111,11 +111,13 @@ async function main() {
 
   await runSql(`Inserting places...`, `INSERT OR IGNORE INTO places (id, name, type, parent_id, short_description, long_explanation) VALUES
     ('the-world', 'The World', 'planet', NULL, 'The world of mists.', 'Long Explanation.'),
-    ('otlorin', 'Othlorin', 'continent', 'the-world', 'The old land of the elves, now a rapidly burgeoning human territory.', 'Long Explanation.'),
+    ('othlorin', 'Othlorin', 'continent', 'the-world', 'The old land of the elves, now a rapidly burgeoning human territory.', 'Long Explanation.'),
     ('wavethorn', 'Wavethorn', 'city-state', 'othlorin', 'A city-state on the coast.', 'Long Explanation.'),
     ('itholis', 'Itholis', 'country', 'othlorin', 'The largest country in Othlorin, composed of 6 Counties.', 'Long Explanation.'),
     ('weinmere', 'Weinmere', 'region', 'itholis', 'A county in Itholis. Ruled over by Count Jirakby', 'Long Explanation.'),
-    ('anash', 'Anash', 'city', 'weinmere', 'A city in the Weinmere.', 'Long Explanation.');
+    ('tempusfen', 'Tempusfen', 'region', 'itholis', 'A former county in Itholis. Composed of swamps and misty forests.', 'Long Explanation.'),
+    ('anash', 'Anash', 'city', 'weinmere', 'A city in the Weinmere.', 'Long Explanation.'),
+    ('lundgren', 'Lundgren', 'town', 'tempusfen', 'A quiet logging town settled on the edge of the Misty Marsh.', 'Long Explanation.');
   `);
 
   await runSql(`Inserting spells...`, `INSERT OR IGNORE INTO spells (id, type, name, level, school, casting_time, range, components, materials, duration, description) VALUES

@@ -91,6 +91,11 @@ jest.mock('../../../common/domainManifest', () => ({
                 route: 'deities',
                 fields: { id: { type: 'string' } },
             },
+            Place: {
+                idField: 'id',
+                route: 'places',
+                fields: { id: { type: 'string' }, parent_id: { type: 'string' } },
+            },
             Alias: {
                 idField: 'id',
                 route: 'aliases',
@@ -169,6 +174,7 @@ beforeEach(() => {
         if (entityRoute === 'characters') return buildEntity('Character', 'characters', 'string');
         if (entityRoute === 'items') return buildEntity('Item', 'items', 'string');
         if (entityRoute === 'deities') return buildEntity('Deity', 'deities', 'string');
+        if (entityRoute === 'places') return buildEntity('Place', 'places', 'string');
         if (entityRoute === 'aliases') return buildEntity('Alias', 'aliases', 'number');
         throw new Error(`Unknown entity route: ${entityRoute}`);
     });
@@ -381,6 +387,27 @@ describe('domainRouter isolated unit tests', () => {
         });
         expect(manifestCrudService.getMany).toHaveBeenNthCalledWith(1, 'CharacterItem', { character_id: 'char-1' });
         expect(manifestCrudService.getMany).toHaveBeenNthCalledWith(2, 'EventCharacter', { character_id: 'char-1' });
+    });
+
+    it('GET /:entityRoute/:id/full returns direct Place children from parent_id', async () => {
+        manifestCrudService.getOne.mockResolvedValue({ id: 'place-1', name: 'Othlorin' });
+        manifestCrudService.getMany.mockResolvedValue([
+            { id: 'place-2', name: 'Wavethorn', parent_id: 'place-1' },
+            { id: 'place-3', name: 'Itholis', parent_id: 'place-1' },
+        ]);
+
+        const response = await request(app).get('/api/places/place-1/full');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({
+            entity: { id: 'place-1', name: 'Othlorin' },
+            related: {},
+            children: [
+                { id: 'place-2', name: 'Wavethorn', parent_id: 'place-1' },
+                { id: 'place-3', name: 'Itholis', parent_id: 'place-1' },
+            ],
+        });
+        expect(manifestCrudService.getMany).toHaveBeenCalledWith('Place', { parent_id: 'place-1' });
     });
 
     it('GET /:entityRoute/:id/:relatedRoute returns 404 on unknown related route', async () => {

@@ -157,6 +157,12 @@ function mapFieldDefs(fieldsObj) {
 
         if (fieldDef.format) field.format = fieldDef.format;
         if (fieldDef.autoIncrement) field.autoIncrement = true;
+        if (fieldDef.ref) {
+            const referencedEntity = Object.entries(domainManifest.entities).find(
+                ([entityName, entityDef]) => entityName === fieldDef.ref || entityDef.route === fieldDef.ref
+            );
+            field.ref = referencedEntity?.[1].route || fieldDef.ref;
+        }
 
         fields.push(field);
     }

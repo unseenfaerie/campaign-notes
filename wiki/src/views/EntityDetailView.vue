@@ -6,13 +6,20 @@ import FieldList from '../components/FieldList.vue'
 import { entityLabelFromRoute } from '../config/entities'
 import { ApiError } from '../services/apiClient'
 import { getEntityFull, updateEntity, updateRelation, type DomainEntity } from '../services/domainService'
-import { getEntitySchema, getRelationSchemas, type EntityFieldSchema, type RelationFormSchema } from '../services/metaService'
+import {
+  getEntitySchema,
+  getRelationSchemas,
+  type EntityFieldSchema,
+  type EntitySchema,
+  type RelationFormSchema,
+} from '../services/metaService'
 import LoreDateInput from '../components/LoreDateInput.vue'
 import { useAuthStore } from '../stores/auth'
 
 type FullState = {
   entity: DomainEntity
   related: Record<string, DomainEntity[]>
+  children?: DomainEntity[]
 }
 
 const props = defineProps<{
@@ -33,6 +40,7 @@ const saving = ref(false)
 const saveError = ref('')
 
 const relationSchemas = ref<RelationFormSchema[]>([])
+const entitySchema = ref<EntitySchema | null>(null)
 const openAddFormRoute = ref<string | null>(null)
 const showingNewRelatedPicker = ref(false)
 
@@ -217,11 +225,13 @@ async function loadDetail() {
   editingHistoryKey.value = null
 
   try {
-    const [full, relations] = await Promise.all([
+    const [full, schema, relations] = await Promise.all([
       getEntityFull(props.entityRoute, props.id),
+      getEntitySchema(props.entityRoute),
       getRelationSchemas(props.entityRoute),
     ])
     fullData.value = full
+    entitySchema.value = schema || null
     relationSchemas.value = relations
   } catch (error) {
     if (error instanceof ApiError) {
@@ -453,7 +463,7 @@ function isLongTextField(field: EntityFieldSchema): boolean {
 async function startEdit() {
   saveError.value = ''
 
-  const schema = await getEntitySchema(props.entityRoute)
+  const schema = entitySchema.value || await getEntitySchema(props.entityRoute)
   const entity = fullData.value?.entity
   if (!schema || !entity) {
     return
@@ -578,7 +588,29 @@ watch(() => [props.entityRoute, props.id], loadDetail)
 
           <p v-if="saveError" class="status-card error">{{ saveError }}</p>
         </form>
-        <FieldList v-else :data="entityDisplayData" empty-message="No entity fields are available." />
+        <FieldList
+          v-else
+          :data="entityDisplayData"
+          :fields="entitySchema?.fields"
+          empty-message="No entity fields are available."
+        />
+      </section>
+
+      <section v-if="entityRoute === 'places' && fullData.children && fullData.children.length > 0" class="article-section">
+        <div class="section-heading-row">
+          <h3>Children</h3>
+          <span class="section-count">{{ fullData.children.length }}</span>
+        </div>
+        <ul class="link-list">
+          <li v-for="child in fullData.children" :key="String(child.id)">
+            <RouterLink
+              v-if="child.id !== undefined && child.id !== null && child.id !== ''"
+              :to="{ name: 'entity-detail', params: { entityRoute: 'places', id: String(child.id) } }"
+            >
+              {{ relatedRecordLabel(child) }}
+            </RouterLink>
+          </li>
+        </ul>
       </section>
 
       <CollapseSection

@@ -71,6 +71,22 @@ describe('metaRouter', () => {
         });
     });
 
+    it('exposes referenced entity routes for entity fields', async () => {
+        const res = await request(app)
+            .get('/api/meta')
+            .set('Authorization', bearerToken());
+
+        expect(res.status).toBe(200);
+
+        const event = res.body.entities.find((entity) => entity.route === 'events');
+        const previousEventField = event.fields.find((field) => field.name === 'previous_event_id');
+        expect(previousEventField.ref).toBe('events');
+
+        const place = res.body.entities.find((entity) => entity.route === 'places');
+        const parentField = place.fields.find((field) => field.name === 'parent_id');
+        expect(parentField.ref).toBe('places');
+    });
+
     it('marks autoIncrement primary keys so forms can skip them', async () => {
         const res = await request(app)
             .get('/api/meta')

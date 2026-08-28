@@ -71,6 +71,12 @@ function buildAllCreateTableSql(manifest = domainManifest) {
 
     for (const [name, def] of Object.entries(manifest.entities)) {
         statements.push(makeEntityTableSql(def));
+
+        for (const [field, meta] of Object.entries(def.fields || {})) {
+            if (meta.ref) {
+                statements.push(`CREATE INDEX IF NOT EXISTS idx_${def.table}_${field} ON ${def.table}(${field})`);
+            }
+        }
     }
 
     for (const [name, rel] of Object.entries(manifest.relations)) {
