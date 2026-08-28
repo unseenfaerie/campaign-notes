@@ -192,6 +192,17 @@ const domainManifest = {
                 acquired_date: { type: 'loreDate', required: true },
                 relinquished_date: { type: 'loreDate' },
                 short_description: { type: 'string', required: true },
+                long_explanation: {
+                    type: 'string',
+                    access: {
+                        playerPatch: {
+                            ownership: {
+                                type: 'anchored-character',
+                                relationMemberEntity: 'Character',
+                            },
+                        },
+                    },
+                },
             },
         },
         CharacterOrganization: {

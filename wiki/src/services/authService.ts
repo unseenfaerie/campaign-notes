@@ -4,6 +4,7 @@ export type AuthUser = {
     id: string
     username: string
     role: string
+    anchoredCharacterIds: string[]
 }
 
 type AuthTokenResponse = {

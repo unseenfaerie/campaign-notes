@@ -10,6 +10,7 @@ jest.mock('../../data/authRepository', () => ({
     createRefreshSession: jest.fn(),
     rotateRefreshSession: jest.fn(),
     revokeRefreshSession: jest.fn(),
+    listAnchoredCharacterIdsByUserId: jest.fn(),
 }));
 
 jest.mock('bcryptjs', () => ({
@@ -29,6 +30,7 @@ const {
     createRefreshSession,
     rotateRefreshSession,
     revokeRefreshSession,
+    listAnchoredCharacterIdsByUserId,
 } = require('../../data/authRepository');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -65,6 +67,7 @@ describe('authRouter', () => {
         createRefreshSession.mockResolvedValue(undefined);
         rotateRefreshSession.mockResolvedValue(undefined);
         revokeRefreshSession.mockResolvedValue(undefined);
+        listAnchoredCharacterIdsByUserId.mockResolvedValue([]);
     });
 
     it('POST /api/auth/token accepts principal that matches user id', async () => {
@@ -335,6 +338,7 @@ describe('authRouter', () => {
             role: 'dm',
             disabled: 0,
         });
+        listAnchoredCharacterIdsByUserId.mockResolvedValueOnce(['char-anchored']);
 
         const response = await request(app)
             .get('/api/auth/me')
@@ -345,8 +349,10 @@ describe('authRouter', () => {
             id: 'dm-admin',
             username: 'faerie',
             role: 'dm',
+            anchoredCharacterIds: ['char-anchored'],
         });
         expect(findUserById).toHaveBeenCalledWith('dm-admin');
+        expect(listAnchoredCharacterIdsByUserId).toHaveBeenCalledWith('dm-admin');
     });
 
     it('GET /api/auth/me returns 401 when user is disabled', async () => {

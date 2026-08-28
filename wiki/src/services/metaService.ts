@@ -10,6 +10,7 @@ export type EntityFieldSchema = {
     format?: string
     autoIncrement?: boolean
     enum?: string[]
+    playerEditable?: boolean
 }
 
 export type EntitySchema = {

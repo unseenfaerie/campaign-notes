@@ -272,6 +272,57 @@ function editableFields(fields: EntityFieldSchema[]): EntityFieldSchema[] {
   return fields.filter((field) => !field.primary)
 }
 
+// Non-admin players are limited to fields the manifest marks as player-editable.
+function fieldsForRole(fields: EntityFieldSchema[]): EntityFieldSchema[] {
+  const nonPrimary = editableFields(fields)
+  return auth.isAdmin.value ? nonPrimary : nonPrimary.filter((field) => field.playerEditable)
+}
+
+function characterCandidateIdsForRelation(relatedRoute: string, record: DomainEntity): string[] {
+  const schema = findRelationSchema(relatedRoute)
+  const ids: string[] = []
+
+  if (props.entityRoute === 'characters') {
+    ids.push(props.id)
+  }
+
+  if (schema?.relatedEntityRoute === 'characters') {
+    const relatedId = relatedRecordId(record)
+    if (relatedId) {
+      ids.push(relatedId)
+    }
+  }
+
+  return ids
+}
+
+function canPlayerEditRelation(relatedRoute: string, record: DomainEntity): boolean {
+  const schema = findRelationSchema(relatedRoute)
+  if (!schema || !schema.fields.some((field) => field.playerEditable)) {
+    return false
+  }
+
+  const candidateIds = characterCandidateIdsForRelation(relatedRoute, record)
+  return candidateIds.some((candidateId) => auth.anchoredCharacterIds.value.includes(candidateId))
+}
+
+const canPlayerEditEntity = computed(() => {
+  if (props.entityRoute !== 'characters') {
+    return false
+  }
+
+  const fields = entitySchema.value?.fields ?? []
+  if (!fields.some((field) => field.playerEditable)) {
+    return false
+  }
+
+  return auth.anchoredCharacterIds.value.includes(props.id)
+})
+
+const visibleEditFields = computed(() =>
+  auth.isAdmin.value ? editFields.value : editFields.value.filter((field) => field.playerEditable)
+)
+
 function primaryFields(fields: EntityFieldSchema[]): EntityFieldSchema[] {
   return fields.filter((field) => field.primary)
 }
@@ -344,7 +395,7 @@ function startEditRelation(relatedRoute: string, record: DomainEntity) {
   }
 
   relationEditError.value = ''
-  relationEditValues.value = fieldValuesFromRecord(editableFields(schema.fields), relationPayload(record))
+  relationEditValues.value = fieldValuesFromRecord(fieldsForRole(schema.fields), relationPayload(record))
   editingRelationKey.value = `${relatedRoute}::${relatedRecordId(record)}`
 }
 
@@ -363,7 +414,7 @@ async function saveEditRelation(relatedRoute: string, record: DomainEntity) {
   relationEditSaving.value = true
 
   try {
-    const payload = buildFieldsPayload(editableFields(schema.fields), relationEditValues.value, {
+    const payload = buildFieldsPayload(fieldsForRole(schema.fields), relationEditValues.value, {
       clearOptionalLoreDates: true,
     })
     await updateRelation(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), payload)
@@ -389,7 +440,7 @@ function startEditHistory(relatedRoute: string, historyEntry: DomainEntity, hist
   const originalValue = historyEntry[schema.historyKey]
 
   historyEditError.value = ''
-  historyEditValues.value = fieldValuesFromRecord(editableFields(schema.fields), historyEntry)
+  historyEditValues.value = fieldValuesFromRecord(fieldsForRole(schema.fields), historyEntry)
   historyEditOriginalSelector.value = { key: schema.historyKey, value: String(originalValue ?? '') }
   editingHistoryKey.value = historyKey
 }
@@ -409,7 +460,7 @@ async function saveEditHistory(relatedRoute: string, record: DomainEntity) {
   historyEditSaving.value = true
 
   try {
-    const payload = buildFieldsPayload(editableFields(schema.fields), historyEditValues.value, {
+    const payload = buildFieldsPayload(fieldsForRole(schema.fields), historyEditValues.value, {
       clearOptionalLoreDates: true,
     })
     await updateRelation(
@@ -498,7 +549,7 @@ function cancelEdit() {
 }
 
 function buildEditPayload(): Record<string, unknown> {
-  const payload = buildFieldsPayload(editableFields(editFields.value), editValues.value, {
+  const payload = buildFieldsPayload(fieldsForRole(editFields.value), editValues.value, {
     clearOptionalLoreDates: true,
     clearOptionalReferences: true,
   })
@@ -546,7 +597,7 @@ watch(() => [props.entityRoute, props.id], loadDetail)
         <div class="section-heading-row">
           <h3>Core data</h3>
           <button
-            v-if="auth.isAdmin.value && !isEditing"
+            v-if="(auth.isAdmin.value || canPlayerEditEntity) && !isEditing"
             type="button"
             class="secondary-button"
             @click="startEdit"
@@ -556,7 +607,7 @@ watch(() => [props.entityRoute, props.id], loadDetail)
         </div>
 
         <form v-if="isEditing" class="entity-form" @submit.prevent="saveEdit">
-          <div v-for="field in editFields" :key="field.name" class="form-row">
+          <div v-for="field in visibleEditFields" :key="field.name" class="form-row">
             <label :for="`edit-field-${field.name}`">
               {{ prettyFieldName(field.name) }}
               <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
@@ -709,7 +760,7 @@ watch(() => [props.entityRoute, props.id], loadDetail)
                 <template v-else>{{ relatedRecordLabel(record) }}</template>
               </h4>
               <button
-                v-if="auth.isAdmin.value && isRelationshipKind(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}`"
+                v-if="(auth.isAdmin.value || canPlayerEditRelation(relatedRoute, record)) && isRelationshipKind(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}`"
                 type="button"
                 class="secondary-button"
                 @click="startEditRelation(relatedRoute, record)"
@@ -729,7 +780,7 @@ watch(() => [props.entityRoute, props.id], loadDetail)
               />
 
               <div
-                v-for="field in editableFields(relationSchemaForRoute(relatedRoute)[0]?.fields ?? [])"
+                v-for="field in fieldsForRole(relationSchemaForRoute(relatedRoute)[0]?.fields ?? [])"
                 :key="field.name"
                 class="form-row"
               >
@@ -814,7 +865,7 @@ watch(() => [props.entityRoute, props.id], loadDetail)
                 :key="`${relatedRoute}-${index}-history-${historyIndex}`"
                 class="history-record"
               >
-                <div v-if="auth.isAdmin.value" class="row-actions-end">
+                <div v-if="auth.isAdmin.value || canPlayerEditRelation(relatedRoute, record)" class="row-actions-end">
                   <button
                     v-if="editingHistoryKey !== `${relatedRoute}-${index}-history-${historyIndex}`"
                     type="button"
@@ -838,7 +889,7 @@ watch(() => [props.entityRoute, props.id], loadDetail)
                   />
 
                   <div
-                    v-for="field in editableFields(relationSchemaForRoute(relatedRoute)[0]?.fields ?? [])"
+                    v-for="field in fieldsForRole(relationSchemaForRoute(relatedRoute)[0]?.fields ?? [])"
                     :key="field.name"
                     class="form-row"
                   >
