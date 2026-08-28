@@ -1054,15 +1054,15 @@ describe('domainRouter isolated unit tests', () => {
             record: {
                 character_id: 'char-1',
                 item_id: 'item-1',
-                acquired_date: 'jan-01-100',
-                relinquished_date: 'jan-02-100',
+                acquired_date: '0200100001_age-of-descent-default',
+                relinquished_date: '0200100002_age-of-descent-default',
             },
         });
 
         const response = await request(app)
             .patch('/api/characters/char-1/items/item-1')
-            .query({ acquired_date: 'jan-01-100' })
-            .send({ relinquished_date: 'jan-02-100' });
+            .query({ acquired_date: '0200100001_age-of-descent-default' })
+            .send({ relinquished_date: '0200100002_age-of-descent-default' });
 
         expect(response.status).toBe(200);
         expect(manifestCrudService.update).toHaveBeenCalledWith(
@@ -1070,9 +1070,9 @@ describe('domainRouter isolated unit tests', () => {
             {
                 character_id: 'char-1',
                 item_id: 'item-1',
-                acquired_date: 'jan-01-100',
+                acquired_date: '0200100001_age-of-descent-default',
             },
-            { relinquished_date: 'jan-02-100' }
+            { relinquished_date: '0200100002_age-of-descent-default' }
         );
     });
 
@@ -1102,8 +1102,8 @@ describe('domainRouter isolated unit tests', () => {
 
         const response = await request(app)
             .patch('/api/characters/char-1/items/item-1')
-            .query({ acquired_date: 'jan-10-100' })
-            .send({ relinquished_date: 'jan-09-100' });
+            .query({ acquired_date: '0200100010_age-of-descent-default' })
+            .send({ relinquished_date: '0200100009_age-of-descent-default' });
 
         expect(response.status).toBe(400);
         expect(response.body).toEqual({ error: 'History end date must be after history start date' });
@@ -1504,8 +1504,8 @@ describe('domainRouter isolated unit tests', () => {
             .post('/api/characters/char-1/items')
             .send({
                 id: 'item-1',
-                acquired_date: 'jan-10-100',
-                relinquished_date: 'jan-10-100',
+                acquired_date: '0200100010_age-of-descent-default',
+                relinquished_date: '0200100010_age-of-descent-default',
                 short_description: 'Nope',
             });
 

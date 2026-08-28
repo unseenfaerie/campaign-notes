@@ -60,7 +60,7 @@ const domainManifest = {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
                 name: { type: 'string', required: true },
                 real_world_date: { type: 'string' },
-                in_game_time: { type: 'string' },
+                in_game_time: { type: 'loreDate' },
                 previous_event_id: { type: 'string' },
                 next_event_id: { type: 'string' },
                 short_description: { type: 'string', required: true },
@@ -159,8 +159,8 @@ const domainManifest = {
             historyEndKey: 'dissolution_date',
             keys: ['character_id', 'deity_id', 'adopted_date'],
             payload: {
-                adopted_date: { type: 'string', required: true },
-                dissolution_date: { type: 'string' },
+                adopted_date: { type: 'loreDate', required: true },
+                dissolution_date: { type: 'loreDate' },
                 relationship_type: { type: 'string' },
                 short_description: { type: 'string', required: true },
                 long_explanation: {
@@ -187,8 +187,8 @@ const domainManifest = {
             historyEndKey: 'relinquished_date',
             keys: ['character_id', 'item_id', 'acquired_date'],
             payload: {
-                acquired_date: { type: 'string', required: true },
-                relinquished_date: { type: 'string' },
+                acquired_date: { type: 'loreDate', required: true },
+                relinquished_date: { type: 'loreDate' },
                 short_description: { type: 'string', required: true },
             },
         },
@@ -203,8 +203,8 @@ const domainManifest = {
             historyEndKey: 'left_date',
             keys: ['character_id', 'organization_id', 'joined_date'],
             payload: {
-                joined_date: { type: 'string', required: true },
-                left_date: { type: 'string' },
+                joined_date: { type: 'loreDate', required: true },
+                left_date: { type: 'loreDate' },
                 short_description: { type: 'string', required: true },
                 long_explanation: {
                     type: 'string',
@@ -230,8 +230,8 @@ const domainManifest = {
             historyEndKey: 'left_date',
             keys: ['character_id', 'place_id', 'arrived_date'],
             payload: {
-                arrived_date: { type: 'string', required: true },
-                left_date: { type: 'string' },
+                arrived_date: { type: 'loreDate', required: true },
+                left_date: { type: 'loreDate' },
                 short_description: { type: 'string', required: true },
                 long_explanation: {
                     type: 'string',
@@ -257,8 +257,8 @@ const domainManifest = {
             historyEndKey: 'dissolution_date',
             keys: ['character_id', 'related_id', 'established_date'],
             payload: {
-                established_date: { type: 'string', required: true },
-                dissolution_date: { type: 'string' },
+                established_date: { type: 'loreDate', required: true },
+                dissolution_date: { type: 'loreDate' },
                 relationship_type: { type: 'string', required: true },
                 short_description: { type: 'string', required: true },
                 long_explanation: {

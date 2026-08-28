@@ -4,6 +4,7 @@ import { ApiError } from '../services/apiClient'
 import { createRelation, listEntities, type DomainEntity } from '../services/domainService'
 import { entityLabelFromRoute } from '../config/entities'
 import type { EntityFieldSchema, RelationFormSchema } from '../services/metaService'
+import LoreDateInput from './LoreDateInput.vue'
 
 const props = defineProps<{
   entityRoute: string
@@ -210,6 +211,11 @@ watch(selectedRelatedRoute, () => {
         rows="4"
         :required="field.required"
       ></textarea>
+      <LoreDateInput
+        v-else-if="field.type === 'loreDate'"
+        v-model="formValues[field.name]"
+        :required="field.required"
+      />
       <input
         v-else
         :id="`add-relation-field-${field.name}`"

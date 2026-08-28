@@ -442,8 +442,8 @@ describe('relationWriteHelpers isolated unit tests', () => {
             expect(() =>
                 validateHistoryChronology({
                     relationDef: historyRelationDef,
-                    startValue: 'jan-01-100',
-                    endValue: 'jan-02-100',
+                    startValue: '0200001001_age-of-descent-default',
+                    endValue: '0200001002_age-of-descent-default',
                 })
             ).not.toThrow();
         });
@@ -452,7 +452,7 @@ describe('relationWriteHelpers isolated unit tests', () => {
             expect(() =>
                 validateHistoryChronology({
                     relationDef: historyRelationDef,
-                    startValue: 'jan-01-100',
+                    startValue: '0200001001_age-of-descent-default',
                     endValue: '',
                 })
             ).not.toThrow();
@@ -462,8 +462,8 @@ describe('relationWriteHelpers isolated unit tests', () => {
             expect(() =>
                 validateHistoryChronology({
                     relationDef: historyRelationDef,
-                    startValue: 'jan-01-100',
-                    endValue: 'jan-01-100',
+                    startValue: '0200001001_age-of-descent-default',
+                    endValue: '0200001001_age-of-descent-default',
                 })
             ).toThrow('History end date must be after history start date');
         });
@@ -472,8 +472,8 @@ describe('relationWriteHelpers isolated unit tests', () => {
             expect(() =>
                 validateHistoryChronology({
                     relationDef: historyRelationDef,
-                    startValue: 'jan-02-100',
-                    endValue: 'jan-01-100',
+                    startValue: '0200001002_age-of-descent-default',
+                    endValue: '0200001001_age-of-descent-default',
                 })
             ).toThrow('History end date must be after history start date');
         });
@@ -483,14 +483,14 @@ describe('relationWriteHelpers isolated unit tests', () => {
                 validateHistoryChronology({
                     relationDef: historyRelationDef,
                     startValue: 'not-a-date',
-                    endValue: 'jan-02-100',
+                    endValue: '0200001002_age-of-descent-default',
                 })
             ).toThrow('Invalid history date format for field: acquired_date');
 
             expect(() =>
                 validateHistoryChronology({
                     relationDef: historyRelationDef,
-                    startValue: 'jan-01-100',
+                    startValue: '0200001001_age-of-descent-default',
                     endValue: 'bad-date',
                 })
             ).toThrow('Invalid history date format for field: relinquished_date');
@@ -501,7 +501,7 @@ describe('relationWriteHelpers isolated unit tests', () => {
                 validateHistoryChronology({
                     relationDef: historyRelationDef,
                     startValue: undefined,
-                    endValue: 'jan-02-100',
+                    endValue: '0200001002_age-of-descent-default',
                 })
             ).toThrow('Missing history start date value for chronology validation');
         });
@@ -510,8 +510,8 @@ describe('relationWriteHelpers isolated unit tests', () => {
             expect(() =>
                 validateHistoryChronology({
                     relationDef: { kind: 'relationship', historyKey: 'acquired_date', historyEndKey: 'relinquished_date' },
-                    startValue: 'jan-02-100',
-                    endValue: 'jan-01-100',
+                    startValue: '0200001002_age-of-descent-default',
+                    endValue: '0200001001_age-of-descent-default',
                 })
             ).not.toThrow();
         });

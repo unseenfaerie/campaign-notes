@@ -1,8 +1,9 @@
 import { requestJson } from './apiClient'
+import type { DateSystem } from '../utils/loreDate'
 
 export type EntityFieldSchema = {
     name: string
-    type: 'string' | 'number' | 'boolean'
+    type: 'string' | 'number' | 'boolean' | 'loreDate'
     required: boolean
     primary: boolean
     format?: string
@@ -28,6 +29,7 @@ export type RelationFormSchema = {
 export type EntitySchemasResponse = {
     entities: EntitySchema[]
     relationsByEntityRoute: Record<string, RelationFormSchema[]>
+    dateSystem: DateSystem
 }
 
 let schemasPromise: Promise<EntitySchemasResponse> | null = null
@@ -49,3 +51,9 @@ export async function getRelationSchemas(entityRoute: string): Promise<RelationF
     const schemas = await getEntitySchemas()
     return schemas.relationsByEntityRoute[entityRoute] ?? []
 }
+
+export async function getDateSystem(): Promise<DateSystem> {
+    const schemas = await getEntitySchemas()
+    return schemas.dateSystem
+}
+
