@@ -2,8 +2,10 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { listEntities, type DomainEntity } from '../services/domainService'
+import { getMentionTargets, type MentionTarget } from '../services/mentionService'
 import { getDateSystem, type EntityFieldSchema } from '../services/metaService'
 import { formatLoreDate, isCanonicalLoreDate, type DateSystem } from '../utils/loreDate'
+import { linkifyText } from '../utils/linkify'
 
 type Props = {
   data: Record<string, unknown>
@@ -17,16 +19,19 @@ const props = withDefaults(defineProps<Props>(), {
 
 const dateSystem = ref<DateSystem | null>(null)
 const referenceNames = ref<Record<string, Record<string, string>>>({})
+const mentionTargets = ref<MentionTarget[]>([])
 
 onMounted(async () => {
   const referencedRoutes = [...new Set((props.fields || []).flatMap((field) => (field.ref ? [field.ref] : [])))]
 
-  const [loadedDateSystem, ...referencedEntities] = await Promise.all([
+  const [loadedDateSystem, loadedMentionTargets, ...referencedEntities] = await Promise.all([
     getDateSystem(),
+    getMentionTargets().catch(() => [] as MentionTarget[]),
     ...referencedRoutes.map((route) => listEntities(route).catch(() => [] as DomainEntity[])),
   ])
 
   dateSystem.value = loadedDateSystem
+  mentionTargets.value = loadedMentionTargets
   referenceNames.value = Object.fromEntries(
     referencedRoutes.map((route, index) => [
       route,
@@ -107,6 +112,18 @@ function prettyValue(key: string, value: unknown): string {
 
   return String(value)
 }
+
+function isDescriptionField(key: string): boolean {
+  return key === 'short_description' || key === 'long_explanation' || key === 'description'
+}
+
+function descriptionFragments(key: string, value: unknown) {
+  if (!isDescriptionField(key) || typeof value !== 'string') {
+    return [{ text: prettyValue(key, value) }]
+  }
+
+  return linkifyText(value, mentionTargets.value)
+}
 </script>
 
 <template>
@@ -125,6 +142,20 @@ function prettyValue(key: string, value: unknown): string {
           >
             {{ fieldReferenceName(key, value) }}
           </RouterLink>
+          <template v-else-if="isDescriptionField(key) && typeof value === 'string'">
+            <template v-for="(fragment, index) in descriptionFragments(key, value)" :key="`${key}-${index}`">
+              <RouterLink
+                v-if="fragment.target"
+                :to="{
+                  name: 'entity-detail',
+                  params: { entityRoute: fragment.target.route, id: fragment.target.id },
+                }"
+              >
+                {{ fragment.text }}
+              </RouterLink>
+              <template v-else>{{ fragment.text }}</template>
+            </template>
+          </template>
           <template v-else>{{ prettyValue(key, value) }}</template>
         </dd>
         <slot name="after-field" :field-key="key" />

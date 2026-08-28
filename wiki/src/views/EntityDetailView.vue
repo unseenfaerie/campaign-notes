@@ -801,7 +801,10 @@ watch(() => [props.entityRoute, props.id], loadDetail)
             </form>
 
             <template v-else-if="showRelationMetadata(record)">
-              <FieldList :data="relationDisplayPayload(record)" />
+              <FieldList
+                :data="relationDisplayPayload(record)"
+                :fields="relationSchemaForRoute(relatedRoute)[0]?.fields"
+              />
             </template>
 
             <template v-if="historyDisplayPayload(record).length > 0">
@@ -905,7 +908,11 @@ watch(() => [props.entityRoute, props.id], loadDetail)
 
                   <p v-if="historyEditError" class="status-card error">{{ historyEditError }}</p>
                 </form>
-                <FieldList v-else :data="historyEntry" />
+                <FieldList
+                  v-else
+                  :data="historyEntry"
+                  :fields="relationSchemaForRoute(relatedRoute)[0]?.fields"
+                />
               </article>
             </template>
 
