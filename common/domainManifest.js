@@ -99,7 +99,7 @@ const domainManifest = {
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
                 name: { type: 'string', required: true },
-                type: { type: 'string', required: true },
+                type: { type: 'string', required: true, enum: 'placeType' },
                 parent_id: { type: 'string', ref: 'Place' },
                 short_description: { type: 'string', required: true },
                 long_explanation: { type: 'string' },

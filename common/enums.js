@@ -1,4 +1,16 @@
 const ENUMS = {
+    placeType: [
+        'universe',
+        'plane',
+        'planet',
+        'continent',
+        'country',
+        'region',
+        'city-state',
+        'city',
+        'town',
+        'site',
+    ],
     alignment: [
         'lawful-good',
         'neutral-good',

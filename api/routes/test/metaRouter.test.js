@@ -87,6 +87,29 @@ describe('metaRouter', () => {
         expect(parentField.ref).toBe('places');
     });
 
+    it('exposes all place type enum values', async () => {
+        const res = await request(app)
+            .get('/api/meta')
+            .set('Authorization', bearerToken());
+
+        expect(res.status).toBe(200);
+
+        const place = res.body.entities.find((entity) => entity.route === 'places');
+        const typeField = place.fields.find((field) => field.name === 'type');
+        expect(typeField.enum).toEqual([
+            'universe',
+            'plane',
+            'planet',
+            'continent',
+            'country',
+            'region',
+            'city-state',
+            'city',
+            'town',
+            'site',
+        ]);
+    });
+
     it('marks autoIncrement primary keys so forms can skip them', async () => {
         const res = await request(app)
             .get('/api/meta')

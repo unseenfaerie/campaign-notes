@@ -46,6 +46,16 @@ const testManifest = {
                 alias: { type: 'string', required: true },
             },
         },
+        Place: {
+            table: 'test_places',
+            route: 'places',
+            idField: 'id',
+            fields: {
+                id: { type: 'string', primary: true, required: true },
+                name: { type: 'string', required: true },
+                type: { type: 'string', required: true, enum: 'placeType' },
+            },
+        },
     },
     relations: {
         CharacterItem: {
@@ -159,6 +169,16 @@ describe('genericCrudService with isolated manifest and in-memory db', () => {
         await expect(
             service.insert('Character', { id: 'char-1', name: 'Aster', level: 99 })
         ).rejects.toThrow('Invalid value for level: expected one of 3, 4, 5');
+    });
+
+    it('resolves named enums when persisting records', async () => {
+        await expect(
+            service.insert('Place', { id: 'the-site', name: 'The Site', type: 'site' })
+        ).resolves.toEqual({ id: 'the-site', name: 'The Site', type: 'site' });
+
+        await expect(
+            service.insert('Place', { id: 'the-village', name: 'The Village', type: 'village' })
+        ).rejects.toThrow('Invalid value for type: expected one of universe, plane, planet, continent, country, region, city-state, city, town, site');
     });
 
     it('prevents primary key updates but allows non-key updates', async () => {

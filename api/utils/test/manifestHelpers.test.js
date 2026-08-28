@@ -1,4 +1,6 @@
 const { coerceValueByType, getEntityByRoute, getRelationMembers, getRelationByRoutes, conformObjectToEntity } = require('../manifestHelpers');
+const { domainManifest } = require('../../../common/domainManifest');
+const { getEnumValues } = require('../../../common/enums');
 
 describe('manifestHelpers isolated unit tests', () => {
     describe('coerceValueByType', () => {
@@ -29,6 +31,29 @@ describe('manifestHelpers isolated unit tests', () => {
             expect(coerceValueByType('string', 'lawful-good', alignments)).toBe('lawful-good');
             expect(() => coerceValueByType('string', 'unaligned', alignments)).toThrow(
                 'Invalid value: expected one of lawful-good, true-neutral, chaotic-evil'
+            );
+        });
+
+        it('resolves named enums from the shared registry', () => {
+            const placeTypes = getEnumValues(domainManifest.entities.Place.fields.type.enum);
+
+            expect(placeTypes).toEqual([
+                'universe',
+                'plane',
+                'planet',
+                'continent',
+                'country',
+                'region',
+                'city-state',
+                'city',
+                'town',
+                'site',
+            ]);
+            expect(
+                conformObjectToEntity({ type: 'city-state' }, domainManifest.entities.Place)
+            ).toEqual({ type: 'city-state' });
+            expect(() => conformObjectToEntity({ type: 'village' }, domainManifest.entities.Place)).toThrow(
+                'Invalid value: expected one of universe, plane, planet, continent, country, region, city-state, city, town, site'
             );
         });
     });
