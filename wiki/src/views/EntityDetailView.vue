@@ -5,7 +5,7 @@ import CollapseSection from '../components/CollapseSection.vue'
 import FieldList from '../components/FieldList.vue'
 import { entityLabelFromRoute } from '../config/entities'
 import { ApiError } from '../services/apiClient'
-import { getEntityFull, updateEntity, updateRelation, type DomainEntity } from '../services/domainService'
+import { getEntityFull, listEntities, updateEntity, updateRelation, type DomainEntity } from '../services/domainService'
 import {
   getEntitySchema,
   getRelationSchemas,
@@ -41,6 +41,7 @@ const saveError = ref('')
 
 const relationSchemas = ref<RelationFormSchema[]>([])
 const entitySchema = ref<EntitySchema | null>(null)
+const placeOptions = ref<DomainEntity[]>([])
 const openAddFormRoute = ref<string | null>(null)
 const showingNewRelatedPicker = ref(false)
 
@@ -233,6 +234,11 @@ async function loadDetail() {
     fullData.value = full
     entitySchema.value = schema || null
     relationSchemas.value = relations
+    placeOptions.value = props.entityRoute === 'places'
+      ? (await listEntities('places'))
+          .filter((place) => String(place.id) !== props.id)
+          .sort((left, right) => String(left.name || left.id).localeCompare(String(right.name || right.id)))
+      : []
   } catch (error) {
     if (error instanceof ApiError) {
       errorMessage.value = error.message
@@ -298,7 +304,7 @@ function fieldValuesFromRecord(fields: EntityFieldSchema[], record: DomainEntity
 function buildFieldsPayload(
   fields: EntityFieldSchema[],
   values: Record<string, any>,
-  { clearOptionalLoreDates = false } = {}
+  { clearOptionalLoreDates = false, clearOptionalReferences = false } = {}
 ): Record<string, unknown> {
   const payload: Record<string, unknown> = {}
 
@@ -316,6 +322,9 @@ function buildFieldsPayload(
         throw new Error(`${prettyFieldName(field.name)} is required.`)
       }
       if (clearOptionalLoreDates && field.type === 'loreDate') {
+        payload[field.name] = null
+      }
+      if (clearOptionalReferences && field.ref) {
         payload[field.name] = null
       }
       continue
@@ -483,6 +492,7 @@ function cancelEdit() {
 function buildEditPayload(): Record<string, unknown> {
   const payload = buildFieldsPayload(editFields.value, editValues.value, {
     clearOptionalLoreDates: true,
+    clearOptionalReferences: true,
   })
 
   return payload
@@ -550,6 +560,16 @@ watch(() => [props.entityRoute, props.id], loadDetail)
               v-model="editValues[field.name]"
               type="checkbox"
             />
+            <select
+              v-else-if="entityRoute === 'places' && field.name === 'parent_id'"
+              :id="`edit-field-${field.name}`"
+              v-model="editValues[field.name]"
+            >
+              <option value="">No parent</option>
+              <option v-for="place in placeOptions" :key="String(place.id)" :value="String(place.id)">
+                {{ place.name || place.id }}
+              </option>
+            </select>
             <input
               v-else-if="field.type === 'number'"
               :id="`edit-field-${field.name}`"

@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { entitySingularLabelFromRoute } from '../config/entities'
 import { ApiError } from '../services/apiClient'
-import { createEntity } from '../services/domainService'
+import { createEntity, listEntities, type DomainEntity } from '../services/domainService'
 import { getEntitySchema, type EntityFieldSchema, type EntitySchema } from '../services/metaService'
 import LoreDateInput from '../components/LoreDateInput.vue'
 
@@ -18,6 +18,7 @@ const submitting = ref(false)
 const errorMessage = ref('')
 const schema = ref<EntitySchema | undefined>()
 const formValues = ref<Record<string, any>>({})
+const placeOptions = ref<DomainEntity[]>([])
 const slugTouched = ref(false)
 
 const singularLabel = computed(() => entitySingularLabelFromRoute(props.entityRoute))
@@ -66,6 +67,7 @@ async function loadSchema() {
   errorMessage.value = ''
   schema.value = undefined
   formValues.value = {}
+  placeOptions.value = []
   slugTouched.value = false
 
   try {
@@ -76,6 +78,12 @@ async function loadSchema() {
     }
 
     schema.value = found
+
+    if (props.entityRoute === 'places') {
+      placeOptions.value = (await listEntities('places')).sort((left, right) =>
+        String(left.name || left.id).localeCompare(String(right.name || right.id))
+      )
+    }
 
     const initialValues: Record<string, any> = {}
     for (const field of found.fields) {
@@ -189,6 +197,16 @@ watch(
           v-model="formValues[field.name]"
           type="checkbox"
         />
+        <select
+          v-else-if="entityRoute === 'places' && field.name === 'parent_id'"
+          :id="`create-field-${field.name}`"
+          v-model="formValues[field.name]"
+        >
+          <option value="">No parent</option>
+          <option v-for="place in placeOptions" :key="String(place.id)" :value="String(place.id)">
+            {{ place.name || place.id }}
+          </option>
+        </select>
         <input
           v-else-if="field.type === 'number'"
           :id="`create-field-${field.name}`"

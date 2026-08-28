@@ -278,7 +278,7 @@ function toHttpError(err) {
     }
 
     if (
-        /Invalid number value|Invalid boolean value|Unknown field for route|Unknown field for relation|Unknown query field for relation|Missing required query field|Cannot update primary key field|Primary key updates are not allowed|Data must be an object|Invalid slug id format for field|Missing history start date value for chronology validation|Invalid history date format for field|History end date must be after history start date/i.test(
+        /Invalid number value|Invalid boolean value|Unknown field for route|Unknown field for relation|Unknown query field for relation|Missing required query field|Cannot update primary key field|Primary key updates are not allowed|Data must be an object|Invalid slug id format for field|Missing history start date value for chronology validation|Invalid history date format for field|History end date must be after history start date|Parent place does not exist|A place cannot be its own parent|Parent assignment would create a cycle/i.test(
             message
         )
     ) {
@@ -290,6 +290,37 @@ function toHttpError(err) {
     }
 
     return { status: 500, message };
+}
+
+async function validatePlaceParent(parentId, placeId = null) {
+    if (parentId === undefined || parentId === null || parentId === '') {
+        return;
+    }
+
+    if (parentId === placeId) {
+        throw new Error('A place cannot be its own parent');
+    }
+
+    const visited = new Set();
+    let currentId = parentId;
+
+    while (currentId !== undefined && currentId !== null && currentId !== '') {
+        if (visited.has(currentId)) {
+            throw new Error('Parent assignment would create a cycle');
+        }
+        visited.add(currentId);
+
+        const parent = await manifestCrudService.getOne('Place', { id: currentId });
+        if (!parent) {
+            throw new Error(`Parent place does not exist: ${currentId}`);
+        }
+
+        if (parent.id === placeId) {
+            throw new Error('Parent assignment would create a cycle');
+        }
+
+        currentId = parent.parent_id;
+    }
 }
 
 async function ensureRecordExists(entityName, idField, idValue) {
@@ -492,6 +523,9 @@ router.post('/:entityRoute', async (req, res) => {
         const validated = conformObjectToEntity(req.body, entityDef, {
             enforcePrimaryIdFormat: true,
         });
+        if (entityName === 'Place') {
+            await validatePlaceParent(validated.parent_id, validated.id);
+        }
         const created = await manifestCrudService.insert(entityName, validated);
         res.status(201).json(created);
     } catch (err) {
@@ -535,6 +569,9 @@ router.patch('/:entityRoute/:id', async (req, res) => {
     try {
         const { entityName, entityDef, idField, idValue } = getEntityLookup(req.params);
         const updates = conformObjectToEntity(req.body, entityDef);
+        if (entityName === 'Place' && Object.prototype.hasOwnProperty.call(updates, 'parent_id')) {
+            await validatePlaceParent(updates.parent_id, idValue);
+        }
         const authErr = await authorizeEntityPatch(req, entityName, entityDef, idValue, updates);
         if (authErr) {
             return res.status(authErr.status).json({ error: authErr.error });

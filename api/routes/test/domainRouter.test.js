@@ -296,6 +296,44 @@ describe('domainRouter isolated unit tests', () => {
         expect(manifestCrudService.insert).not.toHaveBeenCalled();
     });
 
+    it('POST /places rejects a parent that does not exist', async () => {
+        manifestCrudService.getOne.mockResolvedValueOnce(null);
+
+        const response = await request(app)
+            .post('/api/places')
+            .send({ id: 'new-place', name: 'New Place', parent_id: 'missing-place' });
+
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual({ error: 'Parent place does not exist: missing-place' });
+        expect(manifestCrudService.insert).not.toHaveBeenCalled();
+    });
+
+    it('POST /places rejects a place as its own parent', async () => {
+        const response = await request(app)
+            .post('/api/places')
+            .send({ id: 'place-1', name: 'Place', parent_id: 'place-1' });
+
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual({ error: 'A place cannot be its own parent' });
+        expect(manifestCrudService.getOne).not.toHaveBeenCalled();
+        expect(manifestCrudService.insert).not.toHaveBeenCalled();
+    });
+
+    it('PATCH /places rejects a parent assignment that creates a cycle', async () => {
+        manifestCrudService.getOne
+            .mockResolvedValueOnce({ id: 'place-2', parent_id: 'place-3' })
+            .mockResolvedValueOnce({ id: 'place-3', parent_id: 'place-1' })
+            .mockResolvedValueOnce({ id: 'place-1', parent_id: null });
+
+        const response = await request(app)
+            .patch('/api/places/place-1')
+            .send({ parent_id: 'place-2' });
+
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual({ error: 'Parent assignment would create a cycle' });
+        expect(manifestCrudService.update).not.toHaveBeenCalled();
+    });
+
     it('GET /:entityRoute/:id returns single record', async () => {
         manifestCrudService.getOne.mockResolvedValueOnce({ id: 'char-1', name: 'Hero' });
 

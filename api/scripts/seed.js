@@ -110,7 +110,9 @@ async function main() {
   `);
 
   await runSql(`Inserting places...`, `INSERT OR IGNORE INTO places (id, name, type, parent_id, short_description, long_explanation) VALUES
-    ('the-world', 'The World', 'planet', NULL, 'The world of mists.', 'Long Explanation.'),
+    ('the-universe', 'The Universe', 'universe', NULL, 'Everything in existence.', 'Long Explanation.'),
+    ('material-plane', 'The Material Plane', 'plane', 'the-universe', 'The plane of standard physical existence.', 'Long Explanation.'),
+    ('the-world', 'The World', 'planet', 'material-plane', 'The world of mists.', 'Long Explanation.'),
     ('othlorin', 'Othlorin', 'continent', 'the-world', 'The old land of the elves, now a rapidly burgeoning human territory.', 'Long Explanation.'),
     ('wavethorn', 'Wavethorn', 'city-state', 'othlorin', 'A city-state on the coast.', 'Long Explanation.'),
     ('itholis', 'Itholis', 'country', 'othlorin', 'The largest country in Othlorin, composed of 6 Counties.', 'Long Explanation.'),
