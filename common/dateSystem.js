@@ -28,18 +28,33 @@ const REAL_WORLD_MONTH_NAMES = [
     'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
+const ACHIEL_SAINT_MONTHS = [
+    { name: 'Vodardas', days: 30 },
+    { name: 'Leofeden', days: 31 },
+    { name: 'Dalvardas', days: 29 },
+    { name: 'Odomaden', days: 31 },
+    { name: 'Anyadas', days: 30 },
+    { name: 'Dalvarden', days: 31 },
+    { name: 'Sorendas', days: 30 },
+    { name: 'Hammythden', days: 31 },
+    { name: 'Illiadas', days: 30 },
+    { name: 'Nevylden', days: 31 },
+    { name: 'Laciandas', days: 30 },
+    { name: 'Feast Days', days: 2 }
+];
+
 const CALENDARS = {
     'age-of-elves-default': {
         id: 'age-of-elves-default',
         eraId: 'age-of-elves',
         name: 'Default Calendar',
-        months: genericMonths(),
+        months: REAL_WORLD_MONTH_NAMES.map((name) => ({ name, days: 28 })),
     },
     'age-of-ascension-default': {
         id: 'age-of-ascension-default',
         eraId: 'age-of-ascension',
         name: 'Default Calendar',
-        months: genericMonths(),
+        months: REAL_WORLD_MONTH_NAMES.map((name) => ({ name, days: 28 })),
     },
     'age-of-descent-default': {
         id: 'age-of-descent-default',
@@ -50,8 +65,8 @@ const CALENDARS = {
     'age-of-achiel-default': {
         id: 'age-of-achiel-default',
         eraId: 'age-of-achiel',
-        name: 'Default Calendar',
-        months: genericMonths(),
+        name: 'Calendar of Saints',
+        months: ACHIEL_SAINT_MONTHS,
     },
 };
 

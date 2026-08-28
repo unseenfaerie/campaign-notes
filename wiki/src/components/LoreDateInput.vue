@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, useId, watch } from 'vue'
 import { getDateSystem } from '../services/metaService'
 import {
   decodeLoreDate,
@@ -13,6 +13,8 @@ const props = defineProps<{
   modelValue: string
   required?: boolean
 }>()
+
+const inputId = useId()
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
@@ -158,11 +160,26 @@ watch(
     <button type="button" class="secondary-button" :disabled="!dateSystem" @click="setDate">Set date</button>
   </div>
   <div v-else class="lore-date-input">
-    <SearchableSelect v-model="eraId" :options="eraOptions" :required="required" />
-    <SearchableSelect v-model="calendarId" :options="calendarOptions" :required="required" />
-    <SearchableSelect v-model="monthIndex" :options="monthOptions" :required="required" />
-    <input v-model.number="day" type="number" min="1" :max="maxDayForMonth" :required="required" />
-    <input v-model.number="year" type="number" min="1" max="99999" :required="required" />
+    <div class="lore-date-field">
+      <label :for="`${inputId}-era`">Age</label>
+      <SearchableSelect v-model="eraId" :id="`${inputId}-era`" :options="eraOptions" :required="required" />
+    </div>
+    <div class="lore-date-field">
+      <label :for="`${inputId}-calendar`">Calendar</label>
+      <SearchableSelect v-model="calendarId" :id="`${inputId}-calendar`" :options="calendarOptions" :required="required" />
+    </div>
+    <div class="lore-date-field">
+      <label :for="`${inputId}-year`">Year</label>
+      <input :id="`${inputId}-year`" v-model.number="year" type="number" min="1" max="99999" :required="required" />
+    </div>
+    <div class="lore-date-field">
+      <label :for="`${inputId}-month`">Month</label>
+      <SearchableSelect v-model="monthIndex" :id="`${inputId}-month`" :options="monthOptions" :required="required" />
+    </div>
+    <div class="lore-date-field">
+      <label :for="`${inputId}-day`">Day</label>
+      <input :id="`${inputId}-day`" v-model.number="day" type="number" min="1" :max="maxDayForMonth" :required="required" />
+    </div>
     <button v-if="!required" type="button" class="secondary-button" @click="clearDate">Clear date</button>
   </div>
 </template>
@@ -171,7 +188,20 @@ watch(
 .lore-date-input {
   display: flex;
   flex-wrap: wrap;
+  align-items: end;
   gap: 0.5rem;
+}
+
+.lore-date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.36rem;
+}
+
+.lore-date-field label {
+  font-size: 0.88rem;
+  color: var(--ink-700);
+  font-weight: 700;
 }
 
 .lore-date-input input[type='number'] {
