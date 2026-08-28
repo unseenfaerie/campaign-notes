@@ -58,6 +58,10 @@ function fieldType(key: string): string | undefined {
   return props.fields?.find((field) => field.name === key)?.type
 }
 
+function fieldEnumValues(key: string): string[] | undefined {
+  return props.fields?.find((field) => field.name === key)?.enum
+}
+
 function fieldReferenceRoute(key: string): string | undefined {
   return props.fields?.find((field) => field.name === key)?.ref
 }
@@ -76,7 +80,19 @@ function fieldReferenceName(key: string, value: unknown): string {
   return (route && referenceNames.value[route]?.[id]) || id
 }
 
+function prettyEnumValue(value: string): string {
+  return value
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
 function prettyValue(key: string, value: unknown): string {
+  const enumValues = fieldEnumValues(key)
+  if (enumValues && enumValues.includes(String(value))) {
+    return prettyEnumValue(String(value))
+  }
+
   if (Array.isArray(value)) {
     return value.map((entry) => String(entry)).join(', ')
   }

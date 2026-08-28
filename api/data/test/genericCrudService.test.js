@@ -24,7 +24,7 @@ const testManifest = {
             fields: {
                 id: { type: 'string', primary: true, required: true },
                 name: { type: 'string', required: true },
-                level: { type: 'number' },
+                level: { type: 'number', enum: [3, 4, 5] },
             },
         },
         Item: {
@@ -153,6 +153,12 @@ describe('genericCrudService with isolated manifest and in-memory db', () => {
         await expect(
             service.insert('Character', { id: 'char-1' })
         ).rejects.toThrow('Missing required field: name');
+    });
+
+    it('rejects values outside a field enum', async () => {
+        await expect(
+            service.insert('Character', { id: 'char-1', name: 'Aster', level: 99 })
+        ).rejects.toThrow('Invalid value for level: expected one of 3, 4, 5');
     });
 
     it('prevents primary key updates but allows non-key updates', async () => {

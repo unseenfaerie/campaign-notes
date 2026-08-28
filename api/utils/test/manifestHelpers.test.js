@@ -22,6 +22,15 @@ describe('manifestHelpers isolated unit tests', () => {
                 'Invalid boolean value: maybe'
             );
         });
+
+        it('accepts only values from an enum', () => {
+            const alignments = ['lawful-good', 'true-neutral', 'chaotic-evil'];
+
+            expect(coerceValueByType('string', 'lawful-good', alignments)).toBe('lawful-good');
+            expect(() => coerceValueByType('string', 'unaligned', alignments)).toThrow(
+                'Invalid value: expected one of lawful-good, true-neutral, chaotic-evil'
+            );
+        });
     });
 
     describe('getEntityByRoute', () => {

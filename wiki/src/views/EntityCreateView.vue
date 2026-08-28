@@ -51,6 +51,13 @@ function prettyFieldName(name: string): string {
     .join(' ')
 }
 
+function prettyEnumValue(value: string): string {
+  return value
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
 function slugify(value: string): string {
   return value
     .toLowerCase()
@@ -206,6 +213,16 @@ watch(
             { value: '', label: 'No parent' },
             ...placeOptions.map((place) => ({ value: String(place.id), label: String(place.name || place.id) })),
           ]"
+        />
+        <SearchableSelect
+          v-else-if="field.enum"
+          :id="`create-field-${field.name}`"
+          v-model="formValues[field.name]"
+          :options="[
+            ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
+            ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
+          ]"
+          :required="field.required"
         />
         <input
           v-else-if="field.type === 'number'"

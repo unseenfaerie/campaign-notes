@@ -61,15 +61,17 @@ async function main() {
   await seedUsers({ bcrypt, nowIso, runSql });
 
   await runSql(`Inserting characters...`, `INSERT OR IGNORE INTO characters (id, player_character, name, age, ancestry, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, short_description, long_explanation) VALUES
-    ('alann-barnett', true, 'Alann Barnett', 32, 'human', 'Cleric', '4', 'Neutral Good', 13, 8, 11, 10, 14, 11, 20, false, 'A thoughtful and strong-willed adventurer.', 'Long Explanation.'),
-    ('releas-neb', true, 'Releas Neb', 28, 'human', 'Magic User', '7', 'Chaotic Good', 5, 14, 10, 18, 13, 9, 16, false, 'A clever and resourceful wizard.', 'Long Explanation.'),
-    ('appolonia-palleday', true, 'Appolonia Palleday', 16, 'human', 'Magic User', '5', 'Neutral Good', 13, 8, 11, 18, 14, 11, 18, false, 'A bright and curious spellcaster.', 'Long Explanation.'),
-    ('durchir', true, 'Durchir', 35, 'half-elf', 'Fighter/Enchanter', '2/Enchanter', 'Lawful Evil', 18, 10, 12, 15, 10, 11, 22, true, 'Durchir of the Angry Orchard, fallen hero.', 'Long Explanation.'),
-    ('cormac', true, 'Cormac', 27, 'half-elf', 'Thief/Illusionist', '5/4', 'Chaotic Good', 9, 16, 7, 15, 14, 7, 15, false, 'A clever and nimble adventurer.', 'Long Explanation.'),
-    ('bert-verinwort', false, 'Bert Verinwort', 54, 'human', NULL, NULL, 'Lawful Neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, 'A local notable in Wavethorn.', 'Long Explanation.'),
-    ('sieg-ordoss', false, 'Sieg Ordoss', 57, 'human', NULL, NULL, 'Lawful Neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, true, 'A mysterious figure.', 'Long Explanation.'),
-    ('gereg', false, 'Gereg', 41, 'human', 'Thief', '5', 'Neutral Evil', NULL, NULL, NULL, NULL, NULL, NULL, 20, false, 'A resident of Wavethorn.', 'Long Explanation.');
+    ('alann-barnett', true, 'Alann Barnett', 32, 'human', 'Cleric', '4', 'neutral-good', 13, 8, 11, 10, 14, 11, 20, false, 'A thoughtful and strong-willed adventurer.', 'Long Explanation.'),
+    ('releas-neb', true, 'Releas Neb', 28, 'human', 'Magic User', '7', 'chaotic-good', 5, 14, 10, 18, 13, 9, 16, false, 'A clever and resourceful wizard.', 'Long Explanation.'),
+    ('appolonia-palleday', true, 'Appolonia Palleday', 16, 'human', 'Magic User', '5', 'neutral-good', 13, 8, 11, 18, 14, 11, 18, false, 'A bright and curious spellcaster.', 'Long Explanation.'),
+    ('durchir', true, 'Durchir', 35, 'half-elf', 'Fighter/Enchanter', '2/Enchanter', 'lawful-evil', 18, 10, 12, 15, 10, 11, 22, true, 'Durchir of the Angry Orchard, fallen hero.', 'Long Explanation.'),
+    ('cormac', true, 'Cormac', 27, 'half-elf', 'Thief/Illusionist', '5/4', 'chaotic-good', 9, 16, 7, 15, 14, 7, 15, false, 'A clever and nimble adventurer.', 'Long Explanation.'),
+    ('bert-verinwort', false, 'Bert Verinwort', 54, 'human', NULL, NULL, 'lawful-neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, 'A local notable in Wavethorn.', 'Long Explanation.'),
+    ('sieg-ordoss', false, 'Sieg Ordoss', 57, 'human', NULL, NULL, 'lawful-neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, true, 'A mysterious figure.', 'Long Explanation.'),
+    ('gereg', false, 'Gereg', 41, 'human', 'Thief', '5', 'neutral-evil', NULL, NULL, NULL, NULL, NULL, NULL, 20, false, 'A resident of Wavethorn.', 'Long Explanation.');
   `);
+
+  await runSql(`Normalizing seeded character alignments...`, `UPDATE characters SET alignment = lower(replace(alignment, ' ', '-')) WHERE alignment IS NOT NULL;`);
 
   await runSql(`Inserting user_character_anchors...`, `INSERT OR IGNORE INTO user_character_anchors (character_id, user_id, created_at) VALUES
     ('alann-barnett', 'alice', ?),
@@ -77,15 +79,17 @@ async function main() {
   `, [nowIso, nowIso]);
 
   await runSql(`Inserting deities...`, `INSERT OR IGNORE INTO deities (id, name, pantheon, alignment, short_description, long_explanation) VALUES
-    ('achiel', 'Achiel', 'Main Human', 'Lawful Good', 'God of Light.', 'Long Explanation.'),
-    ('idona', 'Idona', 'Main Human', 'Chaotic Good', 'Goddess of Humanity.', 'The patron goddess of and mother to Humankind. Her nurturing guidance shows us what we need to know to thrive. Those that worship Idona are numerous within the Othlorin. She is primarily worshipped as Achiels Wife, deserving of respect and credence. There are some women who have dedicated their lives to interpreting the messages of the moon as those are what Idona intends.'),
-    ('ponat', 'Ponat', 'Main Human', 'Lawful Good', 'God of Fortress and protection.', 'Long Explanation.'),
-    ('wyaris', 'Wyaris', 'Three Sister Goddesses', 'Chaotic Good', 'Lady of Swords.', 'Long Explanation.'),
-    ('danaris', 'Danaris', 'Three Sister Goddesses', 'Chaotic Neutral', 'Lady of Death.', 'Long Explanation.'),
-    ('vaharis', 'Vaharis', 'Three Sister Goddesses', 'Lawful Neutral', 'Lady of Judgement.', 'Long Explanation.'),
-    ('sylrineth', 'Sylrineth', 'Ancient Elven', 'Chaotic Evil', 'Keeper of Forbidden Knowledge.', 'Syrineth is queen of the 666 layers of the abyss. There she hoards esoteric knowledge and hedonistic souls. Her many demons do her bidding.'),
-    ('doh', 'Doh', 'Main Human', 'Lawful Neutral', 'God of Law.', 'Long Explanation.');
+    ('achiel', 'Achiel', 'Main Human', 'lawful-good', 'God of Light.', 'Long Explanation.'),
+    ('idona', 'Idona', 'Main Human', 'chaotic-good', 'Goddess of Humanity.', 'The patron goddess of and mother to Humankind. Her nurturing guidance shows us what we need to know to thrive. Those that worship Idona are numerous within the Othlorin. She is primarily worshipped as Achiels Wife, deserving of respect and credence. There are some women who have dedicated their lives to interpreting the messages of the moon as those are what Idona intends.'),
+    ('ponat', 'Ponat', 'Main Human', 'lawful-good', 'God of Fortress and protection.', 'Long Explanation.'),
+    ('wyaris', 'Wyaris', 'Three Sister Goddesses', 'chaotic-good', 'Lady of Swords.', 'Long Explanation.'),
+    ('danaris', 'Danaris', 'Three Sister Goddesses', 'chaotic-neutral', 'Lady of Death.', 'Long Explanation.'),
+    ('vaharis', 'Vaharis', 'Three Sister Goddesses', 'lawful-neutral', 'Lady of Judgement.', 'Long Explanation.'),
+    ('sylrineth', 'Sylrineth', 'Ancient Elven', 'chaotic-evil', 'Keeper of Forbidden Knowledge.', 'Syrineth is queen of the 666 layers of the abyss. There she hoards esoteric knowledge and hedonistic souls. Her many demons do her bidding.'),
+    ('doh', 'Doh', 'Main Human', 'lawful-neutral', 'God of Law.', 'Long Explanation.');
   `);
+
+  await runSql(`Normalizing seeded deity alignments...`, `UPDATE deities SET alignment = lower(replace(alignment, ' ', '-')) WHERE alignment IS NOT NULL;`);
 
   await runSql(`Inserting events...`, `INSERT OR IGNORE INTO events (id, name, real_world_date, in_game_time, previous_event_id, next_event_id, short_description, long_explanation) VALUES
     ('coup-of-wavethorn', 'The Coup of Wavethorn', '2025-08-01', '0200200255_age-of-descent-default', NULL, 'night-of-spiders', 'Rel, Cormac, Alann, and Durchir arrive in Othlorin at the port city of Wavethorn and upend the local government.', 'Approximately 200 years after the fall of Vokdjinn... A new adventuring party takes shape. Rel, Durchir, Alann, and Cormac come to Othlorin from Gatûn. Some seek the riches that lie in the ruins of the old elven homeland. They settle into Wavethorn, a merchant''s city on the edge of the sea. Before long, they are suspected of murder. Their confidant Bert Verinwort is later framed for a demonic ritual murder of several prominent figures in town, including his uncle Phil Verinwort. After being kidnapped by Wyvernfang bandits, the party understands the conspiracy to remove political threats to those that the Wyvernfang have installed on the council. Brae Novan and Daniel Hillstop are connected to the gang. After gathering evidence against these parties, the party clears a nearby dungeon of Wyvernfang and uses a massive amount of money they found to bankroll a coup of the government. The coup succeeds and a new, more balanced, three-council-oligarchy is implemented by Bert. This endeavor was made possible by an underground crime lord named Gereg. Due to his involvement, the party was obliged to put him into power on the Mercantile council. Brae and Daniel escaped execution by fleeing the town before the new regime was enacted.'),

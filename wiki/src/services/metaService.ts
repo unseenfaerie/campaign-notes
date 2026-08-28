@@ -9,6 +9,7 @@ export type EntityFieldSchema = {
     ref?: string
     format?: string
     autoIncrement?: boolean
+    enum?: string[]
 }
 
 export type EntitySchema = {

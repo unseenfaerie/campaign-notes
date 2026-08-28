@@ -38,6 +38,13 @@ function prettyFieldName(name: string): string {
     .join(' ')
 }
 
+function prettyEnumValue(value: string): string {
+  return value
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
 function isLongTextField(field: EntityFieldSchema): boolean {
   return field.type === 'string' && /description|explanation|notes/i.test(field.name)
 }
@@ -197,6 +204,16 @@ watch(selectedRelatedRoute, () => {
         :id="`add-relation-field-${field.name}`"
         v-model="formValues[field.name]"
         type="checkbox"
+      />
+      <SearchableSelect
+        v-else-if="field.enum"
+        :id="`add-relation-field-${field.name}`"
+        v-model="formValues[field.name]"
+        :options="[
+          ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
+          ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
+        ]"
+        :required="field.required"
       />
       <input
         v-else-if="field.type === 'number'"

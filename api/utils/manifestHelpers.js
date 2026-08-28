@@ -1,8 +1,9 @@
 const { domainManifest } = require('../../common/domainManifest');
 const { validateIdFormat } = require('./idUtils');
 const { isValidLoreDate } = require('../../common/dateSystem');
+const { getEnumValues } = require('../../common/enums');
 
-function coerceValueByType(type, value) {
+function coerceValueByType(type, value, enumValues) {
     if (value === undefined || value === null) return value;
 
     if (type === 'loreDate') {
@@ -31,7 +32,11 @@ function coerceValueByType(type, value) {
     }
 
     if (type === 'string') {
-        return String(value);
+        const normalized = String(value);
+        if (enumValues && !enumValues.includes(normalized)) {
+            throw new Error(`Invalid value: expected one of ${enumValues.join(', ')}`);
+        }
+        return normalized;
     }
 
     return value;
@@ -156,6 +161,7 @@ function mapFieldDefs(fieldsObj) {
         };
 
         if (fieldDef.format) field.format = fieldDef.format;
+        if (fieldDef.enum) field.enum = [...getEnumValues(fieldDef.enum)];
         if (fieldDef.autoIncrement) field.autoIncrement = true;
         if (fieldDef.ref) {
             const referencedEntity = Object.entries(domainManifest.entities).find(
@@ -262,7 +268,7 @@ function conformObjectToEntity(obj, entityDef, options = {}) {
             throw new Error(`Unknown field for route ${entityDef.route}: ${field}`);
         }
 
-        normalized[field] = coerceValueByType(fieldDef.type, rawValue);
+        normalized[field] = coerceValueByType(fieldDef.type, rawValue, getEnumValues(fieldDef.enum));
 
         if (
             enforcePrimaryIdFormat &&

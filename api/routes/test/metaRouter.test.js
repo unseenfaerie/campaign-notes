@@ -125,6 +125,22 @@ describe('metaRouter', () => {
         expect(ageField.type).toBe('number');
     });
 
+    it('exposes alignment enum values for character and deity forms', async () => {
+        const res = await request(app)
+            .get('/api/meta')
+            .set('Authorization', bearerToken());
+
+        expect(res.status).toBe(200);
+
+        for (const route of ['characters', 'deities']) {
+            const entity = res.body.entities.find((item) => item.route === route);
+            const alignmentField = entity.fields.find((field) => field.name === 'alignment');
+            expect(alignmentField.enum).toHaveLength(9);
+            expect(alignmentField.enum).toContain('lawful-good');
+            expect(alignmentField.enum).toContain('chaotic-evil');
+        }
+    });
+
     it('exposes relation form schemas keyed by entity route', async () => {
         const res = await request(app)
             .get('/api/meta')

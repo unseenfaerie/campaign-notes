@@ -466,6 +466,13 @@ function prettyFieldName(name: string): string {
     .join(' ')
 }
 
+function prettyEnumValue(value: string): string {
+  return value
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
 function isLongTextField(field: EntityFieldSchema): boolean {
   return field.type === 'string' && /description|explanation|notes/i.test(field.name)
 }
@@ -561,6 +568,16 @@ watch(() => [props.entityRoute, props.id], loadDetail)
               v-model="editValues[field.name]"
               type="checkbox"
               :disabled="field.primary"
+            />
+            <SearchableSelect
+              v-else-if="field.enum"
+              :id="`edit-field-${field.name}`"
+              v-model="editValues[field.name]"
+              :options="[
+                ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
+                ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
+              ]"
+              :required="field.required"
             />
             <SearchableSelect
               v-else-if="entityRoute === 'places' && field.name === 'parent_id'"
@@ -727,6 +744,16 @@ watch(() => [props.entityRoute, props.id], loadDetail)
                   v-model="relationEditValues[field.name]"
                   type="checkbox"
                 />
+                <SearchableSelect
+                  v-else-if="field.enum"
+                  :id="`edit-relation-${relatedRoute}-${index}-${field.name}`"
+                  v-model="relationEditValues[field.name]"
+                  :options="[
+                    ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
+                    ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
+                  ]"
+                  :required="field.required"
+                />
                 <input
                   v-else-if="field.type === 'number'"
                   :id="`edit-relation-${relatedRoute}-${index}-${field.name}`"
@@ -822,6 +849,16 @@ watch(() => [props.entityRoute, props.id], loadDetail)
                       :id="`edit-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
                       v-model="historyEditValues[field.name]"
                       type="checkbox"
+                    />
+                    <SearchableSelect
+                      v-else-if="field.enum"
+                      :id="`edit-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
+                      v-model="historyEditValues[field.name]"
+                      :options="[
+                        ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
+                        ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
+                      ]"
+                      :required="field.required"
                     />
                     <input
                       v-else-if="field.type === 'number'"
