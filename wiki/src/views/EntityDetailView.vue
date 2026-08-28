@@ -479,7 +479,7 @@ async function startEdit() {
     return
   }
 
-  editFields.value = schema.fields.filter((field) => !field.primary)
+  editFields.value = schema.fields
   editValues.value = fieldValuesFromRecord(editFields.value, entity)
 
   isEditing.value = true
@@ -491,7 +491,7 @@ function cancelEdit() {
 }
 
 function buildEditPayload(): Record<string, unknown> {
-  const payload = buildFieldsPayload(editFields.value, editValues.value, {
+  const payload = buildFieldsPayload(editableFields(editFields.value), editValues.value, {
     clearOptionalLoreDates: true,
     clearOptionalReferences: true,
   })
@@ -560,6 +560,7 @@ watch(() => [props.entityRoute, props.id], loadDetail)
               :id="`edit-field-${field.name}`"
               v-model="editValues[field.name]"
               type="checkbox"
+              :disabled="field.primary"
             />
             <SearchableSelect
               v-else-if="entityRoute === 'places' && field.name === 'parent_id'"
@@ -577,6 +578,7 @@ watch(() => [props.entityRoute, props.id], loadDetail)
               type="number"
               step="any"
               :required="field.required"
+              :readonly="field.primary"
             />
             <textarea
               v-else-if="isLongTextField(field)"
@@ -596,6 +598,7 @@ watch(() => [props.entityRoute, props.id], loadDetail)
               v-model="editValues[field.name]"
               type="text"
               :required="field.required"
+              :readonly="field.primary"
             />
           </div>
 

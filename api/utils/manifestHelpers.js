@@ -170,6 +170,14 @@ function mapFieldDefs(fieldsObj) {
     return fields;
 }
 
+function orderEntityFields(fields, idField) {
+    const nameField = fields.find((field) => field.name === 'name');
+    const entityIdField = fields.find((field) => field.name === idField);
+    const remainingFields = fields.filter((field) => field !== nameField && field !== entityIdField);
+
+    return [nameField, entityIdField, ...remainingFields].filter(Boolean);
+}
+
 function buildEntityFormSchemas(manifest = domainManifest) {
     const entities = [];
 
@@ -178,7 +186,7 @@ function buildEntityFormSchemas(manifest = domainManifest) {
             name: entityName,
             route: entityDef.route,
             idField: entityDef.idField,
-            fields: mapFieldDefs(entityDef.fields),
+            fields: orderEntityFields(mapFieldDefs(entityDef.fields), entityDef.idField),
         });
     }
 

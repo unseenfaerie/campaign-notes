@@ -40,7 +40,7 @@ describe('metaRouter', () => {
         expect(res.body.entities.length).toBeGreaterThan(0);
     });
 
-    it('projects field metadata in definition order', async () => {
+    it('projects entity identity fields first', async () => {
         const res = await request(app)
             .get('/api/meta')
             .set('Authorization', bearerToken());
@@ -53,7 +53,7 @@ describe('metaRouter', () => {
         expect(character.idField).toBe('id');
 
         const fieldNames = character.fields.map((field) => field.name);
-        expect(fieldNames.slice(0, 3)).toEqual(['id', 'player_character', 'name']);
+        expect(fieldNames.slice(0, 3)).toEqual(['name', 'id', 'player_character']);
 
         const idField = character.fields.find((field) => field.name === 'id');
         expect(idField).toMatchObject({
