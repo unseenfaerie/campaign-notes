@@ -593,24 +593,40 @@ watch(() => [props.entityRoute, props.id], loadDetail)
           :data="entityDisplayData"
           :fields="entitySchema?.fields"
           empty-message="No entity fields are available."
-        />
-      </section>
-
-      <section v-if="entityRoute === 'places' && fullData.children && fullData.children.length > 0" class="article-section">
-        <div class="section-heading-row">
-          <h3>Children</h3>
-          <span class="section-count">{{ fullData.children.length }}</span>
-        </div>
-        <ul class="link-list">
-          <li v-for="child in fullData.children" :key="String(child.id)">
-            <RouterLink
-              v-if="child.id !== undefined && child.id !== null && child.id !== ''"
-              :to="{ name: 'entity-detail', params: { entityRoute: 'places', id: String(child.id) } }"
-            >
-              {{ relatedRecordLabel(child) }}
-            </RouterLink>
-          </li>
-        </ul>
+        >
+          <template #after-field="{ fieldKey }">
+            <template v-if="entityRoute === 'places' && fieldKey === 'parent_id' && fullData.children?.length">
+              <dt>Children</dt>
+              <dd>
+                <template v-for="(child, index) in fullData.children" :key="String(child.id)">
+                  <span v-if="index > 0">, </span>
+                  <RouterLink
+                    v-if="child.id !== undefined && child.id !== null && child.id !== ''"
+                    :to="{ name: 'entity-detail', params: { entityRoute: 'places', id: String(child.id) } }"
+                  >
+                    {{ relatedRecordLabel(child) }}
+                  </RouterLink>
+                </template>
+              </dd>
+            </template>
+          </template>
+          <template #after-fields>
+            <template v-if="entityRoute === 'places' && !entityDisplayData.parent_id && fullData.children?.length">
+              <dt>Children</dt>
+              <dd>
+                <template v-for="(child, index) in fullData.children" :key="String(child.id)">
+                  <span v-if="index > 0">, </span>
+                  <RouterLink
+                    v-if="child.id !== undefined && child.id !== null && child.id !== ''"
+                    :to="{ name: 'entity-detail', params: { entityRoute: 'places', id: String(child.id) } }"
+                  >
+                    {{ relatedRecordLabel(child) }}
+                  </RouterLink>
+                </template>
+              </dd>
+            </template>
+          </template>
+        </FieldList>
       </section>
 
       <CollapseSection

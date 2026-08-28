@@ -111,7 +111,9 @@ function prettyValue(key: string, value: unknown): string {
           </RouterLink>
           <template v-else>{{ prettyValue(key, value) }}</template>
         </dd>
+        <slot name="after-field" :field-key="key" />
       </template>
+      <slot name="after-fields" />
     </dl>
   </div>
 </template>
