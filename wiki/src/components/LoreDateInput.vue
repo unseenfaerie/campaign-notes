@@ -21,10 +21,11 @@ const emit = defineEmits<{
 const dateSystem = ref<DateSystem | null>(null)
 const eraId = ref('')
 const calendarId = ref('')
-const monthIndex = ref(0)
+const monthIndex = ref<number | string>('')
 const day = ref(1)
 const year = ref(1)
 const isDateSet = ref(Boolean(props.required || props.modelValue))
+let preserveMonthOnCalendarChange = false
 
 const calendarsForEra = computed(() => (dateSystem.value ? getCalendarsForEra(dateSystem.value, eraId.value) : []))
 
@@ -32,11 +33,18 @@ const selectedCalendar = computed(() => calendarsForEra.value.find((calendar) =>
 
 const monthsForCalendar = computed(() => selectedCalendar.value?.months ?? [])
 
-const eraOptions = computed(() => (dateSystem.value?.eras ?? []).map((era) => ({ value: era.id, label: era.name })))
+const eraOptions = computed(() => (dateSystem.value?.eras ?? [])
+  .slice()
+  .sort((a, b) => b.order - a.order)
+  .map((era) => ({ value: era.id, label: era.name })))
 const calendarOptions = computed(() => calendarsForEra.value.map((calendar) => ({ value: calendar.id, label: calendar.name })))
 const monthOptions = computed(() => monthsForCalendar.value.map((month, index) => ({ value: index, label: month.name })))
 
-const maxDayForMonth = computed(() => monthsForCalendar.value[monthIndex.value]?.days ?? 1)
+const maxDayForMonth = computed(() => (
+  typeof monthIndex.value === 'number'
+    ? monthsForCalendar.value[monthIndex.value]?.days ?? 1
+    : 1
+))
 
 function applyDecoded(value: string) {
   if (!dateSystem.value || !value) {
@@ -48,6 +56,7 @@ function applyDecoded(value: string) {
     return
   }
 
+  preserveMonthOnCalendarChange = true
   eraId.value = decoded.era.id
   calendarId.value = decoded.calendar.id
   monthIndex.value = decoded.monthIndex
@@ -60,21 +69,15 @@ function initializeDefaults() {
     return
   }
 
-  const firstEra = dateSystem.value.eras.slice().sort((a, b) => a.order - b.order)[0]
-  if (!firstEra) {
-    return
-  }
-
-  eraId.value = firstEra.id
-  const firstCalendar = getCalendarsForEra(dateSystem.value, firstEra.id)[0]
-  calendarId.value = firstCalendar?.id ?? ''
-  monthIndex.value = 0
+  eraId.value = ''
+  calendarId.value = ''
+  monthIndex.value = ''
   day.value = 1
   year.value = 1
 }
 
 function emitEncodedValue() {
-  if (!isDateSet.value || !dateSystem.value || !calendarId.value) {
+  if (!isDateSet.value || !dateSystem.value || !calendarId.value || typeof monthIndex.value !== 'number') {
     return
   }
 
@@ -122,9 +125,12 @@ watch(eraId, () => {
 })
 
 watch(calendarId, () => {
-  if (monthIndex.value >= monthsForCalendar.value.length) {
-    monthIndex.value = 0
+  if (preserveMonthOnCalendarChange) {
+    preserveMonthOnCalendarChange = false
+    return
   }
+
+  monthIndex.value = ''
 })
 
 watch([eraId, calendarId, monthIndex, day, year], () => {
