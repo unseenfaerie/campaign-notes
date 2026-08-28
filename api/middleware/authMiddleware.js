@@ -62,7 +62,7 @@ function requireDmForMutations(req, res, next) {
   }
 
   if (req.auth.role !== 'dm') {
-    return res.status(403).json({ error: 'Only dm users can directly modify domain resources' });
+    return res.status(403).json({ error: 'Only DM users can directly modify domain resources' });
   }
 
   return next();

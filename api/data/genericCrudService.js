@@ -128,7 +128,7 @@ function validateWhere(def, where, { allowEmpty = false } = {}) {
   return where;
 }
 
-function buildWhereClause(where) {
+function buildWhereClause(def, where) {
   const fields = Object.keys(where);
   if (fields.length === 0) {
     return { clause: '', params: [] };
@@ -136,8 +136,30 @@ function buildWhereClause(where) {
 
   return {
     clause: `WHERE ${fields.map((field) => `${field} = ?`).join(' AND ')}`,
-    params: fields.map((field) => where[field]),
+    params: fields.map((field) => toSqliteValue(def.fields[field].type, where[field])),
   };
+}
+
+// sqlite has no native boolean type, so booleans are stored as 0/1 integers here and nowhere else.
+function toSqliteValue(type, value) {
+  if (type === 'boolean' && typeof value === 'boolean') {
+    return value ? 1 : 0;
+  }
+
+  return value;
+}
+
+function fromSqliteRow(def, row) {
+  if (!row) return row;
+
+  const mapped = { ...row };
+  for (const [fieldName, meta] of Object.entries(def.fields)) {
+    if (meta.type === 'boolean' && mapped[fieldName] !== undefined && mapped[fieldName] !== null) {
+      mapped[fieldName] = Boolean(mapped[fieldName]);
+    }
+  }
+
+  return mapped;
 }
 
 function run(sql, params = [], sqliteDb = db) {
@@ -181,7 +203,7 @@ function createManifestCrudService(manifest = domainManifest, sqliteDb = db) {
 
     const placeholders = fields.map(() => '?').join(', ');
     const sql = `INSERT INTO ${def.table} (${fields.join(', ')}) VALUES (${placeholders})`;
-    await run(sql, fields.map((field) => validated[field]), sqliteDb);
+    await run(sql, fields.map((field) => toSqliteValue(def.fields[field].type, validated[field])), sqliteDb);
 
     const where = {};
     for (const key of def.primaryKeys) {
@@ -201,18 +223,20 @@ function createManifestCrudService(manifest = domainManifest, sqliteDb = db) {
     const def = toResourceDefinition(resourceName, manifest);
     validateWhere(def, where, { allowEmpty: true });
 
-    const { clause, params } = buildWhereClause(where);
+    const { clause, params } = buildWhereClause(def, where);
     const sql = `SELECT * FROM ${def.table} ${clause}`;
-    return all(sql, params, sqliteDb);
+    const rows = await all(sql, params, sqliteDb);
+    return rows.map((row) => fromSqliteRow(def, row));
   }
 
   async function getOne(resourceName, where) {
     const def = toResourceDefinition(resourceName, manifest);
     validateWhere(def, where);
 
-    const { clause, params } = buildWhereClause(where);
+    const { clause, params } = buildWhereClause(def, where);
     const sql = `SELECT * FROM ${def.table} ${clause} LIMIT 1`;
-    return get(sql, params, sqliteDb);
+    const row = await get(sql, params, sqliteDb);
+    return fromSqliteRow(def, row);
   }
 
   async function update(resourceName, where, updates) {
@@ -237,8 +261,8 @@ function createManifestCrudService(manifest = domainManifest, sqliteDb = db) {
 
     const sql = `UPDATE ${def.table} SET ${setClause} WHERE ${whereClause}`;
     const params = [
-      ...fields.map((field) => validatedUpdates[field]),
-      ...whereFields.map((field) => where[field]),
+      ...fields.map((field) => toSqliteValue(def.fields[field].type, validatedUpdates[field])),
+      ...whereFields.map((field) => toSqliteValue(def.fields[field].type, where[field])),
     ];
 
     const result = await run(sql, params, sqliteDb);
@@ -258,7 +282,7 @@ function createManifestCrudService(manifest = domainManifest, sqliteDb = db) {
 
     const result = await run(
       sql,
-      whereFields.map((field) => where[field]),
+      whereFields.map((field) => toSqliteValue(def.fields[field].type, where[field])),
       sqliteDb
     );
 

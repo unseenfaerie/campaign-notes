@@ -45,6 +45,7 @@ jest.mock('../../utils/manifestHelpers', () => ({
         anchorMember: members[anchorMemberIndex],
         relatedMember: members[anchorMemberIndex === 0 ? 1 : 0],
     })),
+    getRelationsForEntityRoute: jest.fn(),
     getRelatedIdForRow: jest.fn((row, members, sourceId, anchorMemberIndex) => {
         const anchorMember = members[anchorMemberIndex];
         const relatedMember = members[anchorMemberIndex === 0 ? 1 : 0];
@@ -203,6 +204,39 @@ beforeEach(() => {
         anchorMember: members[anchorMemberIndex],
         relatedMember: members[anchorMemberIndex === 0 ? 1 : 0],
     }));
+    manifestHelpers.getRelationsForEntityRoute.mockImplementation((entityRoute, manifest) => {
+        const relations = [];
+
+        for (const [relationName, relationDef] of Object.entries(manifest.relations || {})) {
+            const members = relationDef.members;
+
+            for (let anchorMemberIndex = 0; anchorMemberIndex < members.length; anchorMemberIndex += 1) {
+                const anchorMember = members[anchorMemberIndex];
+                const anchorEntityDef = manifest.entities[anchorMember.entity];
+
+                if (!anchorEntityDef || anchorEntityDef.route !== entityRoute) {
+                    continue;
+                }
+
+                const relatedMember = members[anchorMemberIndex === 0 ? 1 : 0];
+                const relatedEntityDef = manifest.entities[relatedMember.entity];
+
+                relations.push({
+                    relationName,
+                    relationDef,
+                    anchorMemberIndex,
+                    relatedRoute: anchorMember.route,
+                    relatedEntityName: relatedMember.entity,
+                    relatedEntityRoute: relatedEntityDef.route,
+                    relatedIdField: relatedEntityDef.idField,
+                });
+
+                break;
+            }
+        }
+
+        return relations;
+    });
     manifestHelpers.getRelatedIdForRow.mockImplementation((row, members, sourceId, anchorMemberIndex) => {
         const anchorMember = members[anchorMemberIndex];
         const relatedMember = members[anchorMemberIndex === 0 ? 1 : 0];

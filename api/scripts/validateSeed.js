@@ -51,8 +51,8 @@ while ((match = insertRegex.exec(seedContent)) !== null) {
   });
 
   rows.forEach((row, idx) => {
-    // Improved regex: matches single-quoted strings (with escaped quotes), NULL, numbers
-    const values = row.match(/'(?:[^']|'')*'|NULL|\d+|\d+\.\d+/g) || [];
+    // Improved regex: matches single-quoted strings (with escaped quotes), NULL, numbers, booleans
+    const values = row.match(/'(?:[^']|'')*'|NULL|true|false|\d+\.\d+|\d+/g) || [];
     if (values.length !== expectedCount) {
       foundIssues = true;
       console.log(`Table: ${table}, Row ${idx + 1}: Expected ${expectedCount} values, found ${values.length}`);

@@ -136,6 +136,100 @@ function getRelatedIdForRow(row, members, sourceId, anchorMemberIndex) {
     return row[relatedMember.key];
 }
 
+function mapFieldDefs(fieldsObj) {
+    const fields = [];
+
+    for (const [fieldName, fieldDef] of Object.entries(fieldsObj || {})) {
+        const field = {
+            name: fieldName,
+            type: fieldDef.type,
+            required: Boolean(fieldDef.required),
+            primary: Boolean(fieldDef.primary),
+        };
+
+        if (fieldDef.format) field.format = fieldDef.format;
+        if (fieldDef.autoIncrement) field.autoIncrement = true;
+
+        fields.push(field);
+    }
+
+    return fields;
+}
+
+function buildEntityFormSchemas(manifest = domainManifest) {
+    const entities = [];
+
+    for (const [entityName, entityDef] of Object.entries(manifest.entities)) {
+        entities.push({
+            name: entityName,
+            route: entityDef.route,
+            idField: entityDef.idField,
+            fields: mapFieldDefs(entityDef.fields),
+        });
+    }
+
+    return { entities };
+}
+
+// for each entity route, describes the relations reachable from it (used both by domainRouter's
+// /full aggregation and by the frontend's relation-creation forms)
+function getRelationsForEntityRoute(entityRoute, manifest = domainManifest) {
+    const relations = [];
+
+    for (const [relationName, relationDef] of Object.entries(manifest.relations || {})) {
+        const members = getRelationMembers(relationDef);
+
+        for (let anchorMemberIndex = 0; anchorMemberIndex < members.length; anchorMemberIndex += 1) {
+            const anchorMember = members[anchorMemberIndex];
+            const anchorEntityDef = manifest.entities[anchorMember.entity];
+
+            if (!anchorEntityDef || anchorEntityDef.route !== entityRoute) {
+                continue;
+            }
+
+            const relatedMember = members[anchorMemberIndex === 0 ? 1 : 0];
+            const relatedEntityDef = manifest.entities[relatedMember.entity];
+
+            relations.push({
+                relationName,
+                relationDef,
+                anchorMemberIndex,
+                relatedRoute: anchorMember.route,
+                relatedEntityName: relatedMember.entity,
+                relatedEntityRoute: relatedEntityDef.route,
+                relatedIdField: relatedEntityDef.idField,
+            });
+
+            break;
+        }
+    }
+
+    return relations;
+}
+
+function buildRelationFormSchemas(manifest = domainManifest) {
+    const relationsByEntityRoute = {};
+
+    for (const entityDef of Object.values(manifest.entities)) {
+        relationsByEntityRoute[entityDef.route] = getRelationsForEntityRoute(entityDef.route, manifest).map(
+            (relation) => ({
+                relatedRoute: relation.relatedRoute,
+                relationName: relation.relationName,
+                kind: relation.relationDef.kind,
+                relatedEntityRoute: relation.relatedEntityRoute,
+                historyKey: relation.relationDef.historyKey || null,
+                fields: mapFieldDefs(relation.relationDef.payload).map((field) =>
+                    relation.relationDef.historyKey && field.name === relation.relationDef.historyKey
+                        ? { ...field, primary: true }
+                        : field
+                ),
+            })
+        );
+    }
+
+    return relationsByEntityRoute;
+}
+
 function conformObjectToEntity(obj, entityDef, options = {}) {
     const { enforcePrimaryIdFormat = false } = options;
     const normalized = {};
@@ -173,4 +267,7 @@ module.exports = {
     getRelationContext,
     getRelatedIdForRow,
     conformObjectToEntity,
+    buildEntityFormSchemas,
+    getRelationsForEntityRoute,
+    buildRelationFormSchemas,
 };

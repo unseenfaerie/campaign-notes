@@ -7,6 +7,7 @@ const dataRouter = require('./routes/dataRouter');
 const domainRouter = require('./routes/domainRouter');
 const authRouter = require('./routes/authRouter');
 const adminRouter = require('./routes/adminRouter');
+const metaRouter = require('./routes/metaRouter');
 const { requireAuth, requireRole } = require('./middleware/authMiddleware');
 const { initializeDatabase } = require('./data/db');
 
@@ -23,6 +24,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/admin', requireAuth, adminRouter);
 app.use('/api/data', requireAuth, requireRole(['dm']), dataRouter);
+app.use('/api/meta', requireAuth, metaRouter);
 app.use('/api', requireAuth, domainRouter);
 
 app.use((err, req, res, next) => {
