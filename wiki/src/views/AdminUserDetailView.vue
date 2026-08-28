@@ -16,6 +16,7 @@ import {
 } from '../services/adminService'
 import { listEntities, type DomainEntity } from '../services/domainService'
 import { useAuthStore } from '../stores/auth'
+import SearchableSelect from '../components/SearchableSelect.vue'
 
 const props = defineProps<{
   userId: string
@@ -291,11 +292,15 @@ onMounted(loadAll)
 
           <div class="form-row">
             <label for="detail-role">Role</label>
-            <select id="detail-role" v-model="detailForm.role">
-              <option value="player">Player</option>
-              <option value="viewer">Viewer</option>
-              <option value="dm">DM</option>
-            </select>
+            <SearchableSelect
+              id="detail-role"
+              v-model="detailForm.role"
+              :options="[
+                { value: 'player', label: 'Player' },
+                { value: 'viewer', label: 'Viewer' },
+                { value: 'dm', label: 'DM' },
+              ]"
+            />
           </div>
 
           <div class="form-row checkbox-row">
@@ -360,12 +365,15 @@ onMounted(loadAll)
         <form class="assign-form" @submit.prevent="assignCharacter">
           <div class="form-row">
             <label for="assign-character">Associate a character</label>
-            <select id="assign-character" v-model="selectedCharacterId">
-              <option value="" disabled>Choose a character...</option>
-              <option v-for="option in assignableCharacters" :key="option.id" :value="option.id">
-                {{ option.name }}{{ option.anchoredTo ? ` (currently: ${option.anchoredTo})` : '' }}
-              </option>
-            </select>
+            <SearchableSelect
+              id="assign-character"
+              v-model="selectedCharacterId"
+              :options="assignableCharacters.map((option) => ({
+                value: option.id,
+                label: `${option.name}${option.anchoredTo ? ` (currently: ${option.anchoredTo})` : ''}`,
+              }))"
+              placeholder="Choose a character..."
+            />
             <p class="field-hint">
               Only player characters are listed. Assigning a character currently associated with another user moves it
               to this user.

@@ -7,6 +7,7 @@ import {
   getCalendarsForEra,
   type DateSystem,
 } from '../utils/loreDate'
+import SearchableSelect from './SearchableSelect.vue'
 
 const props = defineProps<{
   modelValue: string
@@ -30,6 +31,10 @@ const calendarsForEra = computed(() => (dateSystem.value ? getCalendarsForEra(da
 const selectedCalendar = computed(() => calendarsForEra.value.find((calendar) => calendar.id === calendarId.value))
 
 const monthsForCalendar = computed(() => selectedCalendar.value?.months ?? [])
+
+const eraOptions = computed(() => (dateSystem.value?.eras ?? []).map((era) => ({ value: era.id, label: era.name })))
+const calendarOptions = computed(() => calendarsForEra.value.map((calendar) => ({ value: calendar.id, label: calendar.name })))
+const monthOptions = computed(() => monthsForCalendar.value.map((month, index) => ({ value: index, label: month.name })))
 
 const maxDayForMonth = computed(() => monthsForCalendar.value[monthIndex.value]?.days ?? 1)
 
@@ -147,19 +152,9 @@ watch(
     <button type="button" class="secondary-button" :disabled="!dateSystem" @click="setDate">Set date</button>
   </div>
   <div v-else class="lore-date-input">
-    <select v-model="eraId" :required="required">
-      <option v-for="era in dateSystem?.eras ?? []" :key="era.id" :value="era.id">{{ era.name }}</option>
-    </select>
-    <select v-model="calendarId" :required="required">
-      <option v-for="calendar in calendarsForEra" :key="calendar.id" :value="calendar.id">
-        {{ calendar.name }}
-      </option>
-    </select>
-    <select v-model.number="monthIndex" :required="required">
-      <option v-for="(month, index) in monthsForCalendar" :key="month.name" :value="index">
-        {{ month.name }}
-      </option>
-    </select>
+    <SearchableSelect v-model="eraId" :options="eraOptions" :required="required" />
+    <SearchableSelect v-model="calendarId" :options="calendarOptions" :required="required" />
+    <SearchableSelect v-model="monthIndex" :options="monthOptions" :required="required" />
     <input v-model.number="day" type="number" min="1" :max="maxDayForMonth" :required="required" />
     <input v-model.number="year" type="number" min="1" max="99999" :required="required" />
     <button v-if="!required" type="button" class="secondary-button" @click="clearDate">Clear date</button>

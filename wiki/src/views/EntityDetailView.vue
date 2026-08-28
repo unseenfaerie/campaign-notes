@@ -14,6 +14,7 @@ import {
   type RelationFormSchema,
 } from '../services/metaService'
 import LoreDateInput from '../components/LoreDateInput.vue'
+import SearchableSelect from '../components/SearchableSelect.vue'
 import { useAuthStore } from '../stores/auth'
 
 type FullState = {
@@ -560,16 +561,15 @@ watch(() => [props.entityRoute, props.id], loadDetail)
               v-model="editValues[field.name]"
               type="checkbox"
             />
-            <select
+            <SearchableSelect
               v-else-if="entityRoute === 'places' && field.name === 'parent_id'"
               :id="`edit-field-${field.name}`"
               v-model="editValues[field.name]"
-            >
-              <option value="">No parent</option>
-              <option v-for="place in placeOptions" :key="String(place.id)" :value="String(place.id)">
-                {{ place.name || place.id }}
-              </option>
-            </select>
+              :options="[
+                { value: '', label: 'No parent' },
+                ...placeOptions.map((place) => ({ value: String(place.id), label: String(place.name || place.id) })),
+              ]"
+            />
             <input
               v-else-if="field.type === 'number'"
               :id="`edit-field-${field.name}`"

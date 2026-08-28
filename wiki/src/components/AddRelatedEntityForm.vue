@@ -5,6 +5,7 @@ import { createRelation, listEntities, type DomainEntity } from '../services/dom
 import { entityLabelFromRoute } from '../config/entities'
 import type { EntityFieldSchema, RelationFormSchema } from '../services/metaService'
 import LoreDateInput from './LoreDateInput.vue'
+import SearchableSelect from './SearchableSelect.vue'
 
 const props = defineProps<{
   entityRoute: string
@@ -167,21 +168,22 @@ watch(selectedRelatedRoute, () => {
   <form class="entity-form add-relation-form" @submit.prevent="submit">
     <div v-if="options.length > 1" class="form-row">
       <label for="add-relation-type">Relation type</label>
-      <select id="add-relation-type" v-model="selectedRelatedRoute">
-        <option v-for="option in options" :key="option.relatedRoute" :value="option.relatedRoute">
-          {{ entityLabelFromRoute(option.relatedRoute) }}
-        </option>
-      </select>
+      <SearchableSelect
+        id="add-relation-type"
+        v-model="selectedRelatedRoute"
+        :options="options.map((option) => ({ value: option.relatedRoute, label: entityLabelFromRoute(option.relatedRoute) }))"
+      />
     </div>
 
     <div class="form-row">
       <label for="add-relation-target">{{ entityLabelFromRoute(selectedRelatedRoute) }}</label>
-      <select id="add-relation-target" v-model="selectedTargetId" :disabled="loadingTargets">
-        <option value="" disabled>{{ loadingTargets ? 'Loading...' : 'Select one' }}</option>
-        <option v-for="target in targets" :key="String(target.id)" :value="String(target.id)">
-          {{ targetLabel(target) }}
-        </option>
-      </select>
+      <SearchableSelect
+        id="add-relation-target"
+        v-model="selectedTargetId"
+        :options="targets.map((target) => ({ value: String(target.id), label: targetLabel(target) }))"
+        :disabled="loadingTargets"
+        :placeholder="loadingTargets ? 'Loading...' : 'Select one'"
+      />
     </div>
 
     <div v-for="field in selectedSchema?.fields ?? []" :key="field.name" class="form-row">

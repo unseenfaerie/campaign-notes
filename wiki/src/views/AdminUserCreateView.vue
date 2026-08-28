@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import SearchableSelect from '../components/SearchableSelect.vue'
 import { createUser, type AdminUserRole } from '../services/adminService'
 
 const router = useRouter()
@@ -82,11 +83,15 @@ function cancelCreate() {
 
       <div class="form-row">
         <label for="new-role">Role</label>
-        <select id="new-role" v-model="role">
-          <option value="player">Player</option>
-          <option value="viewer">Viewer</option>
-          <option value="dm">DM</option>
-        </select>
+        <SearchableSelect
+          id="new-role"
+          v-model="role"
+          :options="[
+            { value: 'player', label: 'Player' },
+            { value: 'viewer', label: 'Viewer' },
+            { value: 'dm', label: 'DM' },
+          ]"
+        />
       </div>
 
       <div class="form-actions">

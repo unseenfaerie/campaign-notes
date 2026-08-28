@@ -6,6 +6,7 @@ import { ApiError } from '../services/apiClient'
 import { createEntity, listEntities, type DomainEntity } from '../services/domainService'
 import { getEntitySchema, type EntityFieldSchema, type EntitySchema } from '../services/metaService'
 import LoreDateInput from '../components/LoreDateInput.vue'
+import SearchableSelect from '../components/SearchableSelect.vue'
 
 const props = defineProps<{
   entityRoute: string
@@ -197,16 +198,15 @@ watch(
           v-model="formValues[field.name]"
           type="checkbox"
         />
-        <select
+        <SearchableSelect
           v-else-if="entityRoute === 'places' && field.name === 'parent_id'"
           :id="`create-field-${field.name}`"
           v-model="formValues[field.name]"
-        >
-          <option value="">No parent</option>
-          <option v-for="place in placeOptions" :key="String(place.id)" :value="String(place.id)">
-            {{ place.name || place.id }}
-          </option>
-        </select>
+          :options="[
+            { value: '', label: 'No parent' },
+            ...placeOptions.map((place) => ({ value: String(place.id), label: String(place.name || place.id) })),
+          ]"
+        />
         <input
           v-else-if="field.type === 'number'"
           :id="`create-field-${field.name}`"
