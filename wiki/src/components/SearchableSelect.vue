@@ -57,6 +57,15 @@ function openOptions() {
   }
 }
 
+function toggleOptions() {
+  if (!props.disabled) {
+    isOpen.value = !isOpen.value
+    if (!isOpen.value) {
+      syncSearchText()
+    }
+  }
+}
+
 function selectOption(option: SearchableSelectOption) {
   emptyOptionSelected.value = option.value === ''
   emit('update:modelValue', option.value)
@@ -103,6 +112,17 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', handleDocument
       @input="openOptions"
       @keydown.escape="isOpen = false; syncSearchText()"
     />
+    <button
+      type="button"
+      class="searchable-select-toggle"
+      :aria-label="isOpen ? 'Close options' : 'Open options'"
+      :aria-expanded="isOpen"
+      :disabled="disabled"
+      @mousedown.prevent
+      @click="toggleOptions"
+    >
+      <span aria-hidden="true" class="searchable-select-chevron"></span>
+    </button>
 
     <div v-if="isOpen" :id="id ? `${id}-options` : undefined" class="searchable-select-options" role="listbox">
       <button

@@ -22,7 +22,7 @@ const loadingTargets = ref(false)
 const submitting = ref(false)
 const errorMessage = ref('')
 const targets = ref<DomainEntity[]>([])
-const selectedRelatedRoute = ref(props.options[0]?.relatedRoute ?? '')
+const selectedRelatedRoute = ref('')
 const selectedTargetId = ref('')
 const formValues = ref<Record<string, any>>({})
 
@@ -173,79 +173,83 @@ watch(selectedRelatedRoute, () => {
 
 <template>
   <form class="entity-form add-relation-form" @submit.prevent="submit">
-    <div v-if="options.length > 1" class="form-row">
+    <div class="form-row">
       <label for="add-relation-type">Relation type</label>
       <SearchableSelect
         id="add-relation-type"
         v-model="selectedRelatedRoute"
         :options="options.map((option) => ({ value: option.relatedRoute, label: entityLabelFromRoute(option.relatedRoute) }))"
+        placeholder="Select one"
       />
     </div>
 
-    <div class="form-row">
-      <label for="add-relation-target">{{ entityLabelFromRoute(selectedRelatedRoute) }}</label>
-      <SearchableSelect
-        id="add-relation-target"
-        v-model="selectedTargetId"
-        :options="targets.map((target) => ({ value: String(target.id), label: targetLabel(target) }))"
-        :disabled="loadingTargets"
-        :placeholder="loadingTargets ? 'Loading...' : 'Select one'"
-      />
-    </div>
+    <template v-if="selectedSchema">
+      <div class="form-row">
+        <label for="add-relation-target">{{ entityLabelFromRoute(selectedRelatedRoute) }}</label>
+        <SearchableSelect
+          id="add-relation-target"
+          v-model="selectedTargetId"
+          :options="targets.map((target) => ({ value: String(target.id), label: targetLabel(target) }))"
+          :disabled="loadingTargets"
+          :placeholder="loadingTargets ? 'Loading...' : 'Select one'"
+        />
+      </div>
 
-    <div v-for="field in selectedSchema?.fields ?? []" :key="field.name" class="form-row">
-      <label :for="`add-relation-field-${field.name}`">
-        {{ prettyFieldName(field.name) }}
-        <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
-      </label>
+      <div v-for="field in selectedSchema.fields" :key="field.name" class="form-row">
+        <label :for="`add-relation-field-${field.name}`">
+          {{ prettyFieldName(field.name) }}
+          <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
+        </label>
 
-      <input
-        v-if="field.type === 'boolean'"
-        :id="`add-relation-field-${field.name}`"
-        v-model="formValues[field.name]"
-        type="checkbox"
-      />
-      <SearchableSelect
-        v-else-if="field.enum"
-        :id="`add-relation-field-${field.name}`"
-        v-model="formValues[field.name]"
-        :options="[
-          ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
-          ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
-        ]"
-        :required="field.required"
-      />
-      <input
-        v-else-if="field.type === 'number'"
-        :id="`add-relation-field-${field.name}`"
-        v-model="formValues[field.name]"
-        type="number"
-        step="any"
-        :required="field.required"
-      />
-      <textarea
-        v-else-if="isLongTextField(field)"
-        :id="`add-relation-field-${field.name}`"
-        v-model="formValues[field.name]"
-        rows="4"
-        :required="field.required"
-      ></textarea>
-      <LoreDateInput
-        v-else-if="field.type === 'loreDate'"
-        v-model="formValues[field.name]"
-        :required="field.required"
-      />
-      <input
-        v-else
-        :id="`add-relation-field-${field.name}`"
-        v-model="formValues[field.name]"
-        type="text"
-        :required="field.required"
-      />
-    </div>
+        <input
+          v-if="field.type === 'boolean'"
+          :id="`add-relation-field-${field.name}`"
+          v-model="formValues[field.name]"
+          type="checkbox"
+        />
+        <SearchableSelect
+          v-else-if="field.enum"
+          :id="`add-relation-field-${field.name}`"
+          v-model="formValues[field.name]"
+          :options="[
+            ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
+            ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
+          ]"
+          :required="field.required"
+        />
+        <input
+          v-else-if="field.type === 'number'"
+          :id="`add-relation-field-${field.name}`"
+          v-model="formValues[field.name]"
+          type="number"
+          step="any"
+          :required="field.required"
+        />
+        <textarea
+          v-else-if="isLongTextField(field)"
+          :id="`add-relation-field-${field.name}`"
+          v-model="formValues[field.name]"
+          rows="4"
+          :required="field.required"
+        ></textarea>
+        <LoreDateInput
+          v-else-if="field.type === 'loreDate'"
+          v-model="formValues[field.name]"
+          :required="field.required"
+        />
+        <input
+          v-else
+          :id="`add-relation-field-${field.name}`"
+          v-model="formValues[field.name]"
+          type="text"
+          :required="field.required"
+        />
+      </div>
+
+    </template>
 
     <div class="form-actions">
-      <button class="primary-button" type="submit" :disabled="submitting">
+      <button v-if="selectedSchema" class="primary-button" type="submit" :disabled="submitting">
         {{ submitting ? 'Saving...' : 'Save' }}
       </button>
       <button class="secondary-button" type="button" :disabled="submitting" @click="emit('cancel')">Cancel</button>

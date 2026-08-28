@@ -87,17 +87,15 @@ watch(() => props.entityRoute, loadList)
 
     <div v-else class="grid-list">
       <article v-for="record in sortedRecords" :key="getDisplayLabel(record)" class="entity-card">
-        <h3>{{ getDisplayLabel(record) }}</h3>
-
-        <p>
+        <h3>
           <RouterLink
             v-if="getRecordId(record)"
             :to="{ name: 'entity-detail', params: { entityRoute: props.entityRoute, id: getRecordId(record) } }"
           >
-            Open detail
+            {{ getDisplayLabel(record) }}
           </RouterLink>
-          <span v-else>No route id available for this record.</span>
-        </p>
+          <span v-else>{{ getDisplayLabel(record) }}</span>
+        </h3>
       </article>
     </div>
   </section>
