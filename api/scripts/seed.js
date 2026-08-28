@@ -63,6 +63,8 @@ async function main() {
   await runSql(`Inserting characters...`, `INSERT OR IGNORE INTO characters (id, player_character, name, age, ancestry, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, short_description, long_explanation) VALUES
     ('alann-barnett', true, 'Alann Barnett', 32, 'human', 'Cleric', '4', 'neutral-good', 13, 8, 11, 10, 14, 11, 20, false, 'A thoughtful and strong-willed adventurer.', 'Long Explanation.'),
     ('releas-neb', true, 'Releas Neb', 28, 'human', 'Magic User', '7', 'chaotic-good', 5, 14, 10, 18, 13, 9, 16, false, 'A clever and resourceful wizard.', 'Long Explanation.'),
+    ('orlaith', true, 'Orlaith of the Mosswood', 21, 'human', 'Druid', '1', 'chaotic-neutral', 12, 15, 11, 9, 15, 9, 2, false, 'A burgeoning druid with knowledge of herbs.', 'Long Explanation.'),
+    ('djinn', true, 'Djinn Rat-Eater', 23, 'human', 'Assassin', '2', 'neutral-evil', 8, 18, 10, 4, 15, 10, 5, false, 'A deceptive and quick assassin.', 'Long Explanation.'),
     ('appolonia-palleday', true, 'Appolonia Palleday', 16, 'human', 'Magic User', '5', 'neutral-good', 13, 8, 11, 18, 14, 11, 18, false, 'A bright and curious spellcaster.', 'Long Explanation.'),
     ('durchir', true, 'Durchir', 35, 'half-elf', 'Fighter/Enchanter', '2/Enchanter', 'lawful-evil', 18, 10, 12, 15, 10, 11, 22, true, 'Durchir of the Angry Orchard, fallen hero.', 'Long Explanation.'),
     ('cormac', true, 'Cormac', 27, 'half-elf', 'Thief/Illusionist', '5/4', 'chaotic-good', 9, 16, 7, 15, 14, 7, 15, false, 'A clever and nimble adventurer.', 'Long Explanation.'),
@@ -75,8 +77,10 @@ async function main() {
 
   await runSql(`Inserting user_character_anchors...`, `INSERT OR IGNORE INTO user_character_anchors (character_id, user_id, created_at) VALUES
     ('alann-barnett', 'alice', ?),
+    ('orlaith', 'rosie', ?),
+    ('djinn', 'sadhi', ?),
     ('releas-neb', 'keith', ?);
-  `, [nowIso, nowIso]);
+  `, [nowIso, nowIso, nowIso, nowIso]);
 
   await runSql(`Inserting deities...`, `INSERT OR IGNORE INTO deities (id, name, pantheon, alignment, short_description, long_explanation) VALUES
     ('achiel', 'Achiel', 'Main Human', 'lawful-good', 'God of Light.', 'Long Explanation.'),
@@ -104,9 +108,10 @@ async function main() {
   `);
 
   await runSql(`Inserting organizations...`, `INSERT OR IGNORE INTO organizations (id, name, type, short_description, long_explanation) VALUES
-    ('church-of-achiels-light', 'Church of Achiel''s Light', 'religion', 'The main church of Achiel.', 'Long Explanation.'),
-    ('order-of-the-iron-duch', 'The Order of the Iron Düch', 'adventuring party', 'A party of heroes.', 'Long Explanation.'),
-    ('wyvernfang', 'Wyvernfang', 'adventuring party', 'A group based in Wavethorn.', 'Long Explanation.'),
+    ('church-of-achiels-light', 'Church of Achiel''s Light', 'religious', 'The main church of Achiel.', 'Long Explanation.'),
+    ('order-of-the-iron-duch', 'The Order of the Iron Düch', 'adventuring-party', 'A party of heroes.', 'Long Explanation.'),
+    ('orphans-of-lundgren', 'The Orphans of Lundgren', 'adventuring-party', 'A duo of misfits helping the citizens of Lundgren.', 'Long Explanation.'),
+    ('wyvernfang', 'Wyvernfang', 'gang', 'A bandit group based around Wavethorn.', 'Long Explanation.'),
     ('three-sisters', 'The Three Sisters', 'pantheon', 'The Three Sister Goddesses.', 'Long Explanation.'),
     ('main-human-pantheon', 'The Main Human Pantheon', 'pantheon', 'The primary deities worshipped by humans.', 'Long Explanation.'),
     ('ancient-elven-pantheon', 'The Ancient Elven Pantheon', 'pantheon', 'The primary deities worshipped by the ancient elves.', 'Long Explanation.'),
@@ -180,6 +185,8 @@ async function main() {
     ('alann-barnett', 'adventurers-guild', '0200201001_age-of-descent-default', '', 'Rejoined due to pressure from the party.', 'Long Explanation.'),
     ('releas-neb', 'adventurers-guild', '0200200029_age-of-descent-default', '', 'Became a member of the Adventurers Guild.', 'Long Explanation.'),
     ('durchir', 'adventurers-guild', '0200200057_age-of-descent-default', '', 'Allied with the Adventurers Guild for information.', 'Long Explanation.'),
+    ('orlaith', 'orphans-of-lundgren', '0300006018_age-of-achiel-default', '', 'Formed the Orphans of Lundgren with Djinn.', 'Long Explanation.'),
+    ('djinn', 'orphans-of-lundgren', '0300006018_age-of-achiel-default', '', 'Formed the Orphans of Lundgren with Orlaith.', 'Long Explanation.'),
     ('cormac', 'adventurers-guild', '0200200085_age-of-descent-default', '', 'Sworn to protect the realm as a knight.', 'Long Explanation.');
   `);
 

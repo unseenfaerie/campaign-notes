@@ -87,7 +87,7 @@ const domainManifest = {
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
                 name: { type: 'string', required: true },
-                type: { type: 'string' },
+                type: { type: 'string', required: true, enum: 'organizationType' },
                 short_description: { type: 'string', required: true },
                 long_explanation: { type: 'string' },
             },

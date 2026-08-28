@@ -11,6 +11,16 @@ const ENUMS = {
         'town',
         'site',
     ],
+    organizationType: [
+        'adventuring-party',
+        'government',
+        'guild',
+        'religious',
+        'pantheon',
+        'informal',
+        'enterprise',
+        'gang'
+    ],
     alignment: [
         'lawful-good',
         'neutral-good',
