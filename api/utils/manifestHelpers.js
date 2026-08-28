@@ -1,8 +1,16 @@
 const { domainManifest } = require('../../common/domainManifest');
 const { validateIdFormat } = require('./idUtils');
+const { isValidLoreDate } = require('../../common/dateSystem');
 
 function coerceValueByType(type, value) {
     if (value === undefined || value === null) return value;
+
+    if (type === 'loreDate') {
+        if (!isValidLoreDate(value)) {
+            throw new Error(`Invalid lore date value: ${value}`);
+        }
+        return String(value);
+    }
 
     if (type === 'number') {
         const n = Number(value);

@@ -1,6 +1,6 @@
 const { domainManifest } = require('../../common/domainManifest');
 const { coerceValueByType, getRelationMembers } = require('./manifestHelpers');
-const { isValidDateFormat, loreDateToSortable } = require('./dateUtils');
+const { isValidLoreDate, compareLoreDates } = require('../../common/dateSystem');
 
 function getRelatedMemberInfo(relationDef, anchorMemberIndex) {
     const members = getRelationMembers(relationDef);
@@ -148,18 +148,15 @@ function validateHistoryChronology({ relationDef, startValue, endValue }) {
         throw new Error('Missing history start date value for chronology validation');
     }
 
-    if (!isValidDateFormat(startValue)) {
+    if (!isValidLoreDate(startValue)) {
         throw new Error(`Invalid history date format for field: ${relationDef.historyKey}`);
     }
 
-    if (!isValidDateFormat(endValue)) {
+    if (!isValidLoreDate(endValue)) {
         throw new Error(`Invalid history date format for field: ${relationDef.historyEndKey}`);
     }
 
-    const startSortable = loreDateToSortable(startValue);
-    const endSortable = loreDateToSortable(endValue);
-
-    if (!startSortable || !endSortable || endSortable <= startSortable) {
+    if (compareLoreDates(endValue, startValue) <= 0) {
         throw new Error('History end date must be after history start date');
     }
 }

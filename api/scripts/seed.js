@@ -88,8 +88,8 @@ async function main() {
   `);
 
   await runSql(`Inserting events...`, `INSERT OR IGNORE INTO events (id, name, real_world_date, in_game_time, previous_event_id, next_event_id, short_description, long_explanation) VALUES
-    ('coup-of-wavethorn', 'The Coup of Wavethorn', '2025-08-01', 'oct-03-200', NULL, 'night-of-spiders', 'Rel, Cormac, Alann, and Durchir arrive in Othlorin at the port city of Wavethorn and upend the local government.', 'Approximately 200 years after the fall of Vokdjinn... A new adventuring party takes shape. Rel, Durchir, Alann, and Cormac come to Othlorin from Gatûn. Some seek the riches that lie in the ruins of the old elven homeland. They settle into Wavethorn, a merchant''s city on the edge of the sea. Before long, they are suspected of murder. Their confidant Bert Verinwort is later framed for a demonic ritual murder of several prominent figures in town, including his uncle Phil Verinwort. After being kidnapped by Wyvernfang bandits, the party understands the conspiracy to remove political threats to those that the Wyvernfang have installed on the council. Brae Novan and Daniel Hillstop are connected to the gang. After gathering evidence against these parties, the party clears a nearby dungeon of Wyvernfang and uses a massive amount of money they found to bankroll a coup of the government. The coup succeeds and a new, more balanced, three-council-oligarchy is implemented by Bert. This endeavor was made possible by an underground crime lord named Gereg. Due to his involvement, the party was obliged to put him into power on the Mercantile council. Brae and Daniel escaped execution by fleeing the town before the new regime was enacted.'),
-    ('night-of-spiders', 'The Night of Spiders', '2025-08-02', 'oct-27-200', 'coup-of-wavethorn', NULL, 'Rel, Cormac, Alann, and Durchir track down a bounty for the Adventurer''s Guild and uncover sinsiter evil.', 'Rel, Cormac, Alann, and Durchir join the Adventurer''s Guild! Their first quest is to bring three purported outlaws to justice. These women have been seen impersonating Winged Blades of Wyaris and harassing Ponat worshippers. The party tracks down the individuals and brings them to jail in Wavethorn. After doing this, they hear word that other adventurers from the guild is in trouble in the ruins of Aranil. Naturally they investigate. Upon entering, the party is subjected to a horrifying spider illusion dungeon. Walls of spiders with a horrifying human form flowing through them chase the party down endless halls. After finding and slaying a witch in a crimson robe, they save the weakened other party. They return to Wavethorn to find out that the trial of the three that they had captured was an absolute bloodbath. Every single person in the courtroom was killed. Seeking these three once again the party heads to some coastal caves. They find a strange and magical experimentation lab set up. The place is abandoned, save for a man composed of spiders. As Durchir strikes this man with his sword, he disintegrates part by part into tiny spiders and crawls apart.');
+    ('coup-of-wavethorn', 'The Coup of Wavethorn', '2025-08-01', '0200200255_age-of-descent-default', NULL, 'night-of-spiders', 'Rel, Cormac, Alann, and Durchir arrive in Othlorin at the port city of Wavethorn and upend the local government.', 'Approximately 200 years after the fall of Vokdjinn... A new adventuring party takes shape. Rel, Durchir, Alann, and Cormac come to Othlorin from Gatûn. Some seek the riches that lie in the ruins of the old elven homeland. They settle into Wavethorn, a merchant''s city on the edge of the sea. Before long, they are suspected of murder. Their confidant Bert Verinwort is later framed for a demonic ritual murder of several prominent figures in town, including his uncle Phil Verinwort. After being kidnapped by Wyvernfang bandits, the party understands the conspiracy to remove political threats to those that the Wyvernfang have installed on the council. Brae Novan and Daniel Hillstop are connected to the gang. After gathering evidence against these parties, the party clears a nearby dungeon of Wyvernfang and uses a massive amount of money they found to bankroll a coup of the government. The coup succeeds and a new, more balanced, three-council-oligarchy is implemented by Bert. This endeavor was made possible by an underground crime lord named Gereg. Due to his involvement, the party was obliged to put him into power on the Mercantile council. Brae and Daniel escaped execution by fleeing the town before the new regime was enacted.'),
+    ('night-of-spiders', 'The Night of Spiders', '2025-08-02', '0200200279_age-of-descent-default', 'coup-of-wavethorn', NULL, 'Rel, Cormac, Alann, and Durchir track down a bounty for the Adventurer''s Guild and uncover sinsiter evil.', 'Rel, Cormac, Alann, and Durchir join the Adventurer''s Guild! Their first quest is to bring three purported outlaws to justice. These women have been seen impersonating Winged Blades of Wyaris and harassing Ponat worshippers. The party tracks down the individuals and brings them to jail in Wavethorn. After doing this, they hear word that other adventurers from the guild is in trouble in the ruins of Aranil. Naturally they investigate. Upon entering, the party is subjected to a horrifying spider illusion dungeon. Walls of spiders with a horrifying human form flowing through them chase the party down endless halls. After finding and slaying a witch in a crimson robe, they save the weakened other party. They return to Wavethorn to find out that the trial of the three that they had captured was an absolute bloodbath. Every single person in the courtroom was killed. Seeking these three once again the party heads to some coastal caves. They find a strange and magical experimentation lab set up. The place is abandoned, save for a man composed of spiders. As Durchir strikes this man with his sword, he disintegrates part by part into tiny spiders and crawls apart.');
   `);
 
   await runSql(`Inserting items...`, `INSERT OR IGNORE INTO items (id, name, short_description, long_explanation) VALUES
@@ -150,50 +150,50 @@ async function main() {
   // // Join Tables
 
   await runSql(`Inserting character_deities...`, `INSERT OR IGNORE INTO character_deities (character_id, deity_id, adopted_date, dissolution_date, relationship_type, short_description, long_explanation) VALUES
-    ('alann-barnett', 'achiel', 'jan-01-200', '', 'patron', 'Short description.', 'Long Explanation.'),
-    ('alann-barnett', 'doh', 'jan-01-200', '', 'patron', 'Short description.', 'Long Explanation.'),
-    ('releas-neb', 'wyaris', 'jan-01-200', 'dec-31-200', 'patron', 'Short description.', 'Long Explanation.'),
-    ('releas-neb', 'achiel', 'dec-31-200', '', 'patron', 'Converted to worshipping Achiel.', 'Long Explanation.'),
-    ('appolonia-palleday', 'idona', 'jan-01-200', '', 'patron', 'Short description.', 'Long Explanation.'),
-    ('durchir', 'ponat', 'jan-01-200', '', 'patron', 'Short description.', 'Long Explanation.'),
-    ('cormac', 'idona', 'jan-01-200', '', 'patron', 'Short description.', 'Long Explanation.');
+    ('alann-barnett', 'achiel', '0200200001_age-of-descent-default', '', 'patron', 'Short description.', 'Long Explanation.'),
+    ('alann-barnett', 'doh', '0200200001_age-of-descent-default', '', 'patron', 'Short description.', 'Long Explanation.'),
+    ('releas-neb', 'wyaris', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'patron', 'Short description.', 'Long Explanation.'),
+    ('releas-neb', 'achiel', '0200200336_age-of-descent-default', '', 'patron', 'Converted to worshipping Achiel.', 'Long Explanation.'),
+    ('appolonia-palleday', 'idona', '0200200001_age-of-descent-default', '', 'patron', 'Short description.', 'Long Explanation.'),
+    ('durchir', 'ponat', '0200200001_age-of-descent-default', '', 'patron', 'Short description.', 'Long Explanation.'),
+    ('cormac', 'idona', '0200200001_age-of-descent-default', '', 'patron', 'Short description.', 'Long Explanation.');
   `);
 
   await runSql(`Inserting character_items...`, `INSERT OR IGNORE INTO character_items (character_id, item_id, acquired_date, relinquished_date, short_description) VALUES
-    ('releas-neb', 'rel-s-spellbook', 'feb-06-195', 'mar-06-200', 'Gained from his reclusive master in GatUn, then stolen by ruffians in Wavethorn.'),
-    ('releas-neb', 'rel-s-spellbook', 'may-10-200', '', 'Recovered from street ruffians.'),
-    ('apollonia-palleday', 'polly-s-spellbook', 'jul-21-200', '', 'Received from her betrothed, Alaric Evermoon.'),
-    ('cormac', 'cormac-s-spellbook', 'jun-12-195', '', 'Received from his master.');
+    ('releas-neb', 'rel-s-spellbook', '0200195034_age-of-descent-default', '0200200062_age-of-descent-default', 'Gained from his reclusive master in GatUn, then stolen by ruffians in Wavethorn.'),
+    ('releas-neb', 'rel-s-spellbook', '0200200122_age-of-descent-default', '', 'Recovered from street ruffians.'),
+    ('apollonia-palleday', 'polly-s-spellbook', '0200200189_age-of-descent-default', '', 'Received from her betrothed, Alaric Evermoon.'),
+    ('cormac', 'cormac-s-spellbook', '0200195152_age-of-descent-default', '', 'Received from his master.');
   `);
 
   await runSql(`Inserting character_organizations...`, `INSERT OR IGNORE INTO character_organizations (character_id, organization_id, joined_date, left_date, short_description, long_explanation) VALUES
-    ('alann-barnett', 'adventurers-guild', 'jan-01-200', 'dec-31-200', 'Joined the Adventurers Guild to protect Wavethorn, left after the Night of Spiders.', 'Long Explanation.'),
-    ('alann-barnett', 'adventurers-guild', 'jan-01-201', '', 'Rejoined due to pressure from the party.', 'Long Explanation.'),
-    ('releas-neb', 'adventurers-guild', 'feb-01-200', '', 'Became a member of the Adventurers Guild.', 'Long Explanation.'),
-    ('durchir', 'adventurers-guild', 'mar-01-200', '', 'Allied with the Adventurers Guild for information.', 'Long Explanation.'),
-    ('cormac', 'adventurers-guild', 'apr-01-200', '', 'Sworn to protect the realm as a knight.', 'Long Explanation.');
+    ('alann-barnett', 'adventurers-guild', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'Joined the Adventurers Guild to protect Wavethorn, left after the Night of Spiders.', 'Long Explanation.'),
+    ('alann-barnett', 'adventurers-guild', '0200201001_age-of-descent-default', '', 'Rejoined due to pressure from the party.', 'Long Explanation.'),
+    ('releas-neb', 'adventurers-guild', '0200200029_age-of-descent-default', '', 'Became a member of the Adventurers Guild.', 'Long Explanation.'),
+    ('durchir', 'adventurers-guild', '0200200057_age-of-descent-default', '', 'Allied with the Adventurers Guild for information.', 'Long Explanation.'),
+    ('cormac', 'adventurers-guild', '0200200085_age-of-descent-default', '', 'Sworn to protect the realm as a knight.', 'Long Explanation.');
   `);
 
   await runSql(`Inserting character_places...`, `INSERT OR IGNORE INTO character_places (character_id, place_id, arrived_date, left_date, short_description, long_explanation) VALUES
-    ('alann-barnett', 'wavethorn', 'jan-01-200', 'dec-31-200', 'Hometown and primary setting for early adventures.', 'Long Explanation.'),
-    ('releas-neb', 'gatun', 'feb-01-200', 'mar-01-200', 'Met his mentor here.', 'Long Explanation.'),
-    ('durchir', 'wavethorn', 'mar-01-200', 'apr-01-200', 'Frequent visitor due to guild activities.', 'Long Explanation.'),
-    ('cormac', 'wavethorn', 'apr-01-200', 'may-01-200', 'Sworn to protect the town.', 'Long Explanation.');
+    ('alann-barnett', 'wavethorn', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'Hometown and primary setting for early adventures.', 'Long Explanation.'),
+    ('releas-neb', 'gatun', '0200200029_age-of-descent-default', '0200200057_age-of-descent-default', 'Met his mentor here.', 'Long Explanation.'),
+    ('durchir', 'wavethorn', '0200200057_age-of-descent-default', '0200200085_age-of-descent-default', 'Frequent visitor due to guild activities.', 'Long Explanation.'),
+    ('cormac', 'wavethorn', '0200200085_age-of-descent-default', '0200200113_age-of-descent-default', 'Sworn to protect the town.', 'Long Explanation.');
   `);
 
   await runSql(`Inserting character_relationships...`, `INSERT OR IGNORE INTO character_relationships (character_id, related_id, established_date, dissolution_date, relationship_type, short_description, long_explanation) VALUES
-    ('alann-barnett', 'releas-neb', 'jan-01-200', 'dec-31-200', 'ally', 'Short description.', 'Long Explanation.'),
-    ('alann-barnett', 'durchir', 'jan-01-200', 'dec-31-200', 'ally', 'Short description.', 'Long Explanation.'),
-    ('alann-barnett', 'cormac', 'jan-01-200', 'dec-31-200', 'ally', 'Short description.', 'Long Explanation.'),
-    ('releas-neb', 'durchir', 'jan-01-200', 'dec-31-200', 'ally', 'Short description.', 'Long Explanation.'),
-    ('releas-neb', 'cormac', 'jan-01-200', 'dec-31-200', 'ally', 'Short description.', 'Long Explanation.'),
-    ('releas-neb', 'alann-barnett', 'jan-01-200', 'dec-31-200', 'ally', 'Short description.', 'Long Explanation.'),
-    ('durchir', 'cormac', 'jan-01-200', 'dec-31-200', 'ally', 'Short description.', 'Long Explanation.'),
-    ('durchir', 'releas-neb', 'jan-01-200', 'dec-31-200', 'ally', 'Short description.', 'Long Explanation.'),
-    ('durchir', 'alann-barnett', 'jan-01-200', 'dec-31-200', 'ally', 'Short description.', 'Long Explanation.'),
-    ('cormac', 'durchir', 'jan-01-200', 'dec-31-200', 'ally', 'Short description.', 'Long Explanation.'),
-    ('cormac', 'releas-neb', 'jan-01-200', 'dec-31-200', 'ally', 'Short description.', 'Long Explanation.'),
-    ('cormac', 'alann-barnett', 'jan-01-200', 'dec-31-200', 'ally', 'Short description.', 'Long Explanation.');
+    ('alann-barnett', 'releas-neb', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
+    ('alann-barnett', 'durchir', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
+    ('alann-barnett', 'cormac', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
+    ('releas-neb', 'durchir', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
+    ('releas-neb', 'cormac', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
+    ('releas-neb', 'alann-barnett', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
+    ('durchir', 'cormac', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
+    ('durchir', 'releas-neb', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
+    ('durchir', 'alann-barnett', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
+    ('cormac', 'durchir', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
+    ('cormac', 'releas-neb', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
+    ('cormac', 'alann-barnett', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.');
   `);
 
   await runSql(`Inserting deity_spheres...`, `INSERT OR IGNORE INTO deity_spheres (deity_id, sphere_id) VALUES

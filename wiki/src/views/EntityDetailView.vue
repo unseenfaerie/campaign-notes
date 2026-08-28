@@ -7,6 +7,7 @@ import { entityLabelFromRoute } from '../config/entities'
 import { ApiError } from '../services/apiClient'
 import { getEntityFull, updateEntity, updateRelation, type DomainEntity } from '../services/domainService'
 import { getEntitySchema, getRelationSchemas, type EntityFieldSchema, type RelationFormSchema } from '../services/metaService'
+import LoreDateInput from '../components/LoreDateInput.vue'
 import { useAuthStore } from '../stores/auth'
 
 type FullState = {
@@ -284,7 +285,11 @@ function fieldValuesFromRecord(fields: EntityFieldSchema[], record: DomainEntity
   return values
 }
 
-function buildFieldsPayload(fields: EntityFieldSchema[], values: Record<string, any>): Record<string, unknown> {
+function buildFieldsPayload(
+  fields: EntityFieldSchema[],
+  values: Record<string, any>,
+  { clearOptionalLoreDates = false } = {}
+): Record<string, unknown> {
   const payload: Record<string, unknown> = {}
 
   for (const field of fields) {
@@ -299,6 +304,9 @@ function buildFieldsPayload(fields: EntityFieldSchema[], values: Record<string, 
     if (text === '') {
       if (field.required) {
         throw new Error(`${prettyFieldName(field.name)} is required.`)
+      }
+      if (clearOptionalLoreDates && field.type === 'loreDate') {
+        payload[field.name] = null
       }
       continue
     }
@@ -335,7 +343,9 @@ async function saveEditRelation(relatedRoute: string, record: DomainEntity) {
   relationEditSaving.value = true
 
   try {
-    const payload = buildFieldsPayload(editableFields(schema.fields), relationEditValues.value)
+    const payload = buildFieldsPayload(editableFields(schema.fields), relationEditValues.value, {
+      clearOptionalLoreDates: true,
+    })
     await updateRelation(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), payload)
     editingRelationKey.value = null
     await loadDetail()
@@ -379,7 +389,9 @@ async function saveEditHistory(relatedRoute: string, record: DomainEntity) {
   historyEditSaving.value = true
 
   try {
-    const payload = buildFieldsPayload(editableFields(schema.fields), historyEditValues.value)
+    const payload = buildFieldsPayload(editableFields(schema.fields), historyEditValues.value, {
+      clearOptionalLoreDates: true,
+    })
     await updateRelation(
       props.entityRoute,
       props.id,
@@ -459,7 +471,9 @@ function cancelEdit() {
 }
 
 function buildEditPayload(): Record<string, unknown> {
-  const payload = buildFieldsPayload(editFields.value, editValues.value)
+  const payload = buildFieldsPayload(editFields.value, editValues.value, {
+    clearOptionalLoreDates: true,
+  })
 
   return payload
 }
@@ -541,6 +555,11 @@ watch(() => [props.entityRoute, props.id], loadDetail)
               rows="4"
               :required="field.required"
             ></textarea>
+            <LoreDateInput
+              v-else-if="field.type === 'loreDate'"
+              v-model="editValues[field.name]"
+              :required="field.required"
+            />
             <input
               v-else
               :id="`edit-field-${field.name}`"
@@ -652,6 +671,11 @@ watch(() => [props.entityRoute, props.id], loadDetail)
                   rows="4"
                   :required="field.required"
                 ></textarea>
+                <LoreDateInput
+                  v-else-if="field.type === 'loreDate'"
+                  v-model="relationEditValues[field.name]"
+                  :required="field.required"
+                />
                 <input
                   v-else
                   :id="`edit-relation-${relatedRoute}-${index}-${field.name}`"
@@ -743,6 +767,11 @@ watch(() => [props.entityRoute, props.id], loadDetail)
                       rows="4"
                       :required="field.required"
                     ></textarea>
+                    <LoreDateInput
+                      v-else-if="field.type === 'loreDate'"
+                      v-model="historyEditValues[field.name]"
+                      :required="field.required"
+                    />
                     <input
                       v-else
                       :id="`edit-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`"

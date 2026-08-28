@@ -5,6 +5,7 @@ import { entitySingularLabelFromRoute } from '../config/entities'
 import { ApiError } from '../services/apiClient'
 import { createEntity } from '../services/domainService'
 import { getEntitySchema, type EntityFieldSchema, type EntitySchema } from '../services/metaService'
+import LoreDateInput from '../components/LoreDateInput.vue'
 
 const props = defineProps<{
   entityRoute: string
@@ -203,6 +204,11 @@ watch(
           rows="4"
           :required="field.required"
         ></textarea>
+        <LoreDateInput
+          v-else-if="field.type === 'loreDate'"
+          v-model="formValues[field.name]"
+          :required="field.required"
+        />
         <input
           v-else
           :id="`create-field-${field.name}`"

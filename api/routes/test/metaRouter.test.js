@@ -139,4 +139,18 @@ describe('metaRouter', () => {
             relatedEntityRoute: 'characters',
         });
     });
+
+    it('exposes the shared date system for era/calendar-aware date fields', async () => {
+        const res = await request(app)
+            .get('/api/meta')
+            .set('Authorization', bearerToken());
+
+        expect(res.status).toBe(200);
+        expect(res.body.dateSystem).toBeDefined();
+        expect(typeof res.body.dateSystem.daysPerYear).toBe('number');
+        expect(Array.isArray(res.body.dateSystem.eras)).toBe(true);
+        expect(res.body.dateSystem.eras.length).toBeGreaterThan(0);
+        expect(Array.isArray(res.body.dateSystem.calendars)).toBe(true);
+        expect(res.body.dateSystem.calendars.length).toBeGreaterThan(0);
+    });
 });
