@@ -762,6 +762,10 @@ watch(() => [props.entityRoute, props.id], loadDetail)
 
       </section>
 
+      <div v-if="sortedRelatedSections.length > 0" class="section-heading-row">
+        <h3>Related data</h3>
+      </div>
+
       <CollapseSection
         v-for="[relatedRoute, records] in sortedRelatedSections"
         :key="relatedRoute"
