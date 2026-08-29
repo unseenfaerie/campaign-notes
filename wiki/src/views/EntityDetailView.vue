@@ -78,21 +78,27 @@ const entityPageTitle = computed(() => {
 
 const entityDisplayData = computed(() => withoutIdField(fullData.value?.entity || {}))
 
-// short_description/long_explanation get their own dedicated spots in the layout, so the facts box excludes them.
-const entityShortDescription = computed(() => {
-  const value = fullData.value?.entity?.short_description
-  return typeof value === 'string' && value.trim() ? value : ''
-})
+const entityExpositoryFields = computed(() => {
+  const entity = fullData.value?.entity
+  if (!entity) {
+    return []
+  }
 
-const entityLongExplanation = computed(() => {
-  const value = fullData.value?.entity?.long_explanation
-  return typeof value === 'string' && value.trim() ? value : ''
+  return (entitySchema.value?.fields || []).flatMap((field) => {
+    const value = entity[field.name]
+    return field.expository && typeof value === 'string' && value.trim()
+      ? [{ name: field.name, value }]
+      : []
+  })
 })
 
 const entityFactsData = computed(() =>
   Object.fromEntries(
     Object.entries(entityDisplayData.value).filter(
-      ([key]) => key !== 'name' && key !== 'short_description' && key !== 'long_explanation'
+      ([key]) =>
+        !entitySchema.value?.fields.some((field) => field.name === key && field.hidden) &&
+        key !== 'name' &&
+        !entitySchema.value?.fields.some((field) => field.name === key && field.expository)
     )
   )
 )
@@ -101,7 +107,10 @@ const hasEntityFacts = computed(() => Object.keys(entityFactsData.value).length 
 
 const entityFactsFields = computed(() =>
   (entitySchema.value?.fields || []).filter(
-    (field) => field.name !== 'name' && field.name !== 'short_description' && field.name !== 'long_explanation'
+    (field) =>
+      !field.hidden &&
+      field.name !== 'name' &&
+      !field.expository
   )
 )
 
@@ -748,14 +757,10 @@ watch(() => [props.entityRoute, props.id], loadDetail)
               </template>
             </template>
           </FieldList>
-          <div v-if="entityShortDescription || entityLongExplanation" class="entity-long-description">
-            <template v-if="entityShortDescription">
-              <h4>Description</h4>
-              <p><LinkifiedText :text="entityShortDescription" /></p>
-            </template>
-            <template v-if="entityLongExplanation">
-              <h4>Details</h4>
-              <p><LinkifiedText :text="entityLongExplanation" /></p>
+          <div v-if="entityExpositoryFields.length > 0" class="entity-long-description">
+            <template v-for="field in entityExpositoryFields" :key="field.name">
+              <h4>{{ prettyFieldName(field.name) }}</h4>
+              <p><LinkifiedText :text="field.value" /></p>
             </template>
           </div>
         </div>

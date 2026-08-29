@@ -148,6 +148,21 @@ describe('metaRouter', () => {
         expect(ageField.type).toBe('number');
     });
 
+    it('exposes expository fields for dedicated detail-page presentation', async () => {
+        const res = await request(app)
+            .get('/api/meta')
+            .set('Authorization', bearerToken());
+
+        expect(res.status).toBe(200);
+
+        const character = res.body.entities.find((entity) => entity.route === 'characters');
+        const shortDescription = character.fields.find((field) => field.name === 'short_description');
+        const longExplanation = character.fields.find((field) => field.name === 'long_explanation');
+
+        expect(shortDescription.expository).toBe(true);
+        expect(longExplanation.expository).toBe(true);
+    });
+
     it('exposes alignment enum values for character and deity forms', async () => {
         const res = await request(app)
             .get('/api/meta')

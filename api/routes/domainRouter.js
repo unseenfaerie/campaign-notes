@@ -23,10 +23,16 @@ const {
     buildRelationWhere,
     validateHistoryChronology,
 } = require('../utils/relationWriteHelpers');
+const {
+    isEntityVisibleToUser,
+    isRelationVisibleToUser,
+    filterEntitiesByVisibility,
+    filterRelationsByVisibility,
+} = require('../utils/visibilityHelpers');
 
 const router = express.Router();
 
-async function loadAssociatedRecords(relationName, relationDef, sourceId, anchorMemberIndex) {
+async function loadAssociatedRecords(relationName, relationDef, sourceId, anchorMemberIndex, user, anchoredCharacterIds) {
     const members = getRelationMembers(relationDef);
     const relationContext = getRelationContext(members, anchorMemberIndex);
     const relationRows = await loadRelationRows(relationName, relationContext, sourceId);
@@ -40,19 +46,54 @@ async function loadAssociatedRecords(relationName, relationDef, sourceId, anchor
     const targetById = await loadTargetMap(targetInfo, targetIds);
     const memberKeys = members.map((member) => member.key);
 
+    // Filter relations by visibility - check both member entities
+    let visibleRows = relationRows;
+    if (user && user.role !== 'dm') {
+        // Load source entity once
+        const sourceEntityDef = domainManifest.entities[members[anchorMemberIndex].entity];
+        const sourceRoute = sourceEntityDef.route;
+        const sourceEntity = await manifestCrudService.getOne(
+            members[anchorMemberIndex].entity,
+            { [sourceEntityDef.idField]: sourceId }
+        );
+
+        visibleRows = [];
+        for (const row of relationRows) {
+            // Get the target entity
+            const targetId = getRelatedIdForRow(row, members, sourceId, anchorMemberIndex);
+            const targetEntity = targetById.get(targetId);
+
+            // Check if both members are visible
+            if (sourceEntity && targetEntity) {
+                const memberEntities = anchorMemberIndex === 0
+                    ? [sourceEntity, targetEntity]
+                    : [targetEntity, sourceEntity];
+                if (isRelationVisibleToUser(relationName, memberEntities, user, anchoredCharacterIds)) {
+                    visibleRows.push(row);
+                }
+            }
+        }
+    }
+
     if (relationDef.kind === 'simple') {
-        return buildSimpleResults(targetIds, targetById);
+        return buildSimpleResults(
+            visibleRows.map(row => getRelatedIdForRow(row, members, sourceId, anchorMemberIndex)),
+            targetById
+        );
     }
 
     if (relationDef.kind === 'relationship') {
-        return buildRelationshipResults(relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex);
+        return buildRelationshipResults(visibleRows, targetById, members, memberKeys, sourceId, anchorMemberIndex);
     }
 
     if (relationDef.kind === 'history') {
-        return buildHistoryResults(targetIds, relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex);
+        const visibleTargetIds = visibleRows
+            .map(row => getRelatedIdForRow(row, members, sourceId, anchorMemberIndex))
+            .filter((id, index, arr) => arr.indexOf(id) === index);
+        return buildHistoryResults(visibleTargetIds, visibleRows, targetById, members, memberKeys, sourceId, anchorMemberIndex);
     }
 
-    return relationRows;
+    return visibleRows;
 }
 
 function getFullRelationsForEntityRoute(entityRoute) {
@@ -353,6 +394,13 @@ function isDm(auth) {
     return auth && auth.role === 'dm';
 }
 
+async function getAnchoredCharacterIds(req) {
+    if (!req.auth || !req.auth.userId) {
+        return [];
+    }
+    return listAnchoredCharacterIdsByUserId(req.auth.userId);
+}
+
 function ensureDmForMutation(req) {
     if (!req.auth) {
         return { status: 401, error: 'Unauthorized' };
@@ -539,7 +587,16 @@ router.get('/:entityRoute', async (req, res) => {
         const { entityName } = getEntityByRoute(req.params.entityRoute);
         const records = await manifestCrudService.getMany(entityName);
 
-        return res.json(records);
+        // Filter records by visibility
+        const anchoredCharacterIds = await getAnchoredCharacterIds(req);
+        const visibleRecords = filterEntitiesByVisibility(
+            records,
+            req.params.entityRoute,
+            req.auth,
+            anchoredCharacterIds
+        );
+
+        return res.json(visibleRecords);
     } catch (err) {
         const httpErr = toHttpError(err);
         return res.status(httpErr.status).json({ error: httpErr.message });
@@ -555,6 +612,12 @@ router.get('/:entityRoute/:id', async (req, res) => {
         });
 
         if (!record) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        // Check visibility
+        const anchoredCharacterIds = await getAnchoredCharacterIds(req);
+        if (!isEntityVisibleToUser(record, req.params.entityRoute, req.auth, anchoredCharacterIds)) {
             return res.status(404).json({ error: 'Record not found' });
         }
 
@@ -691,6 +754,12 @@ router.get('/:entityRoute/:id/full', async (req, res) => {
             return res.status(404).json({ error: 'Record not found' });
         }
 
+        // Check visibility of the main entity
+        const anchoredCharacterIds = await getAnchoredCharacterIds(req);
+        if (!isEntityVisibleToUser(record, req.params.entityRoute, req.auth, anchoredCharacterIds)) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
         const related = {};
         const children = entityName === 'Place'
             ? await manifestCrudService.getMany('Place', { parent_id: idValue })
@@ -702,7 +771,9 @@ router.get('/:entityRoute/:id/full', async (req, res) => {
                 relation.relationName,
                 relation.relationDef,
                 idValue,
-                relation.anchorMemberIndex
+                relation.anchorMemberIndex,
+                req.auth,
+                anchoredCharacterIds
             );
         }
 
@@ -742,7 +813,20 @@ router.get('/:entityRoute/:id/:relatedRoute', async (req, res) => {
             return res.status(404).json({ error: 'Record not found' });
         }
 
-        const records = await loadAssociatedRecords(relationName, relationDef, sourceId, anchorMemberIndex);
+        // Check visibility of source entity
+        const anchoredCharacterIds = await getAnchoredCharacterIds(req);
+        if (!isEntityVisibleToUser(sourceRecord, req.params.entityRoute, req.auth, anchoredCharacterIds)) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        const records = await loadAssociatedRecords(
+            relationName,
+            relationDef,
+            sourceId,
+            anchorMemberIndex,
+            req.auth,
+            anchoredCharacterIds
+        );
         return res.json(records);
     } catch (err) {
         const httpErr = toHttpError(err);
@@ -783,6 +867,23 @@ router.get('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
             relationDef,
         });
 
+        // Get anchored character IDs for visibility checking
+        const anchoredCharacterIds = await getAnchoredCharacterIds(req);
+
+        let sourceEntity = null;
+        let relatedEntity = null;
+        const shouldCheckRelationVisibility = !!req.auth && req.auth.role !== 'dm';
+
+        if (shouldCheckRelationVisibility) {
+            // Load member entities for visibility checking
+            sourceEntity = await manifestCrudService.getOne(sourceMember.entity, {
+                [sourceEntityIdField]: sourceId,
+            });
+            relatedEntity = await manifestCrudService.getOne(relatedMember.entity, {
+                [relatedEntityIdField]: relatedId,
+            });
+        }
+
         if (relationDef.kind === 'history' && relationDef.historyKey) {
             const historyValue = getValidatedHistorySelector(req.query, relationDef, { required: false });
             if (historyValue !== undefined) {
@@ -802,6 +903,13 @@ router.get('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
                     return res.status(404).json({ error: 'Record not found' });
                 }
 
+                if (shouldCheckRelationVisibility) {
+                    const memberEntities = [sourceEntity, relatedEntity];
+                    if (!isRelationVisibleToUser(relationName, memberEntities, req.auth, anchoredCharacterIds)) {
+                        return res.status(404).json({ error: 'Record not found' });
+                    }
+                }
+
                 return res.json(record);
             }
 
@@ -810,12 +918,26 @@ router.get('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
                 return res.status(404).json({ error: 'Record not found' });
             }
 
+            if (shouldCheckRelationVisibility) {
+                const memberEntities = [sourceEntity, relatedEntity];
+                if (!isRelationVisibleToUser(relationName, memberEntities, req.auth, anchoredCharacterIds)) {
+                    return res.status(404).json({ error: 'Record not found' });
+                }
+            }
+
             return res.json(records);
         }
 
         const record = await getFirstRelationRecordByWhereCandidates(relationName, whereCandidates);
         if (!record) {
             return res.status(404).json({ error: 'Record not found' });
+        }
+
+        if (shouldCheckRelationVisibility) {
+            const memberEntities = [sourceEntity, relatedEntity];
+            if (!isRelationVisibleToUser(relationName, memberEntities, req.auth, anchoredCharacterIds)) {
+                return res.status(404).json({ error: 'Record not found' });
+            }
         }
 
         return res.json(record);
