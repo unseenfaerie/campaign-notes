@@ -16,7 +16,7 @@ const domainManifest = {
                 player_character: { type: 'boolean', required: true },
                 name: { type: 'string', required: true },
                 age: { type: 'number' },
-                ancestry: { type: 'string', enum: 'ancestries' },
+                ancestry: { type: 'string', enum: 'ancestry' },
                 class: { type: 'string' },
                 level: { type: 'string' },
                 alignment: { type: 'string', enum: 'alignment' },
@@ -272,7 +272,7 @@ const domainManifest = {
             payload: {
                 established_date: { type: 'loreDate', required: true },
                 dissolution_date: { type: 'loreDate' },
-                relationship_type: { type: 'string', required: true },
+                relationship_type: { type: 'string', required: true, enum: 'characterRelationship' },
                 short_description: { type: 'string', required: true },
                 long_explanation: {
                     type: 'string',

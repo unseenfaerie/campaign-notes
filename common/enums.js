@@ -21,7 +21,7 @@ const ENUMS = {
         'enterprise',
         'gang'
     ],
-    ancestries: [
+    ancestry: [
         'human',
         'high-elf',
         'wood-elf',
@@ -40,6 +40,15 @@ const ENUMS = {
         'neutral-evil',
         'chaotic-evil',
     ],
+    characterRelationship: [
+        'friend',
+        'enemy',
+        'associate',
+        'mentor',
+        'student',
+        'lover',
+        'spouse'
+    ]
 };
 
 function getEnumValues(enumDefinition) {

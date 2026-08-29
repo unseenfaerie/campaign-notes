@@ -198,18 +198,18 @@ async function main() {
   `);
 
   await runSql(`Inserting character_relationships...`, `INSERT OR IGNORE INTO character_relationships (character_id, related_id, established_date, dissolution_date, relationship_type, short_description, long_explanation) VALUES
-    ('alann-barnett', 'releas-neb', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('alann-barnett', 'durchir', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('alann-barnett', 'cormac', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('releas-neb', 'durchir', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('releas-neb', 'cormac', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('releas-neb', 'alann-barnett', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('durchir', 'cormac', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('durchir', 'releas-neb', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('durchir', 'alann-barnett', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('cormac', 'durchir', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('cormac', 'releas-neb', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('cormac', 'alann-barnett', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.');
+    ('alann-barnett', 'releas-neb', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'friend', 'Short description.', 'Long Explanation.'),
+    ('alann-barnett', 'durchir', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'associate', 'Short description.', 'Long Explanation.'),
+    ('alann-barnett', 'cormac', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'friend', 'Short description.', 'Long Explanation.'),
+    ('releas-neb', 'durchir', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'associate', 'Short description.', 'Long Explanation.'),
+    ('releas-neb', 'cormac', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'friend', 'Short description.', 'Long Explanation.'),
+    ('releas-neb', 'alann-barnett', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'friend', 'Short description.', 'Long Explanation.'),
+    ('durchir', 'cormac', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'associate', 'Short description.', 'Long Explanation.'),
+    ('durchir', 'releas-neb', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'associate', 'Short description.', 'Long Explanation.'),
+    ('durchir', 'alann-barnett', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'associate', 'Short description.', 'Long Explanation.'),
+    ('cormac', 'durchir', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'associate', 'Short description.', 'Long Explanation.'),
+    ('cormac', 'releas-neb', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'friend', 'Short description.', 'Long Explanation.'),
+    ('cormac', 'alann-barnett', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'friend', 'Short description.', 'Long Explanation.');
   `);
 
   await runSql(`Inserting deity_spheres...`, `INSERT OR IGNORE INTO deity_spheres (deity_id, sphere_id) VALUES
