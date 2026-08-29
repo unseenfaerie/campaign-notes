@@ -16,7 +16,7 @@ const domainManifest = {
                 player_character: { type: 'boolean', required: true },
                 name: { type: 'string', required: true },
                 age: { type: 'number' },
-                ancestry: { type: 'string' },
+                ancestry: { type: 'string', enum: 'ancestries' },
                 class: { type: 'string' },
                 level: { type: 'string' },
                 alignment: { type: 'string', enum: 'alignment' },

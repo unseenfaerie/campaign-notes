@@ -143,22 +143,22 @@ async function main() {
   `);
 
   await runSql(`Inserting spheres...`, `INSERT OR IGNORE INTO spheres (id, name, short_description) VALUES
-    ('all', 'All', 'Sphere of All.'),
-    ('animal', 'Animal', 'Sphere of Animal.'),
-    ('astral', 'Astral', 'Sphere of Astral.'),
-    ('charm', 'Charm', 'Sphere of Charm.'),
-    ('combat', 'Combat', 'Sphere of Combat.'),
-    ('creation', 'Creation', 'Sphere of Creation.'),
-    ('divination', 'Divination', 'Sphere of Divination.'),
-    ('elemental', 'Elemental', 'Sphere of Elemental.'),
-    ('guardian', 'Guardian', 'Sphere of Guardian.'),
-    ('healing', 'Healing', 'Sphere of Healing.'),
-    ('necromantic', 'Necromantic', 'Sphere of Necromantic.'),
-    ('plant', 'Plant', 'Sphere of Plant.'),
-    ('protection', 'Protection', 'Sphere of Protection.'),
-    ('summoning', 'Summoning', 'Sphere of Summoning.'),
-    ('sun', 'Sun', 'Sphere of Sun.'),
-    ('weather', 'Weather', 'Sphere of Weather.');
+    ('all-sphere', 'All Sphere', 'Sphere of All.'),
+    ('animal-sphere', 'Animal Sphere', 'Sphere of Animal.'),
+    ('astral-sphere', 'Astral Sphere', 'Sphere of Astral.'),
+    ('charm-sphere', 'Charm Sphere', 'Sphere of Charm.'),
+    ('combat-sphere', 'Combat Sphere', 'Sphere of Combat.'),
+    ('creation-sphere', 'Creation Sphere', 'Sphere of Creation.'),
+    ('divination-sphere', 'Divination Sphere', 'Sphere of Divination.'),
+    ('elemental-sphere', 'Elemental Sphere', 'Sphere of Elemental.'),
+    ('guardian-sphere', 'Guardian Sphere', 'Sphere of Guardian.'),
+    ('healing-sphere', 'Healing Sphere', 'Sphere of Healing.'),
+    ('necromantic-sphere', 'Necromantic Sphere', 'Sphere of Necromantic.'),
+    ('plant-sphere', 'Plant Sphere', 'Sphere of Plant.'),
+    ('protection-sphere', 'Protection Sphere', 'Sphere of Protection.'),
+    ('summoning-sphere', 'Summoning Sphere', 'Sphere of Summoning.'),
+    ('sun-sphere', 'Sun Sphere', 'Sphere of Sun.'),
+    ('weather-sphere', 'Weather Sphere', 'Sphere of Weather.');
   `);
 
   // // Join Tables

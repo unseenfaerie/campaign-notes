@@ -21,6 +21,14 @@ const ENUMS = {
         'enterprise',
         'gang'
     ],
+    ancestries: [
+        'human',
+        'high-elf',
+        'wood-elf',
+        'dark-elf',
+        'half-elf',
+        'dwarf'
+    ],
     alignment: [
         'lawful-good',
         'neutral-good',
