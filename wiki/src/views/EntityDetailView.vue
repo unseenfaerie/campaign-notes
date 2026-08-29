@@ -15,6 +15,7 @@ import {
 } from '../services/metaService'
 import LoreDateInput from '../components/LoreDateInput.vue'
 import SearchableSelect from '../components/SearchableSelect.vue'
+import LinkifiedText from '../components/LinkifiedText.vue'
 import { useAuthStore } from '../stores/auth'
 
 type FullState = {
@@ -76,6 +77,33 @@ const entityPageTitle = computed(() => {
 })
 
 const entityDisplayData = computed(() => withoutIdField(fullData.value?.entity || {}))
+
+// short_description/long_explanation get their own dedicated spots in the layout, so the facts box excludes them.
+const entityShortDescription = computed(() => {
+  const value = fullData.value?.entity?.short_description
+  return typeof value === 'string' && value.trim() ? value : ''
+})
+
+const entityLongExplanation = computed(() => {
+  const value = fullData.value?.entity?.long_explanation
+  return typeof value === 'string' && value.trim() ? value : ''
+})
+
+const entityFactsData = computed(() =>
+  Object.fromEntries(
+    Object.entries(entityDisplayData.value).filter(
+      ([key]) => key !== 'name' && key !== 'short_description' && key !== 'long_explanation'
+    )
+  )
+)
+
+const hasEntityFacts = computed(() => Object.keys(entityFactsData.value).length > 0)
+
+const entityFactsFields = computed(() =>
+  (entitySchema.value?.fields || []).filter(
+    (field) => field.name !== 'name' && field.name !== 'short_description' && field.name !== 'long_explanation'
+  )
+)
 
 const sortedRelatedSections = computed(() => {
   if (!fullData.value) {
@@ -593,7 +621,7 @@ watch(() => [props.entityRoute, props.id], loadDetail)
     <p v-else-if="errorMessage" class="status-card error">{{ errorMessage }}</p>
 
     <article v-else-if="fullData" class="wiki-article">
-      <section>
+      <section class="core-data-section">
         <div class="section-heading-row">
           <h3>Core data</h3>
           <button
@@ -679,45 +707,59 @@ watch(() => [props.entityRoute, props.id], loadDetail)
 
           <p v-if="saveError" class="status-card error">{{ saveError }}</p>
         </form>
-        <FieldList
-          v-else
-          :data="entityDisplayData"
-          :fields="entitySchema?.fields"
-          empty-message="No entity fields are available."
-        >
-          <template #after-field="{ fieldKey }">
-            <template v-if="entityRoute === 'places' && fieldKey === 'parent_id' && fullData.children?.length">
-              <dt>Children</dt>
-              <dd>
-                <template v-for="(child, index) in fullData.children" :key="String(child.id)">
-                  <span v-if="index > 0">, </span>
-                  <RouterLink
-                    v-if="child.id !== undefined && child.id !== null && child.id !== ''"
-                    :to="{ name: 'entity-detail', params: { entityRoute: 'places', id: String(child.id) } }"
-                  >
-                    {{ relatedRecordLabel(child) }}
-                  </RouterLink>
-                </template>
-              </dd>
+        <div v-else class="entity-overview">
+          <FieldList
+            v-if="hasEntityFacts"
+            class="entity-facts"
+            :data="entityFactsData"
+            :fields="entityFactsFields"
+            empty-message="No entity fields are available."
+          >
+            <template #after-field="{ fieldKey }">
+              <template v-if="entityRoute === 'places' && fieldKey === 'parent_id' && fullData.children?.length">
+                <dt>Children</dt>
+                <dd>
+                  <template v-for="(child, index) in fullData.children" :key="String(child.id)">
+                    <span v-if="index > 0">, </span>
+                    <RouterLink
+                      v-if="child.id !== undefined && child.id !== null && child.id !== ''"
+                      :to="{ name: 'entity-detail', params: { entityRoute: 'places', id: String(child.id) } }"
+                    >
+                      {{ relatedRecordLabel(child) }}
+                    </RouterLink>
+                  </template>
+                </dd>
+              </template>
             </template>
-          </template>
-          <template #after-fields>
-            <template v-if="entityRoute === 'places' && !entityDisplayData.parent_id && fullData.children?.length">
-              <dt>Children</dt>
-              <dd>
-                <template v-for="(child, index) in fullData.children" :key="String(child.id)">
-                  <span v-if="index > 0">, </span>
-                  <RouterLink
-                    v-if="child.id !== undefined && child.id !== null && child.id !== ''"
-                    :to="{ name: 'entity-detail', params: { entityRoute: 'places', id: String(child.id) } }"
-                  >
-                    {{ relatedRecordLabel(child) }}
-                  </RouterLink>
-                </template>
-              </dd>
+            <template #after-fields>
+              <template v-if="entityRoute === 'places' && !entityDisplayData.parent_id && fullData.children?.length">
+                <dt>Children</dt>
+                <dd>
+                  <template v-for="(child, index) in fullData.children" :key="String(child.id)">
+                    <span v-if="index > 0">, </span>
+                    <RouterLink
+                      v-if="child.id !== undefined && child.id !== null && child.id !== ''"
+                      :to="{ name: 'entity-detail', params: { entityRoute: 'places', id: String(child.id) } }"
+                    >
+                      {{ relatedRecordLabel(child) }}
+                    </RouterLink>
+                  </template>
+                </dd>
+              </template>
             </template>
-          </template>
-        </FieldList>
+          </FieldList>
+          <div v-if="entityShortDescription || entityLongExplanation" class="entity-long-description">
+            <template v-if="entityShortDescription">
+              <h4>Description</h4>
+              <p><LinkifiedText :text="entityShortDescription" /></p>
+            </template>
+            <template v-if="entityLongExplanation">
+              <h4>Details</h4>
+              <p><LinkifiedText :text="entityLongExplanation" /></p>
+            </template>
+          </div>
+        </div>
+
       </section>
 
       <CollapseSection
