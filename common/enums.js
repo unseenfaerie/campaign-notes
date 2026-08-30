@@ -11,6 +11,24 @@ const ENUMS = {
         'town',
         'site',
     ],
+    organizationType: [
+        'adventuring-party',
+        'government',
+        'guild',
+        'religious',
+        'pantheon',
+        'informal',
+        'enterprise',
+        'gang'
+    ],
+    ancestry: [
+        'human',
+        'high-elf',
+        'wood-elf',
+        'dark-elf',
+        'half-elf',
+        'dwarf'
+    ],
     alignment: [
         'lawful-good',
         'neutral-good',
@@ -22,6 +40,15 @@ const ENUMS = {
         'neutral-evil',
         'chaotic-evil',
     ],
+    characterRelationship: [
+        'friend',
+        'enemy',
+        'associate',
+        'mentor',
+        'student',
+        'lover',
+        'spouse'
+    ]
 };
 
 function getEnumValues(enumDefinition) {

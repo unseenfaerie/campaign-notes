@@ -9,6 +9,7 @@ const {
   createRefreshSession,
   rotateRefreshSession,
   revokeRefreshSession,
+  listAnchoredCharacterIdsByUserId,
 } = require('../data/authRepository');
 const { requireAuth } = require('../middleware/authMiddleware');
 
@@ -237,10 +238,13 @@ router.get('/me', requireAuth, async (req, res) => {
       return res.status(401).json({ error: 'Invalid user session' });
     }
 
+    const anchoredCharacterIds = await listAnchoredCharacterIdsByUserId(user.id);
+
     return res.json({
       id: user.id,
       username: user.username,
       role: user.role,
+      anchoredCharacterIds,
     });
   } catch (_err) {
     return res.status(500).json({ error: 'Failed to load current user' });

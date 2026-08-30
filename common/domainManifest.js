@@ -14,9 +14,10 @@ const domainManifest = {
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
                 player_character: { type: 'boolean', required: true },
+                is_public: { type: 'boolean', required: true, hidden: true },
                 name: { type: 'string', required: true },
                 age: { type: 'number' },
-                ancestry: { type: 'string' },
+                ancestry: { type: 'string', enum: 'ancestry' },
                 class: { type: 'string' },
                 level: { type: 'string' },
                 alignment: { type: 'string', enum: 'alignment' },
@@ -28,9 +29,10 @@ const domainManifest = {
                 charisma: { type: 'number' },
                 total_health: { type: 'number' },
                 deceased: { type: 'boolean', required: true },
-                short_description: { type: 'string', required: true },
+                short_description: { type: 'string', required: true, expository: true },
                 long_explanation: {
                     type: 'string',
+                    expository: true,
                     access: {
                         playerPatch: {
                             ownership: {
@@ -47,11 +49,12 @@ const domainManifest = {
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
+                is_public: { type: 'boolean', required: true, hidden: true },
                 name: { type: 'string', required: true },
                 pantheon: { type: 'string' },
                 alignment: { type: 'string', enum: 'alignment' },
-                short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
+                short_description: { type: 'string', required: true, expository: true },
+                long_explanation: { type: 'string', expository: true },
             },
         },
         Event: {
@@ -60,13 +63,14 @@ const domainManifest = {
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
+                is_public: { type: 'boolean', required: true, hidden: true },
                 name: { type: 'string', required: true },
                 real_world_date: { type: 'string' },
                 in_game_time: { type: 'loreDate' },
                 previous_event_id: { type: 'string', ref: 'Event' },
                 next_event_id: { type: 'string', ref: 'Event' },
-                short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
+                short_description: { type: 'string', required: true, expository: true },
+                long_explanation: { type: 'string', expository: true },
             },
         },
         Item: {
@@ -75,9 +79,10 @@ const domainManifest = {
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
+                is_public: { type: 'boolean', required: true, hidden: true },
                 name: { type: 'string', required: true },
-                short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
+                short_description: { type: 'string', required: true, expository: true },
+                long_explanation: { type: 'string', expository: true },
             },
         },
         Organization: {
@@ -86,10 +91,11 @@ const domainManifest = {
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
+                is_public: { type: 'boolean', required: true, hidden: true },
                 name: { type: 'string', required: true },
-                type: { type: 'string' },
-                short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
+                type: { type: 'string', required: true, enum: 'organizationType' },
+                short_description: { type: 'string', required: true, expository: true },
+                long_explanation: { type: 'string', expository: true },
             },
         },
         Place: {
@@ -98,11 +104,12 @@ const domainManifest = {
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
+                is_public: { type: 'boolean', required: true, hidden: true },
                 name: { type: 'string', required: true },
                 type: { type: 'string', required: true, enum: 'placeType' },
                 parent_id: { type: 'string', ref: 'Place' },
-                short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
+                short_description: { type: 'string', required: true, expository: true },
+                long_explanation: { type: 'string', expository: true },
             },
         },
         Spell: {
@@ -111,6 +118,7 @@ const domainManifest = {
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
+                is_public: { type: 'boolean', required: true, hidden: true },
                 type: { type: 'string' },
                 name: { type: 'string', required: true },
                 level: { type: 'number' },
@@ -120,7 +128,7 @@ const domainManifest = {
                 components: { type: 'string' },
                 materials: { type: 'string' },
                 duration: { type: 'string' },
-                description: { type: 'string', required: true },
+                description: { type: 'string', required: true, expository: true },
             },
         },
         Sphere: {
@@ -129,8 +137,9 @@ const domainManifest = {
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
+                is_public: { type: 'boolean', required: true, hidden: true },
                 name: { type: 'string', required: true },
-                short_description: { type: 'string', required: true },
+                short_description: { type: 'string', required: true, expository: true },
             },
         },
         Alias: {
@@ -139,6 +148,7 @@ const domainManifest = {
             idField: 'id',
             fields: {
                 id: { type: 'number', primary: true, required: true, autoIncrement: true },
+                is_public: { type: 'boolean', required: true, hidden: true },
                 entity_type: { type: 'string', required: true },
                 entity_id: { type: 'string', required: true },
                 alias: { type: 'string', required: true },
@@ -192,6 +202,17 @@ const domainManifest = {
                 acquired_date: { type: 'loreDate', required: true },
                 relinquished_date: { type: 'loreDate' },
                 short_description: { type: 'string', required: true },
+                long_explanation: {
+                    type: 'string',
+                    access: {
+                        playerPatch: {
+                            ownership: {
+                                type: 'anchored-character',
+                                relationMemberEntity: 'Character',
+                            },
+                        },
+                    },
+                },
             },
         },
         CharacterOrganization: {
@@ -261,7 +282,7 @@ const domainManifest = {
             payload: {
                 established_date: { type: 'loreDate', required: true },
                 dissolution_date: { type: 'loreDate' },
-                relationship_type: { type: 'string', required: true },
+                relationship_type: { type: 'string', required: true, enum: 'characterRelationship' },
                 short_description: { type: 'string', required: true },
                 long_explanation: {
                     type: 'string',

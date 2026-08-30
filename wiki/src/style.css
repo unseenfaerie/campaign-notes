@@ -177,6 +177,42 @@ a:hover {
     color: var(--ink-700);
 }
 
+.core-data-section {
+    padding: 0.9rem 1rem;
+}
+
+.entity-overview {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.75rem;
+    flex-wrap: wrap;
+}
+
+.entity-facts {
+    flex: 0 0 auto;
+    min-width: 260px;
+    max-width: 420px;
+    border: 1px solid #000;
+    padding: 0.75rem 0.9rem;
+}
+
+.entity-long-description {
+    flex: 1 1 320px;
+    min-width: 260px;
+}
+
+.entity-long-description h4 {
+    margin: 0 0 0.35rem;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    color: var(--ink-700);
+}
+
+.entity-long-description p {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
 .section-heading-row {
     display: flex;
     align-items: baseline;

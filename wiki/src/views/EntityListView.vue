@@ -97,7 +97,7 @@ async function loadList() {
     ])
 
     filterableFields.value = (schema?.fields ?? []).filter(
-      (field) => !field.primary && (field.type === 'boolean' || field.enum)
+      (field) => !field.hidden && !field.primary && (field.type === 'boolean' || field.enum)
     )
     records.value = entityRecords
   } catch (error) {

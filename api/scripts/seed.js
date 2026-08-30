@@ -60,100 +60,106 @@ async function main() {
   const nowIso = new Date().toISOString();
   await seedUsers({ bcrypt, nowIso, runSql });
 
-  await runSql(`Inserting characters...`, `INSERT OR IGNORE INTO characters (id, player_character, name, age, ancestry, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, short_description, long_explanation) VALUES
-    ('alann-barnett', true, 'Alann Barnett', 32, 'human', 'Cleric', '4', 'neutral-good', 13, 8, 11, 10, 14, 11, 20, false, 'A thoughtful and strong-willed adventurer.', 'Long Explanation.'),
-    ('releas-neb', true, 'Releas Neb', 28, 'human', 'Magic User', '7', 'chaotic-good', 5, 14, 10, 18, 13, 9, 16, false, 'A clever and resourceful wizard.', 'Long Explanation.'),
-    ('appolonia-palleday', true, 'Appolonia Palleday', 16, 'human', 'Magic User', '5', 'neutral-good', 13, 8, 11, 18, 14, 11, 18, false, 'A bright and curious spellcaster.', 'Long Explanation.'),
-    ('durchir', true, 'Durchir', 35, 'half-elf', 'Fighter/Enchanter', '2/Enchanter', 'lawful-evil', 18, 10, 12, 15, 10, 11, 22, true, 'Durchir of the Angry Orchard, fallen hero.', 'Long Explanation.'),
-    ('cormac', true, 'Cormac', 27, 'half-elf', 'Thief/Illusionist', '5/4', 'chaotic-good', 9, 16, 7, 15, 14, 7, 15, false, 'A clever and nimble adventurer.', 'Long Explanation.'),
-    ('bert-verinwort', false, 'Bert Verinwort', 54, 'human', NULL, NULL, 'lawful-neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, 'A local notable in Wavethorn.', 'Long Explanation.'),
-    ('sieg-ordoss', false, 'Sieg Ordoss', 57, 'human', NULL, NULL, 'lawful-neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, true, 'A mysterious figure.', 'Long Explanation.'),
-    ('gereg', false, 'Gereg', 41, 'human', 'Thief', '5', 'neutral-evil', NULL, NULL, NULL, NULL, NULL, NULL, 20, false, 'A resident of Wavethorn.', 'Long Explanation.');
+  await runSql(`Inserting characters...`, `INSERT OR IGNORE INTO characters (id, player_character, is_public, name, age, ancestry, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, short_description, long_explanation) VALUES
+    ('alann-barnett', true, false, 'Alann Barnett', 32, 'human', 'Cleric', '4', 'neutral-good', 13, 8, 11, 10, 14, 11, 20, false, 'A thoughtful and strong-willed adventurer.', 'Long Explanation.'),
+    ('releas-neb', true, false, 'Releas Neb', 28, 'human', 'Magic User', '7', 'chaotic-good', 5, 14, 10, 18, 13, 9, 16, false, 'A clever and resourceful wizard.', 'Long Explanation.'),
+    ('orlaith', true, false, 'Orlaith of the Mosswood', 21, 'human', 'Druid', '1', 'chaotic-neutral', 12, 15, 11, 9, 15, 9, 2, false, 'A burgeoning druid with knowledge of herbs.', 'Long Explanation.'),
+    ('djinn', true, false, 'Djinn Rat-Eater', 23, 'human', 'Assassin', '2', 'neutral-evil', 8, 18, 10, 4, 15, 10, 5, false, 'A deceptive and quick assassin.', 'Long Explanation.'),
+    ('apollonia-palleday', true, false, 'Apollonia Palleday', 16, 'human', 'Magic User', '5', 'neutral-good', 13, 8, 11, 18, 14, 11, 18, false, 'A bright and curious spellcaster.', 'Long Explanation.'),
+    ('durchir', true, false, 'Durchir', 35, 'half-elf', 'Fighter', '2', 'lawful-evil', 18, 10, 12, 15, 10, 11, 22, true, 'Durchir of the Angry Orchard, fallen hero.', 'Long Explanation.'),
+    ('cormac', true, false, 'Cormac', 27, 'half-elf', 'Thief/Illusionist', '5/4', 'chaotic-good', 9, 16, 7, 15, 14, 7, 15, false, 'A clever and nimble adventurer.', 'Long Explanation.'),
+    ('bert-verinwort', false, false, 'Bert Verinwort', 54, 'human', NULL, NULL, 'lawful-neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, 'A local notable in Wavethorn.', 'Long Explanation.'),
+    ('sieg-ordoss', false, false, 'Sieg Ordoss', 57, 'human', NULL, NULL, 'lawful-neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, true, 'A mysterious figure.', 'Long Explanation.'),
+    ('gereg', false, false, 'Gereg', 41, 'human', 'Thief', '5', 'neutral-evil', NULL, NULL, NULL, NULL, NULL, NULL, 20, false, 'A resident of Wavethorn.', 'Long Explanation.');
   `);
 
   await runSql(`Normalizing seeded character alignments...`, `UPDATE characters SET alignment = lower(replace(alignment, ' ', '-')) WHERE alignment IS NOT NULL;`);
 
   await runSql(`Inserting user_character_anchors...`, `INSERT OR IGNORE INTO user_character_anchors (character_id, user_id, created_at) VALUES
     ('alann-barnett', 'alice', ?),
+    ('orlaith', 'rosie', ?),
+    ('djinn', 'sadhi', ?),
+    ('apollonia-palleday', 'sadhi', ?),
     ('releas-neb', 'keith', ?);
-  `, [nowIso, nowIso]);
+  `, [nowIso, nowIso, nowIso, nowIso, nowIso]);
 
-  await runSql(`Inserting deities...`, `INSERT OR IGNORE INTO deities (id, name, pantheon, alignment, short_description, long_explanation) VALUES
-    ('achiel', 'Achiel', 'Main Human', 'lawful-good', 'God of Light.', 'Long Explanation.'),
-    ('idona', 'Idona', 'Main Human', 'chaotic-good', 'Goddess of Humanity.', 'The patron goddess of and mother to Humankind. Her nurturing guidance shows us what we need to know to thrive. Those that worship Idona are numerous within the Othlorin. She is primarily worshipped as Achiels Wife, deserving of respect and credence. There are some women who have dedicated their lives to interpreting the messages of the moon as those are what Idona intends.'),
-    ('ponat', 'Ponat', 'Main Human', 'lawful-good', 'God of Fortress and protection.', 'Long Explanation.'),
-    ('wyaris', 'Wyaris', 'Three Sister Goddesses', 'chaotic-good', 'Lady of Swords.', 'Long Explanation.'),
-    ('danaris', 'Danaris', 'Three Sister Goddesses', 'chaotic-neutral', 'Lady of Death.', 'Long Explanation.'),
-    ('vaharis', 'Vaharis', 'Three Sister Goddesses', 'lawful-neutral', 'Lady of Judgement.', 'Long Explanation.'),
-    ('sylrineth', 'Sylrineth', 'Ancient Elven', 'chaotic-evil', 'Keeper of Forbidden Knowledge.', 'Syrineth is queen of the 666 layers of the abyss. There she hoards esoteric knowledge and hedonistic souls. Her many demons do her bidding.'),
-    ('doh', 'Doh', 'Main Human', 'lawful-neutral', 'God of Law.', 'Long Explanation.');
+  await runSql(`Inserting deities...`, `INSERT OR IGNORE INTO deities (id, is_public, name, pantheon, alignment, short_description, long_explanation) VALUES
+    ('achiel', true, 'Achiel', 'Main Human', 'lawful-good', 'God of Light.', 'Long Explanation.'),
+    ('idona', true, 'Idona', 'Main Human', 'chaotic-good', 'Goddess of Humanity.', 'The patron goddess of and mother to Humankind. Her nurturing guidance shows us what we need to know to thrive. Those that worship Idona are numerous within the Othlorin. She is primarily worshipped as Achiels Wife, deserving of respect and credence. There are some women who have dedicated their lives to interpreting the messages of the moon as those are what Idona intends.'),
+    ('ponat', true, 'Ponat', 'Main Human', 'lawful-good', 'God of Fortress and protection.', 'Long Explanation.'),
+    ('wyaris', true, 'Wyaris', 'Three Sister Goddesses', 'chaotic-good', 'Lady of Swords.', 'Long Explanation.'),
+    ('danaris', true, 'Danaris', 'Three Sister Goddesses', 'chaotic-neutral', 'Lady of Death.', 'Long Explanation.'),
+    ('vaharis', true, 'Vaharis', 'Three Sister Goddesses', 'lawful-neutral', 'Lady of Judgement.', 'Long Explanation.'),
+    ('sylrineth', true, 'Sylrineth', 'Ancient Elven', 'chaotic-evil', 'Keeper of Forbidden Knowledge.', 'Syrineth is queen of the 666 layers of the abyss. There she hoards esoteric knowledge and hedonistic souls. Her many demons do her bidding.'),
+    ('doh', true, 'Doh', 'Main Human', 'lawful-neutral', 'God of Law.', 'Long Explanation.');
   `);
 
   await runSql(`Normalizing seeded deity alignments...`, `UPDATE deities SET alignment = lower(replace(alignment, ' ', '-')) WHERE alignment IS NOT NULL;`);
 
-  await runSql(`Inserting events...`, `INSERT OR IGNORE INTO events (id, name, real_world_date, in_game_time, previous_event_id, next_event_id, short_description, long_explanation) VALUES
-    ('coup-of-wavethorn', 'The Coup of Wavethorn', '2025-08-01', '0200200255_age-of-descent-default', NULL, 'night-of-spiders', 'Rel, Cormac, Alann, and Durchir arrive in Othlorin at the port city of Wavethorn and upend the local government.', 'Approximately 200 years after the fall of Vokdjinn... A new adventuring party takes shape. Rel, Durchir, Alann, and Cormac come to Othlorin from Gatûn. Some seek the riches that lie in the ruins of the old elven homeland. They settle into Wavethorn, a merchant''s city on the edge of the sea. Before long, they are suspected of murder. Their confidant Bert Verinwort is later framed for a demonic ritual murder of several prominent figures in town, including his uncle Phil Verinwort. After being kidnapped by Wyvernfang bandits, the party understands the conspiracy to remove political threats to those that the Wyvernfang have installed on the council. Brae Novan and Daniel Hillstop are connected to the gang. After gathering evidence against these parties, the party clears a nearby dungeon of Wyvernfang and uses a massive amount of money they found to bankroll a coup of the government. The coup succeeds and a new, more balanced, three-council-oligarchy is implemented by Bert. This endeavor was made possible by an underground crime lord named Gereg. Due to his involvement, the party was obliged to put him into power on the Mercantile council. Brae and Daniel escaped execution by fleeing the town before the new regime was enacted.'),
-    ('night-of-spiders', 'The Night of Spiders', '2025-08-02', '0200200279_age-of-descent-default', 'coup-of-wavethorn', NULL, 'Rel, Cormac, Alann, and Durchir track down a bounty for the Adventurer''s Guild and uncover sinsiter evil.', 'Rel, Cormac, Alann, and Durchir join the Adventurer''s Guild! Their first quest is to bring three purported outlaws to justice. These women have been seen impersonating Winged Blades of Wyaris and harassing Ponat worshippers. The party tracks down the individuals and brings them to jail in Wavethorn. After doing this, they hear word that other adventurers from the guild is in trouble in the ruins of Aranil. Naturally they investigate. Upon entering, the party is subjected to a horrifying spider illusion dungeon. Walls of spiders with a horrifying human form flowing through them chase the party down endless halls. After finding and slaying a witch in a crimson robe, they save the weakened other party. They return to Wavethorn to find out that the trial of the three that they had captured was an absolute bloodbath. Every single person in the courtroom was killed. Seeking these three once again the party heads to some coastal caves. They find a strange and magical experimentation lab set up. The place is abandoned, save for a man composed of spiders. As Durchir strikes this man with his sword, he disintegrates part by part into tiny spiders and crawls apart.');
+  await runSql(`Inserting events...`, `INSERT OR IGNORE INTO events (id, is_public, name, real_world_date, in_game_time, previous_event_id, next_event_id, short_description, long_explanation) VALUES
+    ('coup-of-wavethorn', true, 'The Coup of Wavethorn', '2025-08-01', '0200200255_age-of-descent-default', NULL, 'night-of-spiders', 'Rel, Cormac, Alann, and Durchir arrive in Othlorin at the port city of Wavethorn and upend the local government.', 'Approximately 200 years after the fall of Vokdjinn... A new adventuring party takes shape. Rel, Durchir, Alann, and Cormac come to Othlorin from Gatûn. Some seek the riches that lie in the ruins of the old elven homeland. They settle into Wavethorn, a merchant''s city on the edge of the sea. Before long, they are suspected of murder. Their confidant Bert Verinwort is later framed for a demonic ritual murder of several prominent figures in town, including his uncle Phil Verinwort. After being kidnapped by Wyvernfang bandits, the party understands the conspiracy to remove political threats to those that the Wyvernfang have installed on the council. Brae Novan and Daniel Hillstop are connected to the gang. After gathering evidence against these parties, the party clears a nearby dungeon of Wyvernfang and uses a massive amount of money they found to bankroll a coup of the government. The coup succeeds and a new, more balanced, three-council-oligarchy is implemented by Bert. This endeavor was made possible by an underground crime lord named Gereg. Due to his involvement, the party was obliged to put him into power on the Mercantile council. Brae and Daniel escaped execution by fleeing the town before the new regime was enacted.'),
+    ('night-of-spiders', true, 'The Night of Spiders', '2025-08-02', '0200200279_age-of-descent-default', 'coup-of-wavethorn', NULL, 'Rel, Cormac, Alann, and Durchir track down a bounty for the Adventurer''s Guild and uncover sinsiter evil.', 'Rel, Cormac, Alann, and Durchir join the Adventurer''s Guild! Their first quest is to bring three purported outlaws to justice. These women have been seen impersonating Winged Blades of Wyaris and harassing Ponat worshippers. The party tracks down the individuals and brings them to jail in Wavethorn. After doing this, they hear word that other adventurers from the guild is in trouble in the ruins of Aranil. Naturally they investigate. Upon entering, the party is subjected to a horrifying spider illusion dungeon. Walls of spiders with a horrifying human form flowing through them chase the party down endless halls. After finding and slaying a witch in a crimson robe, they save the weakened other party. They return to Wavethorn to find out that the trial of the three that they had captured was an absolute bloodbath. Every single person in the courtroom was killed. Seeking these three once again the party heads to some coastal caves. They find a strange and magical experimentation lab set up. The place is abandoned, save for a man composed of spiders. As Durchir strikes this man with his sword, he disintegrates part by part into tiny spiders and crawls apart.');
   `);
 
-  await runSql(`Inserting items...`, `INSERT OR IGNORE INTO items (id, name, short_description, long_explanation) VALUES
-    ('cormacs-spellbook', 'Cormac''s Spellbook', 'The first spellbook belonging to Cormac.', 'Long Explanation.'),
-    ('rels-spellbook', 'Rel''s Spellbook', 'The first spellbook belonging to Releas.', 'Rel was afforded the best spells his mentor could afford to show him, as Rel was his most promising (and most morally evolved) of his students.'),
-    ('narisse-amulet', 'Nar''isse Amulet', 'A green glass chunk fastened to a leather neck strap by thin copper wire.', 'Expending a charge allows the user to completely blend in to natural settings if they remain completely still. 3 charges remain.'),
-    ('pollys-spellbook', 'Polly''s Spellbook', 'The first spellbook belonging to Polly.', 'This spellbook is a relic of a mysterious order of mages.');
+  await runSql(`Inserting items...`, `INSERT OR IGNORE INTO items (id, is_public, name, short_description, long_explanation) VALUES
+    ('cormacs-spellbook', false, 'Cormac''s Spellbook', 'The first spellbook belonging to Cormac.', 'Long Explanation.'),
+    ('rels-spellbook', false, 'Rel''s Spellbook', 'The first spellbook belonging to Releas.', 'Rel was afforded the best spells his mentor could afford to show him, as Rel was his most promising (and most morally evolved) of his students.'),
+    ('narisse-amulet', false, 'Nar''isse Amulet', 'A green glass chunk fastened to a leather neck strap by thin copper wire.', 'Expending a charge allows the user to completely blend in to natural settings if they remain completely still. 3 charges remain.'),
+    ('pollys-spellbook', false, 'Polly''s Spellbook', 'The first spellbook belonging to Polly.', 'This spellbook is a relic of a mysterious order of mages.');
   `);
 
-  await runSql(`Inserting organizations...`, `INSERT OR IGNORE INTO organizations (id, name, type, short_description, long_explanation) VALUES
-    ('church-of-achiels-light', 'Church of Achiel''s Light', 'religion', 'The main church of Achiel.', 'Long Explanation.'),
-    ('order-of-the-iron-duch', 'The Order of the Iron Düch', 'adventuring party', 'A party of heroes.', 'Long Explanation.'),
-    ('wyvernfang', 'Wyvernfang', 'adventuring party', 'A group based in Wavethorn.', 'Long Explanation.'),
-    ('three-sisters', 'The Three Sisters', 'pantheon', 'The Three Sister Goddesses.', 'Long Explanation.'),
-    ('main-human-pantheon', 'The Main Human Pantheon', 'pantheon', 'The primary deities worshipped by humans.', 'Long Explanation.'),
-    ('ancient-elven-pantheon', 'The Ancient Elven Pantheon', 'pantheon', 'The primary deities worshipped by the ancient elves.', 'Long Explanation.'),
-    ('adventurers-guild', 'The Adventurer''s Guild', 'guild', 'A guild for adventurers in Novafell and Wavethorn.', 'Long Explanation.');
+  await runSql(`Inserting organizations...`, `INSERT OR IGNORE INTO organizations (id, is_public, name, type, short_description, long_explanation) VALUES
+    ('church-of-achiels-light', true, 'Church of Achiel''s Light', 'religious', 'The main church of Achiel.', 'Long Explanation.'),
+    ('order-of-the-iron-duch', true, 'The Order of the Iron Düch', 'adventuring-party', 'A party of heroes.', 'Long Explanation.'),
+    ('orphans-of-lundgren', true, 'The Orphans of Lundgren', 'adventuring-party', 'A duo of misfits helping the citizens of Lundgren.', 'Long Explanation.'),
+    ('wyvernfang', true, 'Wyvernfang', 'gang', 'A bandit group based around Wavethorn.', 'Long Explanation.'),
+    ('three-sisters', true, 'The Three Sisters', 'pantheon', 'The Three Sister Goddesses.', 'Long Explanation.'),
+    ('main-human-pantheon', true, 'The Main Human Pantheon', 'pantheon', 'The primary deities worshipped by humans.', 'Long Explanation.'),
+    ('ancient-elven-pantheon', true, 'The Ancient Elven Pantheon', 'pantheon', 'The primary deities worshipped by the ancient elves.', 'Long Explanation.'),
+    ('adventurers-guild', true, 'The Adventurer''s Guild', 'guild', 'A guild for adventurers in Novafell and Wavethorn.', 'Long Explanation.');
   `);
 
-  await runSql(`Inserting places...`, `INSERT OR IGNORE INTO places (id, name, type, parent_id, short_description, long_explanation) VALUES
-    ('the-universe', 'The Universe', 'universe', NULL, 'Everything in existence.', 'Long Explanation.'),
-    ('material-plane', 'The Material Plane', 'plane', 'the-universe', 'The plane of standard physical existence.', 'Long Explanation.'),
-    ('the-world', 'The World', 'planet', 'material-plane', 'The world of mists.', 'Long Explanation.'),
-    ('othlorin', 'Othlorin', 'continent', 'the-world', 'The old land of the elves, now a rapidly burgeoning human territory.', 'Long Explanation.'),
-    ('wavethorn', 'Wavethorn', 'city-state', 'othlorin', 'A city-state on the coast.', 'Long Explanation.'),
-    ('itholis', 'Itholis', 'country', 'othlorin', 'The largest country in Othlorin, composed of 6 Counties.', 'Long Explanation.'),
-    ('weinmere', 'Weinmere', 'region', 'itholis', 'A county in Itholis. Ruled over by Count Jirakby', 'Long Explanation.'),
-    ('tempusfen', 'Tempusfen', 'region', 'itholis', 'A former county in Itholis. Composed of swamps and misty forests.', 'Long Explanation.'),
-    ('anash', 'Anash', 'city', 'weinmere', 'A city in the Weinmere.', 'Long Explanation.'),
-    ('lundgren', 'Lundgren', 'town', 'tempusfen', 'A quiet logging town settled on the edge of the Misty Marsh.', 'Long Explanation.');
+  await runSql(`Inserting places...`, `INSERT OR IGNORE INTO places (id, is_public, name, type, parent_id, short_description, long_explanation) VALUES
+    ('the-universe', true, 'The Universe', 'universe', NULL, 'Everything in existence.', 'Long Explanation.'),
+    ('material-plane', true, 'The Material Plane', 'plane', 'the-universe', 'The plane of standard physical existence.', 'Long Explanation.'),
+    ('the-world', true, 'The World', 'planet', 'material-plane', 'The world of mists.', 'Long Explanation.'),
+    ('othlorin', true, 'Othlorin', 'continent', 'the-world', 'The old land of the elves, now a rapidly burgeoning human territory.', 'Long Explanation.'),
+    ('wavethorn', true, 'Wavethorn', 'city-state', 'othlorin', 'A city-state on the coast.', 'Long Explanation.'),
+    ('itholis', true, 'Itholis', 'country', 'othlorin', 'The largest country in Othlorin, composed of 6 Counties.', 'Long Explanation.'),
+    ('weinmere', true, 'Weinmere', 'region', 'itholis', 'A county in Itholis. Ruled over by Count Jirakby', 'Long Explanation.'),
+    ('tempusfen', true, 'Tempusfen', 'region', 'itholis', 'A former county in Itholis. Composed of swamps and misty forests.', 'Long Explanation.'),
+    ('anash', true, 'Anash', 'city', 'weinmere', 'A city in the Weinmere.', 'Long Explanation.'),
+    ('lundgren', true, 'Lundgren', 'town', 'tempusfen', 'A quiet logging town settled on the edge of the Misty Marsh.', 'Long Explanation.');
   `);
 
-  await runSql(`Inserting spells...`, `INSERT OR IGNORE INTO spells (id, type, name, level, school, casting_time, range, components, materials, duration, description) VALUES
-    ('fireball', 'arcane', 'Fireball', 3, 'Evocation', '1 action', '150 feet', 'V,S,M', 'Bat guano.','Instantaneous', 'A bright streak flashes to a point you choose.'),
-    ('raise-dead', 'divine', 'Raise Dead', 5, NULL, '1 hour', 'Touch', 'V, S, M', 'Mummy wrappings, some kind of salve.', 'Instantaneous', 'Return a dead creature to life.'),
-    ('lightning-bolt', 'arcane', 'Lightning Bolt', 3, 'Evocation', '1 action', '100 feet', 'V,S,M', 'A small bit of fulgurite.', 'Instantaneous', 'A stroke of lightning forming a line 100 feet long and 5 feet wide blasts out from you.'),
-    ('healing-word', 'divine', 'Healing Word', 1, NULL, '1 bonus action', '60 feet', NULL, NULL, 'Instantaneous', 'A creature of your choice that you can see within range regains hit points.'),
-    ('mage-hand', 'arcane', 'Mage Hand', 0, 'Conjuration', '1 action', '30 feet', 'V,S', NULL, '1 minute', 'A spectral hand appears and can manipulate objects.'),
-    ('audible-glamer', 'arcane', 'Audible Glamer', 1, 'Illusion', '1 action', '30 feet', 'V,S', NULL, '1 minute', 'Creates a sound that can be heard up to 100 feet away.'),
-    ('change-self', 'arcane', 'Change Self', 1, 'Illusion', '1 action', 'Self', 'V,S', NULL, '1 hour', 'You assume a different form.'),
-    ('magic-missile', 'arcane', 'Magic Missile', 1, 'Evocation', '1 action', '120 feet', 'V,S', NULL, 'Instantaneous', 'Creates three glowing darts of magical force. 1d4+1 damage per bolt.');
+  await runSql(`Inserting spells...`, `INSERT OR IGNORE INTO spells (id, is_public, type, name, level, school, casting_time, range, components, materials, duration, description) VALUES
+    ('fireball', true, 'arcane', 'Fireball', 3, 'Evocation', '1 action', '150 feet', 'V,S,M', 'Bat guano.','Instantaneous', 'A bright streak flashes to a point you choose.'),
+    ('raise-dead', true, 'divine', 'Raise Dead', 5, NULL, '1 hour', 'Touch', 'V, S, M', 'Mummy wrappings, some kind of salve.', 'Instantaneous', 'Return a dead creature to life.'),
+    ('lightning-bolt', true, 'arcane', 'Lightning Bolt', 3, 'Evocation', '1 action', '100 feet', 'V,S,M', 'A small bit of fulgurite.', 'Instantaneous', 'A stroke of lightning forming a line 100 feet long and 5 feet wide blasts out from you.'),
+    ('healing-word', true, 'divine', 'Healing Word', 1, NULL, '1 bonus action', '60 feet', NULL, NULL, 'Instantaneous', 'A creature of your choice that you can see within range regains hit points.'),
+    ('mage-hand', true, 'arcane', 'Mage Hand', 0, 'Conjuration', '1 action', '30 feet', 'V,S', NULL, '1 minute', 'A spectral hand appears and can manipulate objects.'),
+    ('audible-glamer', true, 'arcane', 'Audible Glamer', 1, 'Illusion', '1 action', '30 feet', 'V,S', NULL, '1 minute', 'Creates a sound that can be heard up to 100 feet away.'),
+    ('change-self', true, 'arcane', 'Change Self', 1, 'Illusion', '1 action', 'Self', 'V,S', NULL, '1 hour', 'You assume a different form.'),
+    ('magic-missile', true, 'arcane', 'Magic Missile', 1, 'Evocation', '1 action', '120 feet', 'V,S', NULL, 'Instantaneous', 'Creates three glowing darts of magical force. 1d4+1 damage per bolt.');
   `);
 
-  await runSql(`Inserting spheres...`, `INSERT OR IGNORE INTO spheres (id, name, short_description) VALUES
-    ('all', 'All', 'Sphere of All.'),
-    ('animal', 'Animal', 'Sphere of Animal.'),
-    ('astral', 'Astral', 'Sphere of Astral.'),
-    ('charm', 'Charm', 'Sphere of Charm.'),
-    ('combat', 'Combat', 'Sphere of Combat.'),
-    ('creation', 'Creation', 'Sphere of Creation.'),
-    ('divination', 'Divination', 'Sphere of Divination.'),
-    ('elemental', 'Elemental', 'Sphere of Elemental.'),
-    ('guardian', 'Guardian', 'Sphere of Guardian.'),
-    ('healing', 'Healing', 'Sphere of Healing.'),
-    ('necromantic', 'Necromantic', 'Sphere of Necromantic.'),
-    ('plant', 'Plant', 'Sphere of Plant.'),
-    ('protection', 'Protection', 'Sphere of Protection.'),
-    ('summoning', 'Summoning', 'Sphere of Summoning.'),
-    ('sun', 'Sun', 'Sphere of Sun.'),
-    ('weather', 'Weather', 'Sphere of Weather.');
+  await runSql(`Inserting spheres...`, `INSERT OR IGNORE INTO spheres (id, is_public, name, short_description) VALUES
+    ('all-sphere', true, 'All Sphere', 'Sphere of All.'),
+    ('animal-sphere', true, 'Animal Sphere', 'Sphere of Animal.'),
+    ('astral-sphere', true, 'Astral Sphere', 'Sphere of Astral.'),
+    ('charm-sphere', true, 'Charm Sphere', 'Sphere of Charm.'),
+    ('combat-sphere', true, 'Combat Sphere', 'Sphere of Combat.'),
+    ('creation-sphere', true, 'Creation Sphere', 'Sphere of Creation.'),
+    ('divination-sphere', true, 'Divination Sphere', 'Sphere of Divination.'),
+    ('elemental-sphere', true, 'Elemental Sphere', 'Sphere of Elemental.'),
+    ('guardian-sphere', true, 'Guardian Sphere', 'Sphere of Guardian.'),
+    ('healing-sphere', true, 'Healing Sphere', 'Sphere of Healing.'),
+    ('necromantic-sphere', true, 'Necromantic Sphere', 'Sphere of Necromantic.'),
+    ('plant-sphere', true, 'Plant Sphere', 'Sphere of Plant.'),
+    ('protection-sphere', true, 'Protection Sphere', 'Sphere of Protection.'),
+    ('summoning-sphere', true, 'Summoning Sphere', 'Sphere of Summoning.'),
+    ('sun-sphere', true, 'Sun Sphere', 'Sphere of Sun.'),
+    ('weather-sphere', true, 'Weather Sphere', 'Sphere of Weather.');
   `);
 
   // // Join Tables
@@ -180,6 +186,8 @@ async function main() {
     ('alann-barnett', 'adventurers-guild', '0200201001_age-of-descent-default', '', 'Rejoined due to pressure from the party.', 'Long Explanation.'),
     ('releas-neb', 'adventurers-guild', '0200200029_age-of-descent-default', '', 'Became a member of the Adventurers Guild.', 'Long Explanation.'),
     ('durchir', 'adventurers-guild', '0200200057_age-of-descent-default', '', 'Allied with the Adventurers Guild for information.', 'Long Explanation.'),
+    ('orlaith', 'orphans-of-lundgren', '0300006018_age-of-achiel-default', '', 'Formed the Orphans of Lundgren with Djinn.', 'Long Explanation.'),
+    ('djinn', 'orphans-of-lundgren', '0300006018_age-of-achiel-default', '', 'Formed the Orphans of Lundgren with Orlaith.', 'Long Explanation.'),
     ('cormac', 'adventurers-guild', '0200200085_age-of-descent-default', '', 'Sworn to protect the realm as a knight.', 'Long Explanation.');
   `);
 
@@ -191,18 +199,18 @@ async function main() {
   `);
 
   await runSql(`Inserting character_relationships...`, `INSERT OR IGNORE INTO character_relationships (character_id, related_id, established_date, dissolution_date, relationship_type, short_description, long_explanation) VALUES
-    ('alann-barnett', 'releas-neb', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('alann-barnett', 'durchir', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('alann-barnett', 'cormac', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('releas-neb', 'durchir', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('releas-neb', 'cormac', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('releas-neb', 'alann-barnett', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('durchir', 'cormac', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('durchir', 'releas-neb', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('durchir', 'alann-barnett', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('cormac', 'durchir', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('cormac', 'releas-neb', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.'),
-    ('cormac', 'alann-barnett', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'ally', 'Short description.', 'Long Explanation.');
+    ('alann-barnett', 'releas-neb', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'friend', 'Short description.', 'Long Explanation.'),
+    ('alann-barnett', 'durchir', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'associate', 'Short description.', 'Long Explanation.'),
+    ('alann-barnett', 'cormac', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'friend', 'Short description.', 'Long Explanation.'),
+    ('releas-neb', 'durchir', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'associate', 'Short description.', 'Long Explanation.'),
+    ('releas-neb', 'cormac', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'friend', 'Short description.', 'Long Explanation.'),
+    ('releas-neb', 'alann-barnett', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'friend', 'Short description.', 'Long Explanation.'),
+    ('durchir', 'cormac', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'associate', 'Short description.', 'Long Explanation.'),
+    ('durchir', 'releas-neb', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'associate', 'Short description.', 'Long Explanation.'),
+    ('durchir', 'alann-barnett', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'associate', 'Short description.', 'Long Explanation.'),
+    ('cormac', 'durchir', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'associate', 'Short description.', 'Long Explanation.'),
+    ('cormac', 'releas-neb', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'friend', 'Short description.', 'Long Explanation.'),
+    ('cormac', 'alann-barnett', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'friend', 'Short description.', 'Long Explanation.');
   `);
 
   await runSql(`Inserting deity_spheres...`, `INSERT OR IGNORE INTO deity_spheres (deity_id, sphere_id) VALUES
