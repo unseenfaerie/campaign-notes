@@ -272,6 +272,7 @@ const domainManifest = {
         CharacterRelationship: {
             kind: 'history',
             table: 'character_relationships',
+            directional: true,  // This is a one-way directional relation: character_id is the perspective holder, related_id is the subject. Each character's player independently creates records from their perspective.
             members: [
                 { entity: 'Character', key: 'character_id', route: 'relationships' },
                 { entity: 'Character', key: 'related_id', route: 'relationships' },
@@ -305,6 +306,16 @@ const domainManifest = {
                 { entity: 'Sphere', key: 'sphere_id', route: 'deities' },
             ],
             keys: ['deity_id', 'sphere_id'],
+            payload: {},
+        },
+        DeityOrganization: {
+            kind: 'simple',
+            table: 'deity_organizations',
+            members: [
+                { entity: 'Deity', key: 'deity_id', route: 'organizations' },
+                { entity: 'Organization', key: 'organization_id', route: 'deities' },
+            ],
+            keys: ['deity_id', 'organization_id'],
             payload: {},
         },
         EventCharacter: {

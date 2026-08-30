@@ -122,7 +122,9 @@ function buildRelationWhereCandidates({
     const relatedMemberIndex = anchorMemberIndex === 0 ? 1 : 0;
     const isSelfRelation = members[anchorMemberIndex].entity === members[relatedMemberIndex].entity;
 
-    if (!isSelfRelation || sourceId === relatedId) {
+    // For directional relations (e.g., CharacterRelationship), only query the forward direction
+    // If marked as directional or if not a self-relation, return only the forward WHERE clause
+    if (!isSelfRelation || sourceId === relatedId || relationDef.directional) {
         return [where];
     }
 
@@ -191,22 +193,12 @@ async function removeFirstRelationRecordByWhereCandidates(relationName, whereCan
 async function loadRelationRows(relationName, relationContext, sourceId) {
     const { anchorMember, relatedMember } = relationContext;
 
-    if (anchorMember.entity !== relatedMember.entity) {
-        return manifestCrudService.getMany(relationName, {
-            [anchorMember.key]: sourceId,
-        });
-    }
-
-    const [forwardRows, reverseRows] = await Promise.all([
-        manifestCrudService.getMany(relationName, {
-            [anchorMember.key]: sourceId,
-        }),
-        manifestCrudService.getMany(relationName, {
-            [relatedMember.key]: sourceId,
-        }),
-    ]);
-
-    return dedupeRows([...forwardRows, ...reverseRows]);
+    // For directional relations (e.g., CharacterRelationship), only query from the anchor member's perspective
+    // If both members are the same entity type and the relation is marked as directional,
+    // only return records where sourceId is in the anchor_key position
+    return manifestCrudService.getMany(relationName, {
+        [anchorMember.key]: sourceId,
+    });
 }
 
 function getTargetInfo(relatedMember) {

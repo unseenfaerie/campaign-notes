@@ -651,12 +651,13 @@ describe('domainRouter isolated unit tests', () => {
         });
     });
 
-    it('GET /:entityRoute/:id/:relatedRoute/:relatedId supports reverse-stored self history relation records', async () => {
+    it('GET /:entityRoute/:id/:relatedRoute/:relatedId with directional relations only queries forward direction', async () => {
         manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
             relationName: 'CharacterRelationship',
             relationDef: {
                 kind: 'history',
                 historyKey: 'established_date',
+                directional: true,
                 members: [
                     { entity: 'Character', key: 'character_id', route: 'relationships' },
                     { entity: 'Character', key: 'related_id', route: 'relationships' },
@@ -671,33 +672,18 @@ describe('domainRouter isolated unit tests', () => {
         });
 
         manifestCrudService.getOne
-            .mockResolvedValueOnce(null)
-            .mockResolvedValueOnce({
-                character_id: 'char-2',
-                related_id: 'char-1',
-                established_date: '100-01-01',
-                relationship_type: 'rival',
-            });
+            .mockResolvedValueOnce(null);
 
         const response = await request(app)
             .get('/api/characters/char-1/relationships/char-2')
             .query({ established_date: '100-01-01' });
 
-        expect(response.status).toBe(200);
-        expect(response.body).toEqual({
-            character_id: 'char-2',
-            related_id: 'char-1',
-            established_date: '100-01-01',
-            relationship_type: 'rival',
-        });
+        expect(response.status).toBe(404);
+        // Verify only the forward query is made (not the reverse)
+        expect(manifestCrudService.getOne).toHaveBeenCalledTimes(1);
         expect(manifestCrudService.getOne).toHaveBeenNthCalledWith(1, 'CharacterRelationship', {
             character_id: 'char-1',
             related_id: 'char-2',
-            established_date: '100-01-01',
-        });
-        expect(manifestCrudService.getOne).toHaveBeenNthCalledWith(2, 'CharacterRelationship', {
-            related_id: 'char-1',
-            character_id: 'char-2',
             established_date: '100-01-01',
         });
     });
@@ -708,6 +694,7 @@ describe('domainRouter isolated unit tests', () => {
             relationDef: {
                 kind: 'history',
                 historyKey: 'established_date',
+                directional: true,
                 members: [
                     { entity: 'Character', key: 'character_id', route: 'relationships' },
                     { entity: 'Character', key: 'related_id', route: 'relationships' },
@@ -722,11 +709,10 @@ describe('domainRouter isolated unit tests', () => {
         });
 
         manifestCrudService.getMany
-            .mockResolvedValueOnce([])
             .mockResolvedValueOnce([
                 {
-                    character_id: 'char-2',
-                    related_id: 'char-1',
+                    character_id: 'char-1',
+                    related_id: 'char-2',
                     established_date: '100-01-01',
                     relationship_type: 'rival',
                 },
@@ -737,22 +723,18 @@ describe('domainRouter isolated unit tests', () => {
         expect(response.status).toBe(200);
         expect(response.body).toEqual([
             {
-                character_id: 'char-2',
-                related_id: 'char-1',
+                character_id: 'char-1',
+                related_id: 'char-2',
                 established_date: '100-01-01',
                 relationship_type: 'rival',
             },
         ]);
+        expect(manifestCrudService.getMany).toHaveBeenCalledTimes(1);
         expect(manifestCrudService.getMany).toHaveBeenNthCalledWith(1, 'CharacterRelationship', {
             character_id: 'char-1',
             related_id: 'char-2',
         });
-        expect(manifestCrudService.getMany).toHaveBeenNthCalledWith(2, 'CharacterRelationship', {
-            character_id: 'char-2',
-            related_id: 'char-1',
-        });
         expect(Object.prototype.hasOwnProperty.call(manifestCrudService.getMany.mock.calls[0][1], 'established_date')).toBe(false);
-        expect(Object.prototype.hasOwnProperty.call(manifestCrudService.getMany.mock.calls[1][1], 'established_date')).toBe(false);
     });
 
     it('GET /:entityRoute/:id/:relatedRoute/:relatedId returns 400 on unexpected history query params', async () => {

@@ -87,18 +87,18 @@ async function main() {
     ('achiel', true, 'Achiel', 'Main Human', 'lawful-good', 'God of Light.', 'Long Explanation.'),
     ('idona', true, 'Idona', 'Main Human', 'chaotic-good', 'Goddess of Humanity.', 'The patron goddess of and mother to Humankind. Her nurturing guidance shows us what we need to know to thrive. Those that worship Idona are numerous within the Othlorin. She is primarily worshipped as Achiels Wife, deserving of respect and credence. There are some women who have dedicated their lives to interpreting the messages of the moon as those are what Idona intends.'),
     ('ponat', true, 'Ponat', 'Main Human', 'lawful-good', 'God of Fortress and protection.', 'Long Explanation.'),
-    ('wyaris', true, 'Wyaris', 'Three Sister Goddesses', 'chaotic-good', 'Lady of Swords.', 'Long Explanation.'),
-    ('danaris', true, 'Danaris', 'Three Sister Goddesses', 'chaotic-neutral', 'Lady of Death.', 'Long Explanation.'),
-    ('vaharis', true, 'Vaharis', 'Three Sister Goddesses', 'lawful-neutral', 'Lady of Judgement.', 'Long Explanation.'),
-    ('sylrineth', true, 'Sylrineth', 'Ancient Elven', 'chaotic-evil', 'Keeper of Forbidden Knowledge.', 'Syrineth is queen of the 666 layers of the abyss. There she hoards esoteric knowledge and hedonistic souls. Her many demons do her bidding.'),
+    ('wyaris', false, 'Wyaris', 'Three Sister Goddesses', 'chaotic-good', 'Lady of Swords.', 'Long Explanation.'),
+    ('danaris', false, 'Danaris', 'Three Sister Goddesses', 'chaotic-neutral', 'Lady of Death.', 'Long Explanation.'),
+    ('vaharis', false, 'Vaharis', 'Three Sister Goddesses', 'lawful-neutral', 'Lady of Judgement.', 'Long Explanation.'),
+    ('sylrineth', false, 'Sylrineth', 'Ancient Elven', 'chaotic-evil', 'Keeper of Forbidden Knowledge.', 'Syrineth is queen of the 666 layers of the abyss. There she hoards esoteric knowledge and hedonistic souls. Her many demons do her bidding.'),
     ('doh', true, 'Doh', 'Main Human', 'lawful-neutral', 'God of Law.', 'Long Explanation.');
   `);
 
   await runSql(`Normalizing seeded deity alignments...`, `UPDATE deities SET alignment = lower(replace(alignment, ' ', '-')) WHERE alignment IS NOT NULL;`);
 
   await runSql(`Inserting events...`, `INSERT OR IGNORE INTO events (id, is_public, name, real_world_date, in_game_time, previous_event_id, next_event_id, short_description, long_explanation) VALUES
-    ('coup-of-wavethorn', true, 'The Coup of Wavethorn', '2025-08-01', '0200200255_age-of-descent-default', NULL, 'night-of-spiders', 'Rel, Cormac, Alann, and Durchir arrive in Othlorin at the port city of Wavethorn and upend the local government.', 'Approximately 200 years after the fall of Vokdjinn... A new adventuring party takes shape. Rel, Durchir, Alann, and Cormac come to Othlorin from Gatûn. Some seek the riches that lie in the ruins of the old elven homeland. They settle into Wavethorn, a merchant''s city on the edge of the sea. Before long, they are suspected of murder. Their confidant Bert Verinwort is later framed for a demonic ritual murder of several prominent figures in town, including his uncle Phil Verinwort. After being kidnapped by Wyvernfang bandits, the party understands the conspiracy to remove political threats to those that the Wyvernfang have installed on the council. Brae Novan and Daniel Hillstop are connected to the gang. After gathering evidence against these parties, the party clears a nearby dungeon of Wyvernfang and uses a massive amount of money they found to bankroll a coup of the government. The coup succeeds and a new, more balanced, three-council-oligarchy is implemented by Bert. This endeavor was made possible by an underground crime lord named Gereg. Due to his involvement, the party was obliged to put him into power on the Mercantile council. Brae and Daniel escaped execution by fleeing the town before the new regime was enacted.'),
-    ('night-of-spiders', true, 'The Night of Spiders', '2025-08-02', '0200200279_age-of-descent-default', 'coup-of-wavethorn', NULL, 'Rel, Cormac, Alann, and Durchir track down a bounty for the Adventurer''s Guild and uncover sinsiter evil.', 'Rel, Cormac, Alann, and Durchir join the Adventurer''s Guild! Their first quest is to bring three purported outlaws to justice. These women have been seen impersonating Winged Blades of Wyaris and harassing Ponat worshippers. The party tracks down the individuals and brings them to jail in Wavethorn. After doing this, they hear word that other adventurers from the guild is in trouble in the ruins of Aranil. Naturally they investigate. Upon entering, the party is subjected to a horrifying spider illusion dungeon. Walls of spiders with a horrifying human form flowing through them chase the party down endless halls. After finding and slaying a witch in a crimson robe, they save the weakened other party. They return to Wavethorn to find out that the trial of the three that they had captured was an absolute bloodbath. Every single person in the courtroom was killed. Seeking these three once again the party heads to some coastal caves. They find a strange and magical experimentation lab set up. The place is abandoned, save for a man composed of spiders. As Durchir strikes this man with his sword, he disintegrates part by part into tiny spiders and crawls apart.');
+    ('coup-of-wavethorn', false, 'The Coup of Wavethorn', '2025-08-01', '0200200255_age-of-descent-default', NULL, 'night-of-spiders', 'Rel, Cormac, Alann, and Durchir arrive in Othlorin at the port city of Wavethorn and upend the local government.', 'Approximately 200 years after the fall of Vokdjinn... A new adventuring party takes shape. Rel, Durchir, Alann, and Cormac come to Othlorin from Gatûn. Some seek the riches that lie in the ruins of the old elven homeland. They settle into Wavethorn, a merchant''s city on the edge of the sea. Before long, they are suspected of murder. Their confidant Bert Verinwort is later framed for a demonic ritual murder of several prominent figures in town, including his uncle Phil Verinwort. After being kidnapped by Wyvernfang bandits, the party understands the conspiracy to remove political threats to those that the Wyvernfang have installed on the council. Brae Novan and Daniel Hillstop are connected to the gang. After gathering evidence against these parties, the party clears a nearby dungeon of Wyvernfang and uses a massive amount of money they found to bankroll a coup of the government. The coup succeeds and a new, more balanced, three-council-oligarchy is implemented by Bert. This endeavor was made possible by an underground crime lord named Gereg. Due to his involvement, the party was obliged to put him into power on the Mercantile council. Brae and Daniel escaped execution by fleeing the town before the new regime was enacted.'),
+    ('night-of-spiders', false, 'The Night of Spiders', '2025-08-02', '0200200279_age-of-descent-default', 'coup-of-wavethorn', NULL, 'Rel, Cormac, Alann, and Durchir track down a bounty for the Adventurer''s Guild and uncover sinsiter evil.', 'Rel, Cormac, Alann, and Durchir join the Adventurer''s Guild! Their first quest is to bring three purported outlaws to justice. These women have been seen impersonating Winged Blades of Wyaris and harassing Ponat worshippers. The party tracks down the individuals and brings them to jail in Wavethorn. After doing this, they hear word that other adventurers from the guild is in trouble in the ruins of Aranil. Naturally they investigate. Upon entering, the party is subjected to a horrifying spider illusion dungeon. Walls of spiders with a horrifying human form flowing through them chase the party down endless halls. After finding and slaying a witch in a crimson robe, they save the weakened other party. They return to Wavethorn to find out that the trial of the three that they had captured was an absolute bloodbath. Every single person in the courtroom was killed. Seeking these three once again the party heads to some coastal caves. They find a strange and magical experimentation lab set up. The place is abandoned, save for a man composed of spiders. As Durchir strikes this man with his sword, he disintegrates part by part into tiny spiders and crawls apart.');
   `);
 
   await runSql(`Inserting items...`, `INSERT OR IGNORE INTO items (id, is_public, name, short_description, long_explanation) VALUES
@@ -110,26 +110,26 @@ async function main() {
 
   await runSql(`Inserting organizations...`, `INSERT OR IGNORE INTO organizations (id, is_public, name, type, short_description, long_explanation) VALUES
     ('church-of-achiels-light', true, 'Church of Achiel''s Light', 'religious', 'The main church of Achiel.', 'Long Explanation.'),
-    ('order-of-the-iron-duch', true, 'The Order of the Iron Düch', 'adventuring-party', 'A party of heroes.', 'Long Explanation.'),
-    ('orphans-of-lundgren', true, 'The Orphans of Lundgren', 'adventuring-party', 'A duo of misfits helping the citizens of Lundgren.', 'Long Explanation.'),
-    ('wyvernfang', true, 'Wyvernfang', 'gang', 'A bandit group based around Wavethorn.', 'Long Explanation.'),
-    ('three-sisters', true, 'The Three Sisters', 'pantheon', 'The Three Sister Goddesses.', 'Long Explanation.'),
-    ('main-human-pantheon', true, 'The Main Human Pantheon', 'pantheon', 'The primary deities worshipped by humans.', 'Long Explanation.'),
-    ('ancient-elven-pantheon', true, 'The Ancient Elven Pantheon', 'pantheon', 'The primary deities worshipped by the ancient elves.', 'Long Explanation.'),
-    ('adventurers-guild', true, 'The Adventurer''s Guild', 'guild', 'A guild for adventurers in Novafell and Wavethorn.', 'Long Explanation.');
+    ('order-of-the-iron-duch', false, 'The Order of the Iron Düch', 'adventuring-party', 'A party of heroes.', 'Long Explanation.'),
+    ('orphans-of-lundgren', false, 'The Orphans of Lundgren', 'adventuring-party', 'A duo of misfits helping the citizens of Lundgren.', 'Long Explanation.'),
+    ('wyvernfang', false, 'Wyvernfang', 'gang', 'A bandit group based around Wavethorn.', 'Long Explanation.'),
+    ('three-sisters', false, 'The Three Sisters', 'pantheon', 'The Three Sister Goddesses.', 'Long Explanation.'),
+    ('achielan-pantheon', true, 'Achielan Pantheon', 'pantheon', 'The primary deities worshipped by humans.', 'Long Explanation.'),
+    ('ancient-elven-pantheon', false, 'The Ancient Elven Pantheon', 'pantheon', 'The primary deities worshipped by the ancient elves.', 'Long Explanation.'),
+    ('adventurers-guild', false, 'The Adventurer''s Guild', 'guild', 'A guild for adventurers in Novafell and Wavethorn.', 'Long Explanation.');
   `);
 
   await runSql(`Inserting places...`, `INSERT OR IGNORE INTO places (id, is_public, name, type, parent_id, short_description, long_explanation) VALUES
-    ('the-universe', true, 'The Universe', 'universe', NULL, 'Everything in existence.', 'Long Explanation.'),
-    ('material-plane', true, 'The Material Plane', 'plane', 'the-universe', 'The plane of standard physical existence.', 'Long Explanation.'),
+    ('the-universe', false, 'The Universe', 'universe', NULL, 'Everything in existence.', 'Long Explanation.'),
+    ('material-plane', false, 'The Material Plane', 'plane', 'the-universe', 'The plane of standard physical existence.', 'Long Explanation.'),
     ('the-world', true, 'The World', 'planet', 'material-plane', 'The world of mists.', 'Long Explanation.'),
     ('othlorin', true, 'Othlorin', 'continent', 'the-world', 'The old land of the elves, now a rapidly burgeoning human territory.', 'Long Explanation.'),
     ('wavethorn', true, 'Wavethorn', 'city-state', 'othlorin', 'A city-state on the coast.', 'Long Explanation.'),
     ('itholis', true, 'Itholis', 'country', 'othlorin', 'The largest country in Othlorin, composed of 6 Counties.', 'Long Explanation.'),
     ('weinmere', true, 'Weinmere', 'region', 'itholis', 'A county in Itholis. Ruled over by Count Jirakby', 'Long Explanation.'),
     ('tempusfen', true, 'Tempusfen', 'region', 'itholis', 'A former county in Itholis. Composed of swamps and misty forests.', 'Long Explanation.'),
-    ('anash', true, 'Anash', 'city', 'weinmere', 'A city in the Weinmere.', 'Long Explanation.'),
-    ('lundgren', true, 'Lundgren', 'town', 'tempusfen', 'A quiet logging town settled on the edge of the Misty Marsh.', 'Long Explanation.');
+    ('anash', false, 'Anash', 'city', 'weinmere', 'A city in the Weinmere.', 'Long Explanation.'),
+    ('lundgren', false, 'Lundgren', 'town', 'tempusfen', 'A quiet logging town settled on the edge of the Misty Marsh.', 'Long Explanation.');
   `);
 
   await runSql(`Inserting spells...`, `INSERT OR IGNORE INTO spells (id, is_public, type, name, level, school, casting_time, range, components, materials, duration, description) VALUES
@@ -214,10 +214,19 @@ async function main() {
   `);
 
   await runSql(`Inserting deity_spheres...`, `INSERT OR IGNORE INTO deity_spheres (deity_id, sphere_id) VALUES
-    ('achiel', 'healing'),
-    ('achiel', 'creation'),
-    ('wyaris', 'combat'),
-    ('danaris', 'death');
+    ('achiel', 'healing-sphere'),
+    ('achiel', 'creation-sphere'),
+    ('wyaris', 'combat-sphere');
+  `);
+
+  await runSql(`Inserting deity_organizations...`, `INSERT OR IGNORE INTO deity_organizations (deity_id, organization_id) VALUES
+    ('achiel', 'achielan-pantheon'),
+    ('sylrineth', 'ancient-elven-pantheon'),
+    ('idona', 'achielan-pantheon'),
+    ('wyaris', 'three-sisters'),
+    ('danaris', 'three-sisters'),
+    ('vaharis', 'three-sisters'),
+    ('ponat', 'achielan-pantheon');
   `);
 
   await runSql(`Inserting event_characters...`, `INSERT OR IGNORE INTO event_characters (event_id, character_id, short_description, long_explanation) VALUES
