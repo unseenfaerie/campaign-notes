@@ -10,6 +10,7 @@ const {
     isRelationVisibleToUser,
     filterEntitiesByVisibility,
     isEntityRelatedToAnchoredCharacter,
+    getVisibleEntityIdsForUser,
 } = require('../../utils/visibilityHelpers');
 
 describe('visibilityHelpers', () => {
@@ -357,6 +358,181 @@ describe('visibilityHelpers', () => {
             const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'items', 'item-1', ['char-1', 'char-2']);
             expect(result).toBe(true);
             expect(mockCrudService.getOne).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    describe('getVisibleEntityIdsForUser with hop limits', () => {
+        it('should return empty set for user with no anchored characters', async () => {
+            const mockCrudService = {};
+            const result = await getVisibleEntityIdsForUser(mockCrudService, []);
+            expect(result).toEqual(new Set());
+        });
+
+        it('should return anchored characters at hop depth 0 with no expansion', async () => {
+            const mockCrudService = {
+                getMany: jest.fn().mockResolvedValue([]),
+            };
+            const anchoredIds = ['char-1', 'char-2'];
+            const result = await getVisibleEntityIdsForUser(mockCrudService, anchoredIds, 0);
+            expect(result).toEqual(new Set(['char-1', 'char-2']));
+        });
+
+        it('should expand to direct relations at hop depth 1', async () => {
+            const mockCrudService = {
+                getMany: jest.fn((relationName, where) => {
+                    // CharacterDeity: char-1 -> deity-1
+                    if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
+                        return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
+                    }
+                    if (relationName === 'CharacterDeity' && where.deity_id === 'char-1') {
+                        return Promise.resolve([]);
+                    }
+                    // For all other queries, return empty
+                    return Promise.resolve([]);
+                }),
+            };
+            const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 1);
+            expect(result).toContain('char-1');
+            expect(result).toContain('deity-1');
+        });
+
+        it('should not expand beyond hop limit', async () => {
+            const mockCrudService = {
+                getMany: jest.fn((relationName, where) => {
+                    // Simulate: char-1 -> deity-1 -> place-1
+                    if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
+                        return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
+                    }
+                    if (relationName === 'CharacterDeity' && where.deity_id === 'char-1') {
+                        return Promise.resolve([]);
+                    }
+                    // deity-1 should not be expanded at all with maxHops=1, so no place-1
+                    if (relationName === 'DeitySphere' && where.deity_id === 'deity-1') {
+                        return Promise.resolve([{ deity_id: 'deity-1', sphere_id: 'sphere-1' }]);
+                    }
+                    return Promise.resolve([]);
+                }),
+            };
+            const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 1);
+            // Should have char-1 and deity-1, but NOT sphere-1 (that would be 2 hops away)
+            expect(result).toContain('char-1');
+            expect(result).toContain('deity-1');
+            expect(result).not.toContain('sphere-1');
+        });
+
+        it('should expand to 2 hops when maxHops=2', async () => {
+            const mockCrudService = {
+                getMany: jest.fn((relationName, where) => {
+                    // char-1 -> deity-1
+                    if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
+                        return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
+                    }
+                    // deity-1 -> sphere-1
+                    if (relationName === 'DeitySphere' && where.deity_id === 'deity-1') {
+                        return Promise.resolve([{ deity_id: 'deity-1', sphere_id: 'sphere-1' }]);
+                    }
+                    // All other queries return empty
+                    return Promise.resolve([]);
+                }),
+            };
+            const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 2);
+            // Should have all three entities
+            expect(result).toContain('char-1');
+            expect(result).toContain('deity-1');
+            expect(result).toContain('sphere-1');
+        });
+
+        it('should handle unlimited hops (maxHops=undefined)', async () => {
+            const mockCrudService = {
+                getMany: jest.fn((relationName, where) => {
+                    // Simulate a chain: char-1 -> deity-1 -> sphere-1
+                    if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
+                        return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
+                    }
+                    if (relationName === 'DeitySphere' && where.deity_id === 'deity-1') {
+                        return Promise.resolve([{ deity_id: 'deity-1', sphere_id: 'sphere-1' }]);
+                    }
+                    // Unlimited should also expand sphere-1 (even if no more relations)
+                    if (relationName === 'CharacterDeity' && where.deity_id === 'char-1') {
+                        return Promise.resolve([]);
+                    }
+                    if (relationName === 'DeitySphere' && where.sphere_id === 'deity-1') {
+                        return Promise.resolve([]);
+                    }
+                    return Promise.resolve([]);
+                }),
+            };
+            const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], undefined);
+            // All entities should be visible with unlimited hops
+            expect(result).toContain('char-1');
+            expect(result).toContain('deity-1');
+            expect(result).toContain('sphere-1');
+        });
+
+        it('should handle self-relations (Character <-> Character) within hop limit', async () => {
+            const mockCrudService = {
+                getMany: jest.fn((relationName, where) => {
+                    // CharacterRelationship: char-1 related to char-2
+                    if (relationName === 'CharacterRelationship' && where.character_id === 'char-1') {
+                        return Promise.resolve([{ character_id: 'char-1', related_id: 'char-2' }]);
+                    }
+                    if (relationName === 'CharacterRelationship' && where.related_id === 'char-1') {
+                        return Promise.resolve([]);
+                    }
+                    // char-2 related to char-3, but this is 2 hops, so should not expand at maxHops=1
+                    if (relationName === 'CharacterRelationship' && where.character_id === 'char-2') {
+                        return Promise.resolve([{ character_id: 'char-2', related_id: 'char-3' }]);
+                    }
+                    return Promise.resolve([]);
+                }),
+            };
+            const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 1);
+            expect(result).toContain('char-1');
+            expect(result).toContain('char-2');
+            expect(result).not.toContain('char-3'); // 2 hops, beyond maxHops=1
+        });
+
+        it('should deduplicate entities seen via multiple paths', async () => {
+            const mockCrudService = {
+                getMany: jest.fn((relationName, where) => {
+                    // Both char-1 and char-2 relate to deity-1
+                    if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
+                        return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
+                    }
+                    if (relationName === 'CharacterDeity' && where.character_id === 'char-2') {
+                        return Promise.resolve([{ character_id: 'char-2', deity_id: 'deity-1' }]);
+                    }
+                    return Promise.resolve([]);
+                }),
+            };
+            const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1', 'char-2'], 1);
+            // deity-1 should appear only once in the Set
+            expect(result.size).toBe(3); // char-1, char-2, deity-1
+            expect(result).toContain('deity-1');
+        });
+
+        it('should handle empty anchored character list', async () => {
+            const mockCrudService = {};
+            const result = await getVisibleEntityIdsForUser(mockCrudService, [], 1);
+            expect(result).toEqual(new Set());
+        });
+
+        it('should handle null anchored character list', async () => {
+            const mockCrudService = {};
+            const result = await getVisibleEntityIdsForUser(mockCrudService, null, 1);
+            expect(result).toEqual(new Set());
+        });
+
+        it('should continue expanding from anchored characters even at hop 0 (they are the starting point)', async () => {
+            // Hop 0 means we see the anchored character but don't expand from it to relations
+            const mockCrudService = {
+                getMany: jest.fn().mockResolvedValue([{ deity_id: 'deity-1' }]),
+            };
+            const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 0);
+            // With 0 hops, we should only see the anchored character, not deities
+            expect(result).toEqual(new Set(['char-1']));
+            // getMany should not have been called at all since we don't expand at hop 0
+            expect(mockCrudService.getMany).not.toHaveBeenCalled();
         });
     });
 });

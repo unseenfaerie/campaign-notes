@@ -63,13 +63,14 @@ async function main() {
   await runSql(`Inserting characters...`, `INSERT OR IGNORE INTO characters (id, player_character, is_public, name, age, ancestry, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, total_health, deceased, short_description, long_explanation) VALUES
     ('alann-barnett', true, false, 'Alann Barnett', 32, 'human', 'Cleric', '4', 'neutral-good', 13, 8, 11, 10, 14, 11, 20, false, 'A thoughtful and strong-willed adventurer.', 'Long Explanation.'),
     ('releas-neb', true, false, 'Releas Neb', 28, 'human', 'Magic User', '7', 'chaotic-good', 5, 14, 10, 18, 13, 9, 16, false, 'A clever and resourceful wizard.', 'Long Explanation.'),
-    ('orlaith', true, false, 'Orlaith of the Mosswood', 21, 'human', 'Druid', '1', 'chaotic-neutral', 12, 15, 11, 9, 15, 9, 2, false, 'A burgeoning druid with knowledge of herbs.', 'Long Explanation.'),
+    ('orlaith-of-the-mosswood', true, false, 'Orlaith of the Mosswood', 21, 'human', 'Druid', '1', 'chaotic-neutral', 12, 15, 11, 9, 15, 9, 2, false, 'A burgeoning druid with knowledge of herbs.', 'Long Explanation.'),
     ('djinn', true, false, 'Djinn Rat-Eater', 23, 'human', 'Assassin', '2', 'neutral-evil', 8, 18, 10, 4, 15, 10, 5, false, 'A deceptive and quick assassin.', 'Long Explanation.'),
     ('apollonia-palleday', true, false, 'Apollonia Palleday', 16, 'human', 'Magic User', '5', 'neutral-good', 13, 8, 11, 18, 14, 11, 18, false, 'A bright and curious spellcaster.', 'Long Explanation.'),
     ('durchir', true, false, 'Durchir', 35, 'half-elf', 'Fighter', '2', 'lawful-evil', 18, 10, 12, 15, 10, 11, 22, true, 'Durchir of the Angry Orchard, fallen hero.', 'Long Explanation.'),
     ('cormac', true, false, 'Cormac', 27, 'half-elf', 'Thief/Illusionist', '5/4', 'chaotic-good', 9, 16, 7, 15, 14, 7, 15, false, 'A clever and nimble adventurer.', 'Long Explanation.'),
     ('bert-verinwort', false, false, 'Bert Verinwort', 54, 'human', NULL, NULL, 'lawful-neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, 'A local notable in Wavethorn.', 'Long Explanation.'),
     ('sieg-ordoss', false, false, 'Sieg Ordoss', 57, 'human', NULL, NULL, 'lawful-neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, true, 'A mysterious figure.', 'Long Explanation.'),
+    ('mildred-of-the-mosswood', false, false, 'Mildred of the Mosswood', 87, 'human', 'Druid', NULL, 'neutral-good', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, 'A wise old druid and herbal healer who lives in Lundgren.', 'Long Explanation.'),
     ('gereg', false, false, 'Gereg', 41, 'human', 'Thief', '5', 'neutral-evil', NULL, NULL, NULL, NULL, NULL, NULL, 20, false, 'A resident of Wavethorn.', 'Long Explanation.');
   `);
 
@@ -77,7 +78,7 @@ async function main() {
 
   await runSql(`Inserting user_character_anchors...`, `INSERT OR IGNORE INTO user_character_anchors (character_id, user_id, created_at) VALUES
     ('alann-barnett', 'alice', ?),
-    ('orlaith', 'rosie', ?),
+    ('orlaith-of-the-mosswood', 'rosie', ?),
     ('djinn', 'sadhi', ?),
     ('apollonia-palleday', 'sadhi', ?),
     ('releas-neb', 'keith', ?);
@@ -210,6 +211,8 @@ async function main() {
     ('durchir', 'alann-barnett', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'associate', 'Short description.', 'Long Explanation.'),
     ('cormac', 'durchir', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'associate', 'Short description.', 'Long Explanation.'),
     ('cormac', 'releas-neb', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'friend', 'Short description.', 'Long Explanation.'),
+    ('orlaith-of-the-mosswood', 'mildred-of-the-mosswood', '0200191257_age-of-descent-default', NULL, 'mentor', 'Orlaith was taken in by Mildred as a baby.', 'Long Explanation.'),
+    ('mildred-of-the-mosswood', 'orlaith-of-the-mosswood', '0200191257_age-of-descent-default', NULL, 'student', 'Mildred adopted Orlaith and trained them in Druidic ways.', 'Long Explanation.'),
     ('cormac', 'alann-barnett', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'friend', 'Short description.', 'Long Explanation.');
   `);
 

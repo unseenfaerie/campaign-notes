@@ -202,7 +202,7 @@ describe('metaRouter', () => {
             expect.arrayContaining(['acquired_date', 'relinquished_date', 'short_description'])
         );
 
-        const selfRelation = characterRelations.find((relation) => relation.relatedRoute === 'relationships');
+        const selfRelation = characterRelations.find((relation) => relation.relatedRoute === 'characters' && relation.relationName === 'CharacterRelationship');
         expect(selfRelation).toMatchObject({
             relationName: 'CharacterRelationship',
             kind: 'history',

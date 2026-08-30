@@ -345,6 +345,136 @@ async function isEntityRelatedToAnchoredCharacter(manifestCrudService, entityRou
 }
 
 /**
+ * Get the full transitive closure of visible entity IDs for a user
+ *
+ * Performs BFS traversal from all anchored character IDs through all relations,
+ * collecting every entity reachable from the player's characters. This implements
+ * clustered visibility: players see everything their characters connect to, recursively.
+ *
+ * Algorithm:
+ * 1. Start with all anchored character IDs in a queue
+ * 2. For each entity, find all relations connecting to it
+ * 3. Add related entities to queue if not yet visited
+ * 4. Continue until queue is empty
+ * 5. Return Set of all visited entity IDs
+ *
+ * @param {object} manifestCrudService - the CRUD service for database access
+ * @param {string[]} anchoredCharacterIds - list of anchored character IDs for this user
+ * @returns {Promise<Set<string>>} Set of all entity IDs visible through transitive relations
+ */
+async function getVisibleEntityIdsForUser(manifestCrudService, anchoredCharacterIds = [], maxHops) {
+    const visibleIds = new Set();
+
+    // If no anchored characters, user sees nothing (public entities handled elsewhere)
+    if (!anchoredCharacterIds || anchoredCharacterIds.length === 0) {
+        return visibleIds;
+    }
+
+    // Initialize queue with all anchored characters at hop depth 0
+    // Queue entries are { id, hopDepth }
+    const queue = anchoredCharacterIds.map(id => ({ id, hopDepth: 0 }));
+    const visited = new Set(anchoredCharacterIds);
+
+    // Add anchored characters to visible set
+    for (const charId of anchoredCharacterIds) {
+        visibleIds.add(charId);
+    }
+
+    // BFS traversal: for each entity, find all related entities up to maxHops distance
+    while (queue.length > 0) {
+        const { id: currentEntityId, hopDepth: currentHopDepth } = queue.shift();
+
+        // Check if we should continue expanding from this entity (respects maxHops limit)
+        // Skip relation queries entirely if we've reached or exceeded the hop limit
+        const shouldExpandFurther = maxHops === undefined || currentHopDepth < maxHops;
+        if (!shouldExpandFurther) {
+            continue;
+        }
+
+        // Find all relations that include this entity
+        for (const [relationName, relationDef] of Object.entries(domainManifest.relations)) {
+            if (!relationDef.members || relationDef.members.length < 2) {
+                continue;
+            }
+
+            const member0 = relationDef.members[0];
+            const member1 = relationDef.members[1];
+
+            try {
+                // Case 1: Self-relation (both members same type, e.g., CharacterRelationship)
+                if (member0.entity === member1.entity) {
+                    // Query in both directions
+                    const records1 = await manifestCrudService.getMany(relationName, {
+                        [member0.key]: currentEntityId,
+                    });
+                    if (Array.isArray(records1)) {
+                        for (const record of records1) {
+                            const relatedId = record[member1.key];
+                            if (relatedId && !visited.has(relatedId)) {
+                                visited.add(relatedId);
+                                visibleIds.add(relatedId);
+                                queue.push({ id: relatedId, hopDepth: currentHopDepth + 1 });
+                            }
+                        }
+                    }
+
+                    const records2 = await manifestCrudService.getMany(relationName, {
+                        [member1.key]: currentEntityId,
+                    });
+                    if (Array.isArray(records2)) {
+                        for (const record of records2) {
+                            const relatedId = record[member0.key];
+                            if (relatedId && !visited.has(relatedId)) {
+                                visited.add(relatedId);
+                                visibleIds.add(relatedId);
+                                queue.push({ id: relatedId, hopDepth: currentHopDepth + 1 });
+                            }
+                        }
+                    }
+                }
+                // Case 2: Cross-entity relations
+                else {
+                    // Check if current entity is member 0
+                    const records1 = await manifestCrudService.getMany(relationName, {
+                        [member0.key]: currentEntityId,
+                    });
+                    if (Array.isArray(records1)) {
+                        for (const record of records1) {
+                            const relatedId = record[member1.key];
+                            if (relatedId && !visited.has(relatedId)) {
+                                visited.add(relatedId);
+                                visibleIds.add(relatedId);
+                                queue.push({ id: relatedId, hopDepth: currentHopDepth + 1 });
+                            }
+                        }
+                    }
+
+                    // Check if current entity is member 1
+                    const records2 = await manifestCrudService.getMany(relationName, {
+                        [member1.key]: currentEntityId,
+                    });
+                    if (Array.isArray(records2)) {
+                        for (const record of records2) {
+                            const relatedId = record[member0.key];
+                            if (relatedId && !visited.has(relatedId)) {
+                                visited.add(relatedId);
+                                visibleIds.add(relatedId);
+                                queue.push({ id: relatedId, hopDepth: currentHopDepth + 1 });
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                // If query fails for a relation, continue to next relation
+                continue;
+            }
+        }
+    }
+
+    return visibleIds;
+}
+
+/**
  * Get all entities related to a list of anchored characters
  *
  * Queries the database to find entities that have relations with the given anchored character IDs.
@@ -472,4 +602,5 @@ module.exports = {
     filterEntitiesByVisibility,
     isEntityRelatedToAnchoredCharacter,
     getRelatedEntityIds,
+    getVisibleEntityIdsForUser,
 };
