@@ -224,7 +224,7 @@ function isRelationVisibleToUser(relationName, memberEntities, user, anchoredCha
         const member1Visible = isEntityVisibleToUser(memberEntities[1], memberRoute1, user, anchoredCharacterIds);
         const member0Anchored = isAnchoredCharacter(memberRoute0, memberEntities[0].id, anchoredCharacterIds);
         const member1Anchored = isAnchoredCharacter(memberRoute1, memberEntities[1].id, anchoredCharacterIds);
-        
+
         // Both members visible (standard visibility) OR at least one is anchored (relation visibility)
         return (member0Visible && member1Visible) || member0Anchored || member1Anchored;
     }
