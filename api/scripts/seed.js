@@ -216,8 +216,17 @@ async function main() {
   await runSql(`Inserting deity_spheres...`, `INSERT OR IGNORE INTO deity_spheres (deity_id, sphere_id) VALUES
     ('achiel', 'healing-sphere'),
     ('achiel', 'creation-sphere'),
-    ('wyaris', 'combat-sphere'),
-    ('danaris', 'death-sphere');
+    ('wyaris', 'combat-sphere');
+  `);
+
+  await runSql(`Inserting deity_organizations...`, `INSERT OR IGNORE INTO deity_organizations (deity_id, organization_id) VALUES
+    ('achiel', 'achielan-pantheon'),
+    ('sylrineth', 'ancient-elven-pantheon'),
+    ('idona', 'achielan-pantheon'),
+    ('wyaris', 'three-sisters'),
+    ('danaris', 'three-sisters'),
+    ('vaharis', 'three-sisters'),
+    ('ponat', 'achielan-pantheon');
   `);
 
   await runSql(`Inserting event_characters...`, `INSERT OR IGNORE INTO event_characters (event_id, character_id, short_description, long_explanation) VALUES

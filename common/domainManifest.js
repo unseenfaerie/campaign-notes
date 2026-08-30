@@ -308,6 +308,16 @@ const domainManifest = {
             keys: ['deity_id', 'sphere_id'],
             payload: {},
         },
+        DeityOrganization: {
+            kind: 'simple',
+            table: 'deity_organizations',
+            members: [
+                { entity: 'Deity', key: 'deity_id', route: 'organizations' },
+                { entity: 'Organization', key: 'organization_id', route: 'deities' },
+            ],
+            keys: ['deity_id', 'organization_id'],
+            payload: {},
+        },
         EventCharacter: {
             kind: 'relationship',
             table: 'event_characters',
