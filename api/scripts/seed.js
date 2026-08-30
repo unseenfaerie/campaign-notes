@@ -65,8 +65,8 @@ async function main() {
     ('releas-neb', true, false, 'Releas Neb', 28, 'human', 'Magic User', '7', 'chaotic-good', 5, 14, 10, 18, 13, 9, 16, false, 'A clever and resourceful wizard.', 'Long Explanation.'),
     ('orlaith', true, false, 'Orlaith of the Mosswood', 21, 'human', 'Druid', '1', 'chaotic-neutral', 12, 15, 11, 9, 15, 9, 2, false, 'A burgeoning druid with knowledge of herbs.', 'Long Explanation.'),
     ('djinn', true, false, 'Djinn Rat-Eater', 23, 'human', 'Assassin', '2', 'neutral-evil', 8, 18, 10, 4, 15, 10, 5, false, 'A deceptive and quick assassin.', 'Long Explanation.'),
-    ('appolonia-palleday', true, false, 'Appolonia Palleday', 16, 'human', 'Magic User', '5', 'neutral-good', 13, 8, 11, 18, 14, 11, 18, false, 'A bright and curious spellcaster.', 'Long Explanation.'),
-    ('durchir', true, false, 'Durchir', 35, 'half-elf', 'Fighter/Enchanter', '2/Enchanter', 'lawful-evil', 18, 10, 12, 15, 10, 11, 22, true, 'Durchir of the Angry Orchard, fallen hero.', 'Long Explanation.'),
+    ('apollonia-palleday', true, false, 'Apollonia Palleday', 16, 'human', 'Magic User', '5', 'neutral-good', 13, 8, 11, 18, 14, 11, 18, false, 'A bright and curious spellcaster.', 'Long Explanation.'),
+    ('durchir', true, false, 'Durchir', 35, 'half-elf', 'Fighter', '2', 'lawful-evil', 18, 10, 12, 15, 10, 11, 22, true, 'Durchir of the Angry Orchard, fallen hero.', 'Long Explanation.'),
     ('cormac', true, false, 'Cormac', 27, 'half-elf', 'Thief/Illusionist', '5/4', 'chaotic-good', 9, 16, 7, 15, 14, 7, 15, false, 'A clever and nimble adventurer.', 'Long Explanation.'),
     ('bert-verinwort', false, false, 'Bert Verinwort', 54, 'human', NULL, NULL, 'lawful-neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, 'A local notable in Wavethorn.', 'Long Explanation.'),
     ('sieg-ordoss', false, false, 'Sieg Ordoss', 57, 'human', NULL, NULL, 'lawful-neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, true, 'A mysterious figure.', 'Long Explanation.'),
@@ -79,8 +79,9 @@ async function main() {
     ('alann-barnett', 'alice', ?),
     ('orlaith', 'rosie', ?),
     ('djinn', 'sadhi', ?),
+    ('apollonia-palleday', 'sadhi', ?),
     ('releas-neb', 'keith', ?);
-  `, [nowIso, nowIso, nowIso, nowIso]);
+  `, [nowIso, nowIso, nowIso, nowIso, nowIso]);
 
   await runSql(`Inserting deities...`, `INSERT OR IGNORE INTO deities (id, is_public, name, pantheon, alignment, short_description, long_explanation) VALUES
     ('achiel', true, 'Achiel', 'Main Human', 'lawful-good', 'God of Light.', 'Long Explanation.'),

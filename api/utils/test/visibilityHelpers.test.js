@@ -9,6 +9,7 @@ const {
     isEntityVisibleToUser,
     isRelationVisibleToUser,
     filterEntitiesByVisibility,
+    isEntityRelatedToAnchoredCharacter,
 } = require('../../utils/visibilityHelpers');
 
 describe('visibilityHelpers', () => {
@@ -186,7 +187,7 @@ describe('visibilityHelpers', () => {
                 expect(isRelationVisibleToUser('DeitySphere', [publicMember1, publicMember2], playerUser, [])).toBe(true);
             });
 
-            it('should not see relation if one member is private', () => {
+            it('should not see relation if one member is private and not anchored', () => {
                 expect(isRelationVisibleToUser('EventCharacter', [publicMember1, privateMember1], playerUser, [])).toBe(false);
             });
 
@@ -197,6 +198,17 @@ describe('visibilityHelpers', () => {
             it('should see relation with anchored private character', () => {
                 const anchorIds = ['char-1'];
                 expect(isRelationVisibleToUser('CharacterDeity', [privateMember1, publicMember1], playerUser, anchorIds)).toBe(true);
+            });
+
+            it('should see relation if first member is anchored (even if second is private)', () => {
+                const anchorIds = ['char-1'];
+                expect(isRelationVisibleToUser('CharacterItem', [privateMember1, privateMember2], playerUser, anchorIds)).toBe(true);
+            });
+
+            it('should see relation if second member is anchored (even if first is private)', () => {
+                const otherPrivateMember = { id: 'char-2', is_public: false };
+                const anchorIds = ['char-2'];
+                expect(isRelationVisibleToUser('CharacterRelationship', [privateMember1, otherPrivateMember], playerUser, anchorIds)).toBe(true);
             });
         });
 
@@ -293,6 +305,58 @@ describe('visibilityHelpers', () => {
                 const result = filterEntitiesByVisibility([], 'deities', playerUser, []);
                 expect(result).toHaveLength(0);
             });
+        });
+    });
+
+    describe('isEntityRelatedToAnchoredCharacter', () => {
+        it('should return false if no anchored character IDs provided', async () => {
+            const mockCrudService = { getOne: jest.fn() };
+            const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'places', 'place-1', []);
+            expect(result).toBe(false);
+            expect(mockCrudService.getOne).not.toHaveBeenCalled();
+        });
+
+        it('should return false if null anchored character IDs', async () => {
+            const mockCrudService = { getOne: jest.fn() };
+            const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'places', 'place-1', null);
+            expect(result).toBe(false);
+            expect(mockCrudService.getOne).not.toHaveBeenCalled();
+        });
+
+        it('should return false if invalid entity route', async () => {
+            const mockCrudService = { getOne: jest.fn() };
+            const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'invalid-route', 'place-1', ['char-1']);
+            expect(result).toBe(false);
+            expect(mockCrudService.getOne).not.toHaveBeenCalled();
+        });
+
+        it('should return true if entity is related to an anchored character', async () => {
+            const mockCrudService = {
+                getOne: jest.fn().mockResolvedValue({ character_id: 'char-1', place_id: 'place-1' }),
+            };
+            const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'places', 'place-1', ['char-1']);
+            expect(result).toBe(true);
+            expect(mockCrudService.getOne).toHaveBeenCalled();
+        });
+
+        it('should return false if entity is not related to any anchored character', async () => {
+            const mockCrudService = {
+                getOne: jest.fn().mockResolvedValue(null),
+            };
+            const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'places', 'place-1', ['char-1']);
+            expect(result).toBe(false);
+            expect(mockCrudService.getOne).toHaveBeenCalled();
+        });
+
+        it('should check multiple anchored characters', async () => {
+            const mockCrudService = {
+                getOne: jest.fn()
+                    .mockResolvedValueOnce(null)  // char-1 has no relation
+                    .mockResolvedValueOnce({ character_id: 'char-2', item_id: 'item-1' }),  // char-2 has relation
+            };
+            const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'items', 'item-1', ['char-1', 'char-2']);
+            expect(result).toBe(true);
+            expect(mockCrudService.getOne).toHaveBeenCalledTimes(2);
         });
     });
 });

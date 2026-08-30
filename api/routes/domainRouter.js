@@ -28,6 +28,8 @@ const {
     isRelationVisibleToUser,
     filterEntitiesByVisibility,
     filterRelationsByVisibility,
+    isEntityRelatedToAnchoredCharacter,
+    getRelatedEntityIds,
 } = require('../utils/visibilityHelpers');
 
 const router = express.Router();
@@ -596,7 +598,24 @@ router.get('/:entityRoute', async (req, res) => {
             anchoredCharacterIds
         );
 
-        return res.json(visibleRecords);
+        // For players, also include entities related to their anchored characters
+        let resultRecords = visibleRecords;
+        if (req.auth && req.auth.role === 'player' && anchoredCharacterIds.length > 0) {
+            const relatedIds = await getRelatedEntityIds(
+                manifestCrudService,
+                req.params.entityRoute,
+                anchoredCharacterIds
+            );
+
+            // Add related entities that aren't already in visible records
+            if (relatedIds.length > 0) {
+                const visibleIds = new Set(visibleRecords.map(r => r.id));
+                const relatedRecords = records.filter(r => relatedIds.includes(r.id) && !visibleIds.has(r.id));
+                resultRecords = [...visibleRecords, ...relatedRecords];
+            }
+        }
+
+        return res.json(resultRecords);
     } catch (err) {
         const httpErr = toHttpError(err);
         return res.status(httpErr.status).json({ error: httpErr.message });
@@ -617,7 +636,19 @@ router.get('/:entityRoute/:id', async (req, res) => {
 
         // Check visibility
         const anchoredCharacterIds = await getAnchoredCharacterIds(req);
-        if (!isEntityVisibleToUser(record, req.params.entityRoute, req.auth, anchoredCharacterIds)) {
+        let isVisible = isEntityVisibleToUser(record, req.params.entityRoute, req.auth, anchoredCharacterIds);
+
+        // For players, also check if the entity is related to their anchored characters
+        if (!isVisible && req.auth && req.auth.role === 'player' && anchoredCharacterIds.length > 0) {
+            isVisible = await isEntityRelatedToAnchoredCharacter(
+                manifestCrudService,
+                req.params.entityRoute,
+                idValue,
+                anchoredCharacterIds
+            );
+        }
+
+        if (!isVisible) {
             return res.status(404).json({ error: 'Record not found' });
         }
 
@@ -756,7 +787,19 @@ router.get('/:entityRoute/:id/full', async (req, res) => {
 
         // Check visibility of the main entity
         const anchoredCharacterIds = await getAnchoredCharacterIds(req);
-        if (!isEntityVisibleToUser(record, req.params.entityRoute, req.auth, anchoredCharacterIds)) {
+        let isVisible = isEntityVisibleToUser(record, req.params.entityRoute, req.auth, anchoredCharacterIds);
+
+        // For players, also check if the entity is related to their anchored characters
+        if (!isVisible && req.auth && req.auth.role === 'player' && anchoredCharacterIds.length > 0) {
+            isVisible = await isEntityRelatedToAnchoredCharacter(
+                manifestCrudService,
+                req.params.entityRoute,
+                idValue,
+                anchoredCharacterIds
+            );
+        }
+
+        if (!isVisible) {
             return res.status(404).json({ error: 'Record not found' });
         }
 
