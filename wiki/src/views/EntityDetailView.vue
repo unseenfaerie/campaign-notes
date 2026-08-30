@@ -120,7 +120,12 @@ const sortedRelatedSections = computed(() => {
   }
 
   return Object.entries(fullData.value.related || {})
-    .map(([relatedRoute, records]) => [relatedRoute, dedupeRelatedRecords(records || [])] as [string, DomainEntity[]])
+    .map(([relatedRoute, records]) => {
+      // Skip deduplication for directional relations (CharacterRelationship) since they represent independent perspectives
+      const shouldDedupe = relatedRoute !== 'relationships'
+      const processed = shouldDedupe ? dedupeRelatedRecords(records || []) : (records || [])
+      return [relatedRoute, processed] as [string, DomainEntity[]]
+    })
     .filter(([, records]) => Array.isArray(records) && records.length > 0)
     .sort(([left], [right]) => left.localeCompare(right))
 })
