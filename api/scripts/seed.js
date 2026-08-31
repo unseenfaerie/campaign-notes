@@ -85,14 +85,14 @@ async function main() {
   `, [nowIso, nowIso, nowIso, nowIso, nowIso]);
 
   await runSql(`Inserting deities...`, `INSERT OR IGNORE INTO deities (id, is_public, name, pantheon, alignment, short_description, long_explanation) VALUES
-    ('achiel', true, 'Achiel', 'Main Human', 'lawful-good', 'God of Light.', 'Long Explanation.'),
-    ('idona', true, 'Idona', 'Main Human', 'chaotic-good', 'Goddess of Humanity.', 'The patron goddess of and mother to Humankind. Her nurturing guidance shows us what we need to know to thrive. Those that worship Idona are numerous within the Othlorin. She is primarily worshipped as Achiels Wife, deserving of respect and credence. There are some women who have dedicated their lives to interpreting the messages of the moon as those are what Idona intends.'),
-    ('ponat', true, 'Ponat', 'Main Human', 'lawful-good', 'God of Fortress and protection.', 'Long Explanation.'),
-    ('wyaris', false, 'Wyaris', 'Three Sister Goddesses', 'chaotic-good', 'Lady of Swords.', 'Long Explanation.'),
-    ('danaris', false, 'Danaris', 'Three Sister Goddesses', 'chaotic-neutral', 'Lady of Death.', 'Long Explanation.'),
-    ('vaharis', false, 'Vaharis', 'Three Sister Goddesses', 'lawful-neutral', 'Lady of Judgement.', 'Long Explanation.'),
-    ('sylrineth', false, 'Sylrineth', 'Ancient Elven', 'chaotic-evil', 'Keeper of Forbidden Knowledge.', 'Syrineth is queen of the 666 layers of the abyss. There she hoards esoteric knowledge and hedonistic souls. Her many demons do her bidding.'),
-    ('doh', true, 'Doh', 'Main Human', 'lawful-neutral', 'God of Law.', 'Long Explanation.');
+    ('achiel', true, 'Achiel', 'lawful-good', 'God of Light.', 'Long Explanation.'),
+    ('idona', true, 'Idona', 'chaotic-good', 'Goddess of Humanity.', 'The patron goddess of and mother to Humankind. Her nurturing guidance shows us what we need to know to thrive. Those that worship Idona are numerous within the Othlorin. She is primarily worshipped as Achiels Wife, deserving of respect and credence. There are some women who have dedicated their lives to interpreting the messages of the moon as those are what Idona intends.'),
+    ('ponat', true, 'Ponat', 'lawful-good', 'God of fortress and protection.', 'Long Explanation.'),
+    ('wyaris', false, 'Wyaris', 'chaotic-good', 'Lady of Swords.', 'Long Explanation.'),
+    ('danaris', false, 'Danaris', 'chaotic-neutral', 'Lady of Death.', 'Long Explanation.'),
+    ('vaharis', false, 'Vaharis', 'lawful-neutral', 'Lady of Judgement.', 'Long Explanation.'),
+    ('sylrineth', false, 'Sylrineth', 'chaotic-evil', 'Keeper of Forbidden Knowledge.', 'Syrineth is queen of the 666 layers of the abyss. There she hoards esoteric knowledge and hedonistic souls. Her many demons do her bidding.'),
+    ('doh', true, 'Doh', 'lawful-neutral', 'God of Law.', 'Long Explanation.');
   `);
 
   await runSql(`Normalizing seeded deity alignments...`, `UPDATE deities SET alignment = lower(replace(alignment, ' ', '-')) WHERE alignment IS NOT NULL;`);

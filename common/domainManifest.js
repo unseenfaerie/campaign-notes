@@ -51,7 +51,6 @@ const domainManifest = {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
                 is_public: { type: 'boolean', required: true, hidden: true },
                 name: { type: 'string', required: true },
-                pantheon: { type: 'string' },
                 alignment: { type: 'string', enum: 'alignment' },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
