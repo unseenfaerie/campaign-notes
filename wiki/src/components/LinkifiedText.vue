@@ -23,8 +23,18 @@ const fragments = computed(() => linkifyText(props.text, mentionTargets.value))
       v-if="fragment.target"
       :to="{ name: 'entity-detail', params: { entityRoute: fragment.target.route, id: fragment.target.id } }"
     >
-      {{ fragment.text }}
+      <strong v-if="fragment.bold">
+        <em v-if="fragment.italic">{{ fragment.text }}</em>
+        <template v-else>{{ fragment.text }}</template>
+      </strong>
+      <em v-else-if="fragment.italic">{{ fragment.text }}</em>
+      <template v-else>{{ fragment.text }}</template>
     </RouterLink>
+    <strong v-else-if="fragment.bold">
+      <em v-if="fragment.italic">{{ fragment.text }}</em>
+      <template v-else>{{ fragment.text }}</template>
+    </strong>
+    <em v-else-if="fragment.italic">{{ fragment.text }}</em>
     <template v-else>{{ fragment.text }}</template>
   </template>
 </template>

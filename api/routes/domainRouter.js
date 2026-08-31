@@ -28,13 +28,13 @@ const {
     isRelationVisibleToUser,
     filterEntitiesByVisibility,
     filterRelationsByVisibility,
-    isEntityRelatedToAnchoredCharacter,
     getRelatedEntityIds,
+    getVisibleEntityIdsForUser,
 } = require('../utils/visibilityHelpers');
 
 const router = express.Router();
 
-async function loadAssociatedRecords(relationName, relationDef, sourceId, anchorMemberIndex, user, anchoredCharacterIds) {
+async function loadAssociatedRecords(relationName, relationDef, sourceId, anchorMemberIndex, user, anchoredCharacterIds, visibleEntityIds) {
     const members = getRelationMembers(relationDef);
     const relationContext = getRelationContext(members, anchorMemberIndex);
     const relationRows = await loadRelationRows(relationName, relationContext, sourceId);
@@ -70,7 +70,12 @@ async function loadAssociatedRecords(relationName, relationDef, sourceId, anchor
                 const memberEntities = anchorMemberIndex === 0
                     ? [sourceEntity, targetEntity]
                     : [targetEntity, sourceEntity];
-                if (isRelationVisibleToUser(relationName, memberEntities, user, anchoredCharacterIds)) {
+                // Fall back to the transitive graph: both members reachable there means the
+                // relation connecting them should show too, even if neither is directly anchored.
+                const transitivelyVisible = !!visibleEntityIds
+                    && visibleEntityIds.has(sourceEntity.id)
+                    && visibleEntityIds.has(targetEntity.id);
+                if (isRelationVisibleToUser(relationName, memberEntities, user, anchoredCharacterIds) || transitivelyVisible) {
                     visibleRows.push(row);
                 }
             }
@@ -388,6 +393,19 @@ function isDm(auth) {
     return auth && auth.role === 'dm';
 }
 
+/**
+ * Get the player visibility hops limit for a user.
+ * DMs always see all entities (unlimited/undefined).
+ * Players get the manifest-configured limit.
+ * Other roles (viewer, null) get unlimited (handled separately via public visibility).
+ */
+function getPlayerVisibilityHops(auth) {
+    if (!auth || auth.role !== 'player') {
+        return undefined;
+    }
+    return domainManifest.playerVisibilityHops;
+}
+
 async function getAnchoredCharacterIds(req) {
     if (!req.auth || !req.auth.userId) {
         return [];
@@ -581,30 +599,34 @@ router.get('/:entityRoute', async (req, res) => {
         const { entityName } = getEntityByRoute(req.params.entityRoute);
         const records = await manifestCrudService.getMany(entityName);
 
-        // Filter records by visibility
+        // Get visibility scope for this user
         const anchoredCharacterIds = await getAnchoredCharacterIds(req);
-        const visibleRecords = filterEntitiesByVisibility(
-            records,
-            req.params.entityRoute,
-            req.auth,
-            anchoredCharacterIds
-        );
+        let visibleEntityIds = new Set();
 
-        // For players, also include entities related to their anchored characters
-        let resultRecords = visibleRecords;
+        // For players, compute full transitive visibility graph
         if (req.auth && req.auth.role === 'player' && anchoredCharacterIds.length > 0) {
-            const relatedIds = await getRelatedEntityIds(
+            visibleEntityIds = await getVisibleEntityIdsForUser(
                 manifestCrudService,
+                anchoredCharacterIds,
+                getPlayerVisibilityHops(req.auth)
+            );
+        }
+
+        // Filter records: for players use transitive graph, for others use standard visibility
+        let resultRecords;
+        if (req.auth && req.auth.role === 'player' && anchoredCharacterIds.length > 0) {
+            // Filter to entities in transitive graph or public entities
+            resultRecords = records.filter(r => {
+                return visibleEntityIds.has(r.id) || isEntityVisibleToUser(r, req.params.entityRoute, req.auth, anchoredCharacterIds);
+            });
+        } else {
+            // Use standard visibility filtering (DM sees all, viewer sees public, null user sees public)
+            resultRecords = filterEntitiesByVisibility(
+                records,
                 req.params.entityRoute,
+                req.auth,
                 anchoredCharacterIds
             );
-
-            // Add related entities that aren't already in visible records
-            if (relatedIds.length > 0) {
-                const visibleIds = new Set(visibleRecords.map(r => r.id));
-                const relatedRecords = records.filter(r => relatedIds.includes(r.id) && !visibleIds.has(r.id));
-                resultRecords = [...visibleRecords, ...relatedRecords];
-            }
         }
 
         return res.json(resultRecords);
@@ -630,14 +652,14 @@ router.get('/:entityRoute/:id', async (req, res) => {
         const anchoredCharacterIds = await getAnchoredCharacterIds(req);
         let isVisible = isEntityVisibleToUser(record, req.params.entityRoute, req.auth, anchoredCharacterIds);
 
-        // For players, also check if the entity is related to their anchored characters
+        // For players, also check transitive visibility graph
         if (!isVisible && req.auth && req.auth.role === 'player' && anchoredCharacterIds.length > 0) {
-            isVisible = await isEntityRelatedToAnchoredCharacter(
+            const visibleEntityIds = await getVisibleEntityIdsForUser(
                 manifestCrudService,
-                req.params.entityRoute,
-                idValue,
-                anchoredCharacterIds
+                anchoredCharacterIds,
+                getPlayerVisibilityHops(req.auth)
             );
+            isVisible = visibleEntityIds.has(idValue);
         }
 
         if (!isVisible) {
@@ -781,14 +803,18 @@ router.get('/:entityRoute/:id/full', async (req, res) => {
         const anchoredCharacterIds = await getAnchoredCharacterIds(req);
         let isVisible = isEntityVisibleToUser(record, req.params.entityRoute, req.auth, anchoredCharacterIds);
 
-        // For players, also check if the entity is related to their anchored characters
-        if (!isVisible && req.auth && req.auth.role === 'player' && anchoredCharacterIds.length > 0) {
-            isVisible = await isEntityRelatedToAnchoredCharacter(
+        // For players, compute the full transitive visibility graph (not just direct relations)
+        // once, so it can be reused both for the main entity check and for filtering relations below.
+        let visibleEntityIds;
+        if (req.auth && req.auth.role === 'player' && anchoredCharacterIds.length > 0) {
+            visibleEntityIds = await getVisibleEntityIdsForUser(
                 manifestCrudService,
-                req.params.entityRoute,
-                idValue,
-                anchoredCharacterIds
+                anchoredCharacterIds,
+                getPlayerVisibilityHops(req.auth)
             );
+            if (!isVisible) {
+                isVisible = visibleEntityIds.has(idValue);
+            }
         }
 
         if (!isVisible) {
@@ -808,7 +834,8 @@ router.get('/:entityRoute/:id/full', async (req, res) => {
                 idValue,
                 relation.anchorMemberIndex,
                 req.auth,
-                anchoredCharacterIds
+                anchoredCharacterIds,
+                visibleEntityIds
             );
         }
 
@@ -850,7 +877,21 @@ router.get('/:entityRoute/:id/:relatedRoute', async (req, res) => {
 
         // Check visibility of source entity
         const anchoredCharacterIds = await getAnchoredCharacterIds(req);
-        if (!isEntityVisibleToUser(sourceRecord, req.params.entityRoute, req.auth, anchoredCharacterIds)) {
+        let sourceVisible = isEntityVisibleToUser(sourceRecord, req.params.entityRoute, req.auth, anchoredCharacterIds);
+
+        let visibleEntityIds;
+        if (req.auth && req.auth.role === 'player' && anchoredCharacterIds.length > 0) {
+            visibleEntityIds = await getVisibleEntityIdsForUser(
+                manifestCrudService,
+                anchoredCharacterIds,
+                getPlayerVisibilityHops(req.auth)
+            );
+            if (!sourceVisible) {
+                sourceVisible = visibleEntityIds.has(sourceId);
+            }
+        }
+
+        if (!sourceVisible) {
             return res.status(404).json({ error: 'Record not found' });
         }
 
@@ -860,7 +901,8 @@ router.get('/:entityRoute/:id/:relatedRoute', async (req, res) => {
             sourceId,
             anchorMemberIndex,
             req.auth,
-            anchoredCharacterIds
+            anchoredCharacterIds,
+            visibleEntityIds
         );
         return res.json(records);
     } catch (err) {

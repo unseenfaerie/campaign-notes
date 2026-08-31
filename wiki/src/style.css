@@ -182,22 +182,19 @@ a:hover {
 }
 
 .entity-overview {
-    display: flex;
-    align-items: flex-start;
-    gap: 1.75rem;
-    flex-wrap: wrap;
+    display: flow-root;
 }
 
 .entity-facts {
-    flex: 0 0 auto;
+    float: left;
     min-width: 260px;
     max-width: 420px;
+    margin: 0 1.75rem 0.8rem 0;
     border: 1px solid #000;
     padding: 0.75rem 0.9rem;
 }
 
 .entity-long-description {
-    flex: 1 1 320px;
     min-width: 260px;
 }
 
@@ -682,6 +679,12 @@ a:hover {
 
     .field-list {
         grid-template-columns: 1fr;
+    }
+
+    .entity-facts {
+        float: none;
+        max-width: none;
+        margin: 0 0 0.8rem;
     }
 
     .wiki-article {

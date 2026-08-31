@@ -51,7 +51,6 @@ const domainManifest = {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
                 is_public: { type: 'boolean', required: true, hidden: true },
                 name: { type: 'string', required: true },
-                pantheon: { type: 'string' },
                 alignment: { type: 'string', enum: 'alignment' },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
@@ -66,7 +65,8 @@ const domainManifest = {
                 is_public: { type: 'boolean', required: true, hidden: true },
                 name: { type: 'string', required: true },
                 real_world_date: { type: 'string' },
-                in_game_time: { type: 'loreDate' },
+                in_game_time_start: { type: 'loreDate' },
+                in_game_time_end: { type: 'loreDate' },
                 previous_event_id: { type: 'string', ref: 'Event' },
                 next_event_id: { type: 'string', ref: 'Event' },
                 short_description: { type: 'string', required: true, expository: true },
@@ -109,6 +109,7 @@ const domainManifest = {
                 type: { type: 'string', required: true, enum: 'placeType' },
                 parent_id: { type: 'string', ref: 'Place' },
                 short_description: { type: 'string', required: true, expository: true },
+                establishments: { type: 'string', expository: true },
                 long_explanation: { type: 'string', expository: true },
             },
         },
@@ -274,8 +275,8 @@ const domainManifest = {
             table: 'character_relationships',
             directional: true,  // This is a one-way directional relation: character_id is the perspective holder, related_id is the subject. Each character's player independently creates records from their perspective.
             members: [
-                { entity: 'Character', key: 'character_id', route: 'relationships' },
-                { entity: 'Character', key: 'related_id', route: 'relationships' },
+                { entity: 'Character', key: 'character_id', route: 'characters' },
+                { entity: 'Character', key: 'related_id', route: 'characters' },
             ],
             historyKey: 'established_date',
             historyEndKey: 'dissolution_date',
@@ -341,32 +342,6 @@ const domainManifest = {
                 },
             },
         },
-        EventDeity: {
-            kind: 'relationship',
-            table: 'event_deities',
-            members: [
-                { entity: 'Event', key: 'event_id', route: 'deities' },
-                { entity: 'Deity', key: 'deity_id', route: 'events' },
-            ],
-            keys: ['event_id', 'deity_id'],
-            payload: {
-                short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
-            },
-        },
-        EventItem: {
-            kind: 'relationship',
-            table: 'event_items',
-            members: [
-                { entity: 'Event', key: 'event_id', route: 'items' },
-                { entity: 'Item', key: 'item_id', route: 'events' },
-            ],
-            keys: ['event_id', 'item_id'],
-            payload: {
-                short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
-            },
-        },
         EventOrganization: {
             kind: 'relationship',
             table: 'event_organizations',
@@ -381,17 +356,14 @@ const domainManifest = {
             },
         },
         EventPlace: {
-            kind: 'relationship',
+            kind: 'simple',
             table: 'event_places',
             members: [
                 { entity: 'Event', key: 'event_id', route: 'places' },
                 { entity: 'Place', key: 'place_id', route: 'events' },
             ],
             keys: ['event_id', 'place_id'],
-            payload: {
-                short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
-            },
+            payload: {},
         },
         OrganizationPlace: {
             kind: 'relationship',
@@ -427,6 +399,24 @@ const domainManifest = {
             payload: {},
         },
     },
+
+    /**
+     * Player visibility hop limit: controls how many relationship hops players can traverse
+     * from their anchored characters to see related entities.
+     *
+     * Semantics:
+     * - null or undefined: unlimited (current behavior, players see all reachable entities via BFS)
+     * - 0: players see only their anchored characters + all public entities
+     * - 1: players see anchored characters + entities directly related (1 hop) + public entities
+     * - 2+: players see anchored characters + entities up to N hops away + public entities
+     *
+     * DM role always sees all entities regardless of this setting.
+     * Viewer role always sees only public entities (not affected by this setting).
+     * Public entities remain visible at any hop count.
+     *
+     * Implementation: limits BFS traversal depth in getVisibleEntityIdsForUser()
+     */
+    playerVisibilityHops: 3,
 };
 
 function buildEntityTableMap(manifest = domainManifest) {

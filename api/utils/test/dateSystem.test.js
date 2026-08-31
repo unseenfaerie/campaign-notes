@@ -104,9 +104,9 @@ describe('dateSystem', () => {
 
     it('compares dates across eras chronologically regardless of year', () => {
         const laterEraEarlyYear = encodeLoreDate({
-            eraId: 'age-of-achiel',
+            eraId: 'age-of-light',
             year: 1,
-            calendarId: 'age-of-achiel-default',
+            calendarId: 'age-of-light-default',
             monthIndex: 0,
             day: 1,
         });

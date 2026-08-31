@@ -12,7 +12,7 @@ const ERAS = [
     { id: 'age-of-elves', order: 0, name: 'Age of Elves' },
     { id: 'age-of-ascension', order: 1, name: 'Age of Ascension' },
     { id: 'age-of-descent', order: 2, name: 'Age of Descent' },
-    { id: 'age-of-achiel', order: 3, name: 'Age of Achiel' },
+    { id: 'age-of-light', order: 3, name: 'Age of Light' },
 ];
 
 function genericMonths() {
@@ -62,9 +62,9 @@ const CALENDARS = {
         name: 'Common Calendar',
         months: REAL_WORLD_MONTH_NAMES.map((name) => ({ name, days: 28 })),
     },
-    'age-of-achiel-default': {
-        id: 'age-of-achiel-default',
-        eraId: 'age-of-achiel',
+    'age-of-light-default': {
+        id: 'age-of-light-default',
+        eraId: 'age-of-light',
         name: 'Calendar of Saints',
         months: ACHIEL_SAINT_MONTHS,
     },
