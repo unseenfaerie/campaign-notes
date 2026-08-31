@@ -195,8 +195,8 @@ async function main() {
     ('alann-barnett', 'adventurers-guild', '0200201001_age-of-descent-default', '', 'Rejoined due to pressure from the party.', NULL),
     ('releas-neb', 'adventurers-guild', '0200200029_age-of-descent-default', '', 'Became a member of the Adventurers Guild.', NULL),
     ('durchir', 'adventurers-guild', '0200200057_age-of-descent-default', '', 'Allied with the Adventurers Guild for information.', NULL),
-    ('orlaith-of-the-mosswood', 'orphans-of-lundgren', '0300006018_age-of-achiel-default', '', 'Formed the Orphans of Lundgren with Djinn.', NULL),
-    ('djinn', 'orphans-of-lundgren', '0300006018_age-of-achiel-default', '', 'Formed the Orphans of Lundgren with Orlaith.', NULL),
+    ('orlaith-of-the-mosswood', 'orphans-of-lundgren', '0300006018_age-of-light-default', '', 'Formed the Orphans of Lundgren with Djinn.', NULL),
+    ('djinn', 'orphans-of-lundgren', '0300006018_age-of-light-default', '', 'Formed the Orphans of Lundgren with Orlaith.', NULL),
     ('cormac', 'adventurers-guild', '0200200085_age-of-descent-default', '', 'Sworn to protect the realm as a knight.', NULL);
   `);
 

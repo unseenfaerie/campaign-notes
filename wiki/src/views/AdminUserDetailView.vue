@@ -297,7 +297,6 @@ onMounted(loadAll)
               v-model="detailForm.role"
               :options="[
                 { value: 'player', label: 'Player' },
-                { value: 'viewer', label: 'Viewer' },
                 { value: 'dm', label: 'DM' },
               ]"
             />

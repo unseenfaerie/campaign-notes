@@ -88,7 +88,6 @@ function cancelCreate() {
           v-model="role"
           :options="[
             { value: 'player', label: 'Player' },
-            { value: 'viewer', label: 'Viewer' },
             { value: 'dm', label: 'DM' },
           ]"
         />

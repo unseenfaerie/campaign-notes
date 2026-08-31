@@ -173,7 +173,6 @@ function mapFieldDefs(fieldsObj) {
         if (fieldDef.autoIncrement) field.autoIncrement = true;
         if (fieldDef.hidden) field.hidden = true;
         if (fieldDef.expository) field.expository = true;
-        if (fieldDef.access && fieldDef.access.playerPatch) field.playerEditable = true;
         if (fieldDef.ref) {
             const referencedEntity = Object.entries(domainManifest.entities).find(
                 ([entityName, entityDef]) => entityName === fieldDef.ref || entityDef.route === fieldDef.ref

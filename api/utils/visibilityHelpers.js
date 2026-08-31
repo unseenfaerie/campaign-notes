@@ -4,7 +4,6 @@
  * Rules:
  * - DM (role='dm'): Sees all entities and relations (bypass all checks)
  * - Player (role='player'): Sees anchored characters + their relations + related entity pages + public entities/relations
- * - Viewer (role='viewer'): Sees only public entities/relations
  *
  * Visibility is controlled by the is_public boolean field on each entity instance.
  */
@@ -14,7 +13,7 @@ const { domainManifest } = require('../../common/domainManifest');
 /**
  * Player visibility hop limit: how many relationship hops a player can traverse from their
  * anchored characters to see related entities (0 = anchored characters + public only).
- * Tune here directly; DM/viewer roles are unaffected (handled separately).
+ * Tune here directly; DMs are unaffected (handled separately).
  */
 const PLAYER_VISIBILITY_HOPS = 3;
 
@@ -80,7 +79,7 @@ function isEntityPublic(entity) {
  * Visibility rules:
  * - DM: always visible
  * - Anchored character: visible to owner (must be player role)
- * - Public entity: visible to all authenticated users (DM, player, viewer) and unauthenticated (null) users
+ * - Public entity: visible to players and unauthenticated users
  * - Other entities: not visible
  *
  * @param {object} entity - the entity object with id and is_public fields
@@ -97,11 +96,6 @@ function isEntityVisibleToUser(entity, entityRoute, user, anchoredCharacterIds =
     // DM sees everything
     if (isDm(user)) {
         return true;
-    }
-
-    // Viewers can only see public entities
-    if (user && user.role === 'viewer') {
-        return isEntityPublic(entity);
     }
 
     // Players can see anchored characters and public entities
@@ -190,7 +184,6 @@ function getVisibleMemberIndices(relationName, relationRecord, memberEntities, u
  * Visibility for a relation:
  * - DM: sees all relations
  * - Player: sees relations where both members are visible, OR where at least one member is an anchored character
- * - Viewer: sees relations where both members are public
  *
  * @param {string} relationName - the relation name (e.g., 'CharacterDeity')
  * @param {array} memberEntities - array of member entities [entity1, entity2] with id and is_public fields
@@ -217,11 +210,6 @@ function isRelationVisibleToUser(relationName, memberEntities, user, anchoredCha
 
     const memberRoute0 = getRouteByEntityName(relationDef.members[0].entity);
     const memberRoute1 = getRouteByEntityName(relationDef.members[1].entity);
-
-    // Viewers can only see relations where both members are public
-    if (user && user.role === 'viewer') {
-        return isEntityPublic(memberEntities[0]) && isEntityPublic(memberEntities[1]);
-    }
 
     // Players can see relations where:
     // - Both members are visible, OR

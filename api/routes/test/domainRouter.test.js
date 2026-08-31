@@ -790,78 +790,7 @@ describe('domainRouter isolated unit tests', () => {
         );
     });
 
-    it('PATCH /:entityRoute/:id allows player updates to anchored character long_explanation', async () => {
-        manifestHelpers.getEntityByRoute.mockImplementationOnce(() => ({
-            entityName: 'Character',
-            entityDef: {
-                route: 'characters',
-                idField: 'id',
-                fields: {
-                    id: { type: 'string' },
-                    long_explanation: {
-                        type: 'string',
-                        access: {
-                            playerPatch: {
-                                ownership: {
-                                    type: 'anchored-character',
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        }));
-        listAnchoredCharacterIdsByUserId.mockResolvedValueOnce(['char-1']);
-        manifestCrudService.update.mockResolvedValueOnce({
-            updated: 1,
-            record: { id: 'char-1', long_explanation: 'player text' },
-        });
-
-        const response = await request(app)
-            .patch('/api/characters/char-1')
-            .set('x-test-role', 'player')
-            .set('x-test-user', 'player-one')
-            .send({ long_explanation: 'player text' });
-
-        expect(response.status).toBe(200);
-        expect(listAnchoredCharacterIdsByUserId).toHaveBeenCalledWith('player-one');
-    });
-
-    it('PATCH /:entityRoute/:id blocks player updates to dm-only fields', async () => {
-        const response = await request(app)
-            .patch('/api/characters/char-1')
-            .set('x-test-role', 'player')
-            .set('x-test-user', 'player-one')
-            .send({ name: 'Nope' });
-
-        expect(response.status).toBe(403);
-        expect(response.body).toEqual({ error: 'Field is dm-only: name' });
-        expect(manifestCrudService.update).not.toHaveBeenCalled();
-    });
-
-    it('PATCH /:entityRoute/:id blocks player updates to unanchored character records', async () => {
-        manifestHelpers.getEntityByRoute.mockImplementationOnce(() => ({
-            entityName: 'Character',
-            entityDef: {
-                route: 'characters',
-                idField: 'id',
-                fields: {
-                    id: { type: 'string' },
-                    long_explanation: {
-                        type: 'string',
-                        access: {
-                            playerPatch: {
-                                ownership: {
-                                    type: 'anchored-character',
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        }));
-        listAnchoredCharacterIdsByUserId.mockResolvedValueOnce(['char-2']);
-
+    it('PATCH /:entityRoute/:id blocks player updates', async () => {
         const response = await request(app)
             .patch('/api/characters/char-1')
             .set('x-test-role', 'player')
@@ -869,7 +798,7 @@ describe('domainRouter isolated unit tests', () => {
             .send({ long_explanation: 'player text' });
 
         expect(response.status).toBe(403);
-        expect(response.body).toEqual({ error: 'Players may only patch anchored character records' });
+        expect(response.body).toEqual({ error: 'Only dm users can modify canonical domain data' });
         expect(manifestCrudService.update).not.toHaveBeenCalled();
     });
 
@@ -936,17 +865,7 @@ describe('domainRouter isolated unit tests', () => {
                 ],
                 payload: {
                     short_description: { type: 'string', required: true },
-                    long_explanation: {
-                        type: 'string',
-                        access: {
-                            playerPatch: {
-                                ownership: {
-                                    type: 'anchored-character',
-                                    relationMemberEntity: 'Character',
-                                },
-                            },
-                        },
-                    },
+                    long_explanation: { type: 'string' },
                 },
             },
             anchorMemberIndex: 0,
@@ -985,80 +904,7 @@ describe('domainRouter isolated unit tests', () => {
         );
     });
 
-    it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId allows player updates for anchored character relation long_explanation', async () => {
-        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
-            relationName: 'EventItem',
-            relationDef: {
-                kind: 'relationship',
-                members: [
-                    { entity: 'Character', key: 'character_id', route: 'items' },
-                    { entity: 'Item', key: 'item_id', route: 'characters' },
-                ],
-                payload: {
-                    long_explanation: {
-                        type: 'string',
-                        access: {
-                            playerPatch: {
-                                ownership: {
-                                    type: 'anchored-character',
-                                    relationMemberEntity: 'Character',
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-            anchorMemberIndex: 0,
-        });
-        listAnchoredCharacterIdsByUserId.mockResolvedValueOnce(['char-1']);
-        manifestCrudService.getOne
-            .mockResolvedValueOnce({ id: 'char-1' })
-            .mockResolvedValueOnce({ id: 'char-1' });
-        manifestCrudService.update.mockResolvedValueOnce({
-            updated: 1,
-            record: { character_id: 'char-1', item_id: 'char-1', long_explanation: 'player text' },
-        });
-
-        const response = await request(app)
-            .patch('/api/characters/char-1/items/char-1')
-            .set('x-test-role', 'player')
-            .set('x-test-user', 'player-one')
-            .send({ long_explanation: 'player text' });
-
-        expect(response.status).toBe(200);
-        expect(listAnchoredCharacterIdsByUserId).toHaveBeenCalledWith('player-one');
-    });
-
-    it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId blocks player updates when relation is not tied to anchored character', async () => {
-        manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
-            relationName: 'EventItem',
-            relationDef: {
-                kind: 'relationship',
-                members: [
-                    { entity: 'Character', key: 'character_id', route: 'items' },
-                    { entity: 'Item', key: 'item_id', route: 'characters' },
-                ],
-                payload: {
-                    long_explanation: {
-                        type: 'string',
-                        access: {
-                            playerPatch: {
-                                ownership: {
-                                    type: 'anchored-character',
-                                    relationMemberEntity: 'Character',
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-            anchorMemberIndex: 0,
-        });
-        listAnchoredCharacterIdsByUserId.mockResolvedValueOnce(['char-9']);
-        manifestCrudService.getOne
-            .mockResolvedValueOnce({ id: 'char-1' })
-            .mockResolvedValueOnce({ id: 'char-1' });
-
+    it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId blocks player updates', async () => {
         const response = await request(app)
             .patch('/api/characters/char-1/items/char-1')
             .set('x-test-role', 'player')
@@ -1066,9 +912,7 @@ describe('domainRouter isolated unit tests', () => {
             .send({ long_explanation: 'player text' });
 
         expect(response.status).toBe(403);
-        expect(response.body).toEqual({
-            error: 'Players may only patch relation records tied to anchored characters',
-        });
+        expect(response.body).toEqual({ error: 'Only dm users can modify canonical domain data' });
         expect(manifestCrudService.update).not.toHaveBeenCalled();
     });
 

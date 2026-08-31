@@ -18,7 +18,7 @@ const { requireRole } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-const VALID_ROLES = new Set(['dm', 'player', 'viewer']);
+const VALID_ROLES = new Set(['dm', 'player']);
 
 function isSqliteConstraint(err) {
     return err && err.code === 'SQLITE_CONSTRAINT';

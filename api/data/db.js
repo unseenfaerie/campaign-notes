@@ -21,7 +21,7 @@ function getAuthCreateTableSql() {
       id TEXT PRIMARY KEY,
       username TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
-      role TEXT NOT NULL CHECK (role IN ('dm', 'player', 'viewer')),
+      role TEXT NOT NULL CHECK (role IN ('dm', 'player')),
       disabled INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -64,6 +64,8 @@ async function initializeDatabase(database = db) {
       console.log(`Created or verified table: ${tableMatch[1]}`);
     }
   }
+
+  await runStatement(database, "UPDATE users SET role = 'player' WHERE role = 'viewer'");
 
   console.log('Database tables created or verified from domainManifest.');
 }
