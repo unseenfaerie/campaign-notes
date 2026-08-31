@@ -72,3 +72,52 @@ export async function getDateSystem(): Promise<DateSystem> {
     return schemas.dateSystem
 }
 
+// Edit Proposals API
+
+export type EditProposal = {
+    id: string
+    proposed_by_user_id: string
+    entity_route: string
+    entity_id: string
+    relation_name?: string | null
+    relation_member_ids?: string | null
+    field_name: string
+    old_value?: string | null
+    new_value: string
+    proposal_type: 'field-edit' | 'relation-create'
+    status: 'pending' | 'approved' | 'rejected'
+    rejected_reason?: string | null
+    created_at: string
+    reviewed_by_user_id?: string | null
+    reviewed_at?: string | null
+}
+
+export async function getEditProposals(status?: string) {
+    const query = status ? `?status=${status}` : ''
+    return requestJson<{ proposals: EditProposal[]; count: number }>(`/meta/edit-proposals${query}`)
+}
+
+export async function getUserProposals(userId: string, status?: string, limit: number = 50) {
+    const query = new URLSearchParams()
+    if (status) query.append('status', status)
+    query.append('limit', limit.toString())
+    const queryStr = query.toString()
+    return requestJson<{ proposals: EditProposal[]; count: number }>(
+        `/meta/edit-proposals/by-user/${userId}${queryStr ? '?' + queryStr : ''}`
+    )
+}
+
+export async function getProposalStats() {
+    return requestJson<{ total: number; pending: number; approved: number; rejected: number }>(
+        '/meta/edit-proposals-stats'
+    )
+}
+
+export async function reviewProposal(proposalId: string, action: 'approve' | 'reject', reason?: string) {
+    return requestJson<{ message: string; proposal: EditProposal }>('/meta/edit-proposals/' + proposalId, {
+        method: 'PATCH',
+        body: JSON.stringify({ action, reason }),
+        headers: { 'Content-Type': 'application/json' },
+    })
+}
+

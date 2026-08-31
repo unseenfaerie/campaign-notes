@@ -43,8 +43,13 @@ async function handleLogout() {
           </RouterLink>
         </nav>
 
+        <nav v-if="auth.user.value?.role === 'player'" aria-label="Player navigation" class="nav-links">
+          <RouterLink :to="{ name: 'player-proposals' }" class="nav-link">My Proposals</RouterLink>
+        </nav>
+
         <nav v-if="auth.isAdmin.value" aria-label="Admin navigation" class="nav-links admin-nav">
           <RouterLink :to="{ name: 'admin-users' }" class="nav-link">Manage Users</RouterLink>
+          <RouterLink :to="{ name: 'admin-edit-proposals' }" class="nav-link">Review Proposals</RouterLink>
         </nav>
 
         <button class="logout-button" type="button" @click="handleLogout">Logout</button>

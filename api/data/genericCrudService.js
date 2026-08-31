@@ -71,6 +71,33 @@ function toResourceDefinition(resourceName, manifest = domainManifest) {
     };
   }
 
+  // Handle system resources like edit_proposals
+  if (resourceName === 'edit_proposals') {
+    return {
+      kind: 'system',
+      name: 'edit_proposals',
+      table: 'edit_proposals',
+      fields: {
+        id: { type: 'string', required: true, primary: true },
+        proposed_by_user_id: { type: 'string', required: true },
+        entity_route: { type: 'string', required: true },
+        entity_id: { type: 'string', required: true },
+        relation_name: { type: 'string' },
+        relation_member_ids: { type: 'string' },
+        field_name: { type: 'string', required: true },
+        old_value: { type: 'string' },
+        new_value: { type: 'string', required: true },
+        proposal_type: { type: 'string', required: true },
+        status: { type: 'string', required: true },
+        rejected_reason: { type: 'string' },
+        created_at: { type: 'string', required: true },
+        reviewed_by_user_id: { type: 'string' },
+        reviewed_at: { type: 'string' },
+      },
+      primaryKeys: ['id'],
+    };
+  }
+
   throw new Error(`Unknown resource: ${resourceName}`);
 }
 

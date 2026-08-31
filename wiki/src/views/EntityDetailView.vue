@@ -4,7 +4,14 @@ import AddRelatedEntityForm from '../components/AddRelatedEntityForm.vue'
 import CollapseSection from '../components/CollapseSection.vue'
 import FieldList from '../components/FieldList.vue'
 import { ApiError } from '../services/apiClient'
-import { getEntityFull, listEntities, updateEntity, updateRelation, type DomainEntity } from '../services/domainService'
+import {
+  getEntityFull,
+  isEditProposalSubmission,
+  listEntities,
+  updateEntity,
+  updateRelation,
+  type DomainEntity,
+} from '../services/domainService'
 import {
   getEntitySchema,
   getRelationSchemas,
@@ -40,6 +47,7 @@ const editFields = ref<EntityFieldSchema[]>([])
 const editValues = ref<Record<string, any>>({})
 const saving = ref(false)
 const saveError = ref('')
+const proposalMessage = ref('')
 
 const relationSchemas = ref<RelationFormSchema[]>([])
 const entitySchema = ref<EntitySchema | null>(null)
@@ -321,56 +329,11 @@ function editableFields(fields: EntityFieldSchema[]): EntityFieldSchema[] {
   return fields.filter((field) => !field.primary)
 }
 
-// Non-admin players are limited to fields the manifest marks as player-editable.
 function fieldsForRole(fields: EntityFieldSchema[]): EntityFieldSchema[] {
-  const nonPrimary = editableFields(fields)
-  return auth.isAdmin.value ? nonPrimary : nonPrimary.filter((field) => field.playerEditable)
+  return editableFields(fields)
 }
 
-function characterCandidateIdsForRelation(relatedRoute: string, record: DomainEntity): string[] {
-  const schema = findRelationSchema(relatedRoute)
-  const ids: string[] = []
-
-  if (props.entityRoute === 'characters') {
-    ids.push(props.id)
-  }
-
-  if (schema?.relatedEntityRoute === 'characters') {
-    const relatedId = relatedRecordId(record)
-    if (relatedId) {
-      ids.push(relatedId)
-    }
-  }
-
-  return ids
-}
-
-function canPlayerEditRelation(relatedRoute: string, record: DomainEntity): boolean {
-  const schema = findRelationSchema(relatedRoute)
-  if (!schema || !schema.fields.some((field) => field.playerEditable)) {
-    return false
-  }
-
-  const candidateIds = characterCandidateIdsForRelation(relatedRoute, record)
-  return candidateIds.some((candidateId) => auth.anchoredCharacterIds.value.includes(candidateId))
-}
-
-const canPlayerEditEntity = computed(() => {
-  if (props.entityRoute !== 'characters') {
-    return false
-  }
-
-  const fields = entitySchema.value?.fields ?? []
-  if (!fields.some((field) => field.playerEditable)) {
-    return false
-  }
-
-  return auth.anchoredCharacterIds.value.includes(props.id)
-})
-
-const visibleEditFields = computed(() =>
-  auth.isAdmin.value ? editFields.value : editFields.value.filter((field) => field.playerEditable)
-)
+const visibleEditFields = computed(() => fieldsForRole(editFields.value))
 
 function primaryFields(fields: EntityFieldSchema[]): EntityFieldSchema[] {
   return fields.filter((field) => field.primary)
@@ -466,8 +429,12 @@ async function saveEditRelation(relatedRoute: string, record: DomainEntity) {
     const payload = buildFieldsPayload(fieldsForRole(schema.fields), relationEditValues.value, {
       clearOptionalLoreDates: true,
     })
-    await updateRelation(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), payload)
+    const result = await updateRelation(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), payload)
     editingRelationKey.value = null
+    if (isEditProposalSubmission(result)) {
+      proposalMessage.value = 'Suggestion sent. Track it in your proposals queue.'
+      return
+    }
     await loadDetail({ silent: true })
   } catch (error) {
     if (error instanceof ApiError || error instanceof Error) {
@@ -512,7 +479,7 @@ async function saveEditHistory(relatedRoute: string, record: DomainEntity) {
     const payload = buildFieldsPayload(fieldsForRole(schema.fields), historyEditValues.value, {
       clearOptionalLoreDates: true,
     })
-    await updateRelation(
+    const result = await updateRelation(
       props.entityRoute,
       props.id,
       relatedRoute,
@@ -521,6 +488,10 @@ async function saveEditHistory(relatedRoute: string, record: DomainEntity) {
       historyEditOriginalSelector.value
     )
     editingHistoryKey.value = null
+    if (isEditProposalSubmission(result)) {
+      proposalMessage.value = 'Suggestion sent. Track it in your proposals queue.'
+      return
+    }
     await loadDetail({ silent: true })
   } catch (error) {
     if (error instanceof ApiError || error instanceof Error) {
@@ -631,9 +602,14 @@ async function saveEdit() {
 
   try {
     const payload = buildEditPayload()
-    const updated = await updateEntity(props.entityRoute, props.id, payload)
+    const result = await updateEntity(props.entityRoute, props.id, payload)
+    if (isEditProposalSubmission(result)) {
+      proposalMessage.value = 'Suggestion sent. Track it in your proposals queue.'
+      isEditing.value = false
+      return
+    }
     if (fullData.value) {
-      fullData.value.entity = { ...fullData.value.entity, ...updated }
+      fullData.value.entity = { ...fullData.value.entity, ...result }
     }
     isEditing.value = false
   } catch (error) {
@@ -657,6 +633,11 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
       <h1>{{ entityPageTitle }}</h1>
     </header>
 
+    <p v-if="proposalMessage" class="status-card proposal-confirmation">
+      {{ proposalMessage }}
+      <RouterLink :to="{ name: 'player-proposals' }">View proposals</RouterLink>
+    </p>
+
     <p v-if="loading" class="status-card">Loading entity detail...</p>
     <p v-else-if="errorMessage" class="status-card error">{{ errorMessage }}</p>
 
@@ -665,7 +646,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
         <div class="section-heading-row">
           <h3>Core data</h3>
           <button
-            v-if="(auth.isAdmin.value || canPlayerEditEntity) && !isEditing"
+            v-if="!isEditing"
             type="button"
             class="secondary-button"
             @click="startEdit"
@@ -848,7 +829,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 <template v-else>{{ relatedRecordLabel(record) }}</template>
               </h4>
               <button
-                v-if="(auth.isAdmin.value || canPlayerEditRelation(relatedRoute, record)) && isRelationshipKind(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}`"
+                v-if="isRelationshipKind(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}`"
                 type="button"
                 class="secondary-button"
                 @click="startEditRelation(relatedRoute, record)"
@@ -1061,10 +1042,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                   <p v-if="historyEditError" class="status-card error">{{ historyEditError }}</p>
                 </form>
                 <div v-else class="entity-overview">
-                  <div
-                    v-if="auth.isAdmin.value || canPlayerEditRelation(relatedRoute, record)"
-                    class="history-record-actions"
-                  >
+                  <div class="history-record-actions">
                     <button
                       type="button"
                       class="secondary-button"

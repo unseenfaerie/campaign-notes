@@ -790,7 +790,7 @@ describe('domainRouter isolated unit tests', () => {
         );
     });
 
-    it('PATCH /:entityRoute/:id allows player updates to anchored character long_explanation', async () => {
+    it('PATCH /:entityRoute/:id creates a proposal for a player edit', async () => {
         manifestHelpers.getEntityByRoute.mockImplementationOnce(() => ({
             entityName: 'Character',
             entityDef: {
@@ -811,35 +811,43 @@ describe('domainRouter isolated unit tests', () => {
                 },
             },
         }));
-        listAnchoredCharacterIdsByUserId.mockResolvedValueOnce(['char-1']);
-        manifestCrudService.update.mockResolvedValueOnce({
-            updated: 1,
-            record: { id: 'char-1', long_explanation: 'player text' },
-        });
-
         const response = await request(app)
             .patch('/api/characters/char-1')
             .set('x-test-role', 'player')
             .set('x-test-user', 'player-one')
             .send({ long_explanation: 'player text' });
 
-        expect(response.status).toBe(200);
-        expect(listAnchoredCharacterIdsByUserId).toHaveBeenCalledWith('player-one');
+        expect(response.status).toBe(202);
+        expect(response.body.message).toBe('Proposals created - awaiting DM review');
+        expect(manifestCrudService.insert).toHaveBeenCalledWith(
+            'edit_proposals',
+            expect.objectContaining({
+                proposed_by_user_id: 'player-one',
+                entity_route: 'characters',
+                entity_id: 'char-1',
+                field_name: 'long_explanation',
+                proposal_type: 'field-edit',
+            })
+        );
+        expect(manifestCrudService.update).not.toHaveBeenCalled();
     });
 
-    it('PATCH /:entityRoute/:id blocks player updates to dm-only fields', async () => {
+    it('PATCH /:entityRoute/:id creates a proposal for every player-editable field', async () => {
         const response = await request(app)
             .patch('/api/characters/char-1')
             .set('x-test-role', 'player')
             .set('x-test-user', 'player-one')
             .send({ name: 'Nope' });
 
-        expect(response.status).toBe(403);
-        expect(response.body).toEqual({ error: 'Field is dm-only: name' });
+        expect(response.status).toBe(202);
+        expect(manifestCrudService.insert).toHaveBeenCalledWith(
+            'edit_proposals',
+            expect.objectContaining({ field_name: 'name' })
+        );
         expect(manifestCrudService.update).not.toHaveBeenCalled();
     });
 
-    it('PATCH /:entityRoute/:id blocks player updates to unanchored character records', async () => {
+    it('PATCH /:entityRoute/:id creates a proposal without requiring character ownership', async () => {
         manifestHelpers.getEntityByRoute.mockImplementationOnce(() => ({
             entityName: 'Character',
             entityDef: {
@@ -860,16 +868,17 @@ describe('domainRouter isolated unit tests', () => {
                 },
             },
         }));
-        listAnchoredCharacterIdsByUserId.mockResolvedValueOnce(['char-2']);
-
         const response = await request(app)
             .patch('/api/characters/char-1')
             .set('x-test-role', 'player')
             .set('x-test-user', 'player-one')
             .send({ long_explanation: 'player text' });
 
-        expect(response.status).toBe(403);
-        expect(response.body).toEqual({ error: 'Players may only patch anchored character records' });
+        expect(response.status).toBe(202);
+        expect(manifestCrudService.insert).toHaveBeenCalledWith(
+            'edit_proposals',
+            expect.objectContaining({ entity_id: 'char-1', field_name: 'long_explanation' })
+        );
         expect(manifestCrudService.update).not.toHaveBeenCalled();
     });
 
@@ -985,7 +994,7 @@ describe('domainRouter isolated unit tests', () => {
         );
     });
 
-    it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId allows player updates for anchored character relation long_explanation', async () => {
+    it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId creates a proposal for a player relation edit', async () => {
         manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
             relationName: 'EventItem',
             relationDef: {
@@ -1010,26 +1019,29 @@ describe('domainRouter isolated unit tests', () => {
             },
             anchorMemberIndex: 0,
         });
-        listAnchoredCharacterIdsByUserId.mockResolvedValueOnce(['char-1']);
         manifestCrudService.getOne
             .mockResolvedValueOnce({ id: 'char-1' })
             .mockResolvedValueOnce({ id: 'char-1' });
-        manifestCrudService.update.mockResolvedValueOnce({
-            updated: 1,
-            record: { character_id: 'char-1', item_id: 'char-1', long_explanation: 'player text' },
-        });
-
         const response = await request(app)
             .patch('/api/characters/char-1/items/char-1')
             .set('x-test-role', 'player')
             .set('x-test-user', 'player-one')
             .send({ long_explanation: 'player text' });
 
-        expect(response.status).toBe(200);
-        expect(listAnchoredCharacterIdsByUserId).toHaveBeenCalledWith('player-one');
+        expect(response.status).toBe(202);
+        expect(response.body.message).toBe('Proposal created - awaiting DM review');
+        expect(manifestCrudService.insert).toHaveBeenCalledWith(
+            'edit_proposals',
+            expect.objectContaining({
+                relation_name: 'EventItem',
+                relation_member_ids: JSON.stringify(['char-1', 'char-1']),
+                proposal_type: 'relation-create',
+            })
+        );
+        expect(manifestCrudService.update).not.toHaveBeenCalled();
     });
 
-    it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId blocks player updates when relation is not tied to anchored character', async () => {
+    it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId creates a proposal without relation ownership', async () => {
         manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
             relationName: 'EventItem',
             relationDef: {
@@ -1054,7 +1066,6 @@ describe('domainRouter isolated unit tests', () => {
             },
             anchorMemberIndex: 0,
         });
-        listAnchoredCharacterIdsByUserId.mockResolvedValueOnce(['char-9']);
         manifestCrudService.getOne
             .mockResolvedValueOnce({ id: 'char-1' })
             .mockResolvedValueOnce({ id: 'char-1' });
@@ -1065,10 +1076,11 @@ describe('domainRouter isolated unit tests', () => {
             .set('x-test-user', 'player-one')
             .send({ long_explanation: 'player text' });
 
-        expect(response.status).toBe(403);
-        expect(response.body).toEqual({
-            error: 'Players may only patch relation records tied to anchored characters',
-        });
+        expect(response.status).toBe(202);
+        expect(manifestCrudService.insert).toHaveBeenCalledWith(
+            'edit_proposals',
+            expect.objectContaining({ relation_name: 'EventItem' })
+        );
         expect(manifestCrudService.update).not.toHaveBeenCalled();
     });
 

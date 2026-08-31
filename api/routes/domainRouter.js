@@ -3,6 +3,10 @@ const { domainManifest } = require('../../common/domainManifest');
 const { manifestCrudService } = require('../data/genericCrudService');
 const { listAnchoredCharacterIdsByUserId } = require('../data/authRepository');
 const {
+    createFieldEditProposal,
+    createRelationProposal,
+} = require('../utils/proposalHelpers');
+const {
     coerceValueByType,
     getEntityByRoute,
     getRelationMembers,
@@ -426,29 +430,8 @@ function ensureDmForMutation(req) {
     return { status: 403, error: 'Only dm users can modify canonical domain data' };
 }
 
-function getPlayerPatchRule(fieldDef) {
-    if (!fieldDef || !fieldDef.access) {
-        return null;
-    }
-
-    return fieldDef.access.playerPatch || null;
-}
-
 function isPlayer(auth) {
     return auth && auth.role === 'player';
-}
-
-function normalizeOwnershipRule(playerPatchRule) {
-    if (!playerPatchRule || typeof playerPatchRule !== 'object') {
-        return null;
-    }
-
-    return playerPatchRule.ownership || null;
-}
-
-async function getAnchoredCharacterIdSetForRequest(auth) {
-    const anchoredIds = await listAnchoredCharacterIdsByUserId(auth.userId);
-    return new Set(anchoredIds);
 }
 
 async function authorizeEntityPatch(req, entityName, entityDef, idValue, updates) {
@@ -457,6 +440,7 @@ async function authorizeEntityPatch(req, entityName, entityDef, idValue, updates
     }
 
     if (isDm(req.auth)) {
+        // DM can edit anything directly
         return null;
     }
 
@@ -466,36 +450,34 @@ async function authorizeEntityPatch(req, entityName, entityDef, idValue, updates
 
     const updateKeys = Object.keys(updates || {});
     if (updateKeys.length === 0) {
-        return { status: 403, error: 'No player-editable fields were provided' };
+        return { status: 403, error: 'No fields provided for update' };
     }
 
-    for (const key of updateKeys) {
-        const fieldDef = entityDef.fields[key];
-        const playerPatchRule = getPlayerPatchRule(fieldDef);
-        if (!playerPatchRule) {
-            return { status: 403, error: `Field is dm-only: ${key}` };
-        }
+    // All player edits go through proposals
+    return { proposal: true };
+}
 
-        const ownershipRule = normalizeOwnershipRule(playerPatchRule);
-        if (!ownershipRule) {
-            continue;
-        }
-
-        if (ownershipRule.type !== 'anchored-character') {
-            return { status: 403, error: `Unsupported ownership rule for field: ${key}` };
-        }
-
-        if (entityName !== 'Character') {
-            return { status: 403, error: `Anchored player edits are not configured for entity: ${entityName}` };
-        }
-
-        const anchoredIds = await getAnchoredCharacterIdSetForRequest(req.auth);
-        if (!anchoredIds.has(idValue)) {
-            return { status: 403, error: 'Players may only patch anchored character records' };
-        }
+async function authorizeRelationPatch(req, relationDef, members, anchorMemberIndex, sourceId, relatedId, updates) {
+    if (!req.auth) {
+        return { status: 401, error: 'Unauthorized' };
     }
 
-    return null;
+    if (isDm(req.auth)) {
+        // DM can edit anything directly
+        return null;
+    }
+
+    if (!isPlayer(req.auth)) {
+        return { status: 403, error: 'Only dm and player users can patch domain resources' };
+    }
+
+    const updateKeys = Object.keys(updates || {});
+    if (updateKeys.length === 0) {
+        return { status: 403, error: 'No fields provided for update' };
+    }
+
+    // All player edits go through proposals
+    return { proposal: true };
 }
 
 function getRelationMemberIdsByEntity(members, anchorMemberIndex, sourceId, relatedId, entityName) {
@@ -510,66 +492,7 @@ function getRelationMemberIdsByEntity(members, anchorMemberIndex, sourceId, rela
         .filter((idValue) => idValue !== null && idValue !== undefined);
 }
 
-async function authorizeRelationPatch(req, relationDef, members, anchorMemberIndex, sourceId, relatedId, updates) {
-    if (!req.auth) {
-        return { status: 401, error: 'Unauthorized' };
-    }
 
-    if (isDm(req.auth)) {
-        return null;
-    }
-
-    if (!isPlayer(req.auth)) {
-        return { status: 403, error: 'Only dm and player users can patch domain resources' };
-    }
-
-    const updateKeys = Object.keys(updates || {});
-    if (updateKeys.length === 0) {
-        return { status: 403, error: 'No player-editable fields were provided' };
-    }
-
-    const anchoredIds = await getAnchoredCharacterIdSetForRequest(req.auth);
-
-    for (const key of updateKeys) {
-        const fieldDef = relationDef.payload && relationDef.payload[key];
-        const playerPatchRule = getPlayerPatchRule(fieldDef);
-        if (!playerPatchRule) {
-            return { status: 403, error: `Field is dm-only: ${key}` };
-        }
-
-        const ownershipRule = normalizeOwnershipRule(playerPatchRule);
-        if (!ownershipRule) {
-            continue;
-        }
-
-        if (ownershipRule.type !== 'anchored-character') {
-            return { status: 403, error: `Unsupported ownership rule for field: ${key}` };
-        }
-
-        const relationMemberEntity = ownershipRule.relationMemberEntity || 'Character';
-        const relationEntityIds = getRelationMemberIdsByEntity(
-            members,
-            anchorMemberIndex,
-            sourceId,
-            relatedId,
-            relationMemberEntity
-        );
-
-        if (relationEntityIds.length === 0) {
-            return { status: 403, error: `No ${relationMemberEntity} member is available for anchored ownership checks` };
-        }
-
-        const hasAnchoredMember = relationEntityIds.some((relationEntityId) =>
-            anchoredIds.has(relationEntityId)
-        );
-
-        if (!hasAnchoredMember) {
-            return { status: 403, error: 'Players may only patch relation records tied to anchored characters' };
-        }
-    }
-
-    return null;
-}
 
 /* BASIC ENTITY ROUTES */
 // create entity
@@ -682,8 +605,32 @@ router.patch('/:entityRoute/:id', async (req, res) => {
             await validatePlaceParent(updates.parent_id, idValue);
         }
         const authErr = await authorizeEntityPatch(req, entityName, entityDef, idValue, updates);
-        if (authErr) {
+        if (authErr && authErr.status) {
             return res.status(authErr.status).json({ error: authErr.error });
+        }
+
+        // If authErr.proposal is true, create proposals instead of direct edit
+        if (authErr && authErr.proposal) {
+            const proposals = [];
+            for (const [fieldName, newValue] of Object.entries(updates)) {
+                const record = await manifestCrudService.getOne(entityName, { [idField]: idValue });
+                const oldValue = record?.[fieldName];
+
+                const proposal = await createFieldEditProposal(
+                    req.auth.userId,
+                    req.params.entityRoute,
+                    idValue,
+                    fieldName,
+                    oldValue,
+                    newValue
+                );
+                proposals.push(proposal);
+            }
+
+            return res.status(202).json({
+                proposals,
+                message: 'Proposals created - awaiting DM review'
+            });
         }
 
         const result = await manifestCrudService.update(entityName, {
@@ -1077,8 +1024,27 @@ router.patch('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
             relatedId,
             updates
         );
-        if (authErr) {
+        if (authErr && authErr.status) {
             return res.status(authErr.status).json({ error: authErr.error });
+        }
+
+        // If authErr.proposal is true, create proposals instead of direct edit
+        if (authErr && authErr.proposal) {
+            const memberIds = [];
+            memberIds[anchorMemberIndex] = sourceId;
+            memberIds[anchorMemberIndex === 0 ? 1 : 0] = relatedId;
+            const proposal = await createRelationProposal(
+                req.auth.userId,
+                req.params.entityRoute,
+                relationName,
+                memberIds,
+                { updates, historyValue }
+            );
+
+            return res.status(202).json({
+                proposals: [proposal],
+                message: 'Proposal created - awaiting DM review'
+            });
         }
 
         const whereCandidates = buildRelationWhereCandidates({

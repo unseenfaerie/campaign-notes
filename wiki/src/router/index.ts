@@ -4,11 +4,13 @@ import { useAuthStore } from '../stores/auth'
 import AdminUserCreateView from '../views/AdminUserCreateView.vue'
 import AdminUserDetailView from '../views/AdminUserDetailView.vue'
 import AdminUsersView from '../views/AdminUsersView.vue'
+import AdminEditProposalsView from '../views/AdminEditProposalsView.vue'
 import EntityCreateView from '../views/EntityCreateView.vue'
 import EntityDetailView from '../views/EntityDetailView.vue'
 import EntityListView from '../views/EntityListView.vue'
 import LoginView from '../views/LoginView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
+import PlayerProposalsView from '../views/PlayerProposalsView.vue'
 
 const router = createRouter({
     history: createWebHistory(),
@@ -62,6 +64,17 @@ const router = createRouter({
                 userId: String(route.params.userId),
             }),
             meta: { requiresAdmin: true },
+        },
+        {
+            path: '/admin/edit-proposals',
+            name: 'admin-edit-proposals',
+            component: AdminEditProposalsView,
+            meta: { requiresAdmin: true },
+        },
+        {
+            path: '/player/proposals',
+            name: 'player-proposals',
+            component: PlayerProposalsView,
         },
         {
             path: '/:entityRoute',

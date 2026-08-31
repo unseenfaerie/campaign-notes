@@ -35,13 +35,6 @@ const domainManifest = {
                 long_explanation: {
                     type: 'string',
                     expository: true,
-                    access: {
-                        playerPatch: {
-                            ownership: {
-                                type: 'anchored-character',
-                            },
-                        },
-                    },
                 },
             },
         },
@@ -189,14 +182,6 @@ const domainManifest = {
                 long_explanation: {
                     type: 'string',
                     expository: true,
-                    access: {
-                        playerPatch: {
-                            ownership: {
-                                type: 'anchored-character',
-                                relationMemberEntity: 'Character',
-                            },
-                        },
-                    },
                 },
             },
         },
@@ -217,14 +202,6 @@ const domainManifest = {
                 long_explanation: {
                     type: 'string',
                     expository: true,
-                    access: {
-                        playerPatch: {
-                            ownership: {
-                                type: 'anchored-character',
-                                relationMemberEntity: 'Character',
-                            },
-                        },
-                    },
                 },
             },
         },
@@ -245,14 +222,6 @@ const domainManifest = {
                 long_explanation: {
                     type: 'string',
                     expository: true,
-                    access: {
-                        playerPatch: {
-                            ownership: {
-                                type: 'anchored-character',
-                                relationMemberEntity: 'Character',
-                            },
-                        },
-                    },
                 },
             },
         },
@@ -273,14 +242,6 @@ const domainManifest = {
                 long_explanation: {
                     type: 'string',
                     expository: true,
-                    access: {
-                        playerPatch: {
-                            ownership: {
-                                type: 'anchored-character',
-                                relationMemberEntity: 'Character',
-                            },
-                        },
-                    },
                 },
             },
         },
@@ -303,14 +264,6 @@ const domainManifest = {
                 long_explanation: {
                     type: 'string',
                     expository: true,
-                    access: {
-                        playerPatch: {
-                            ownership: {
-                                type: 'anchored-character',
-                                relationMemberEntity: 'Character',
-                            },
-                        },
-                    },
                 },
             },
         },
@@ -347,14 +300,6 @@ const domainManifest = {
                 long_explanation: {
                     type: 'string',
                     expository: true,
-                    access: {
-                        playerPatch: {
-                            ownership: {
-                                type: 'anchored-character',
-                                relationMemberEntity: 'Character',
-                            },
-                        },
-                    },
                 },
             },
         },

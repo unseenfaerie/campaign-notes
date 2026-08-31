@@ -47,6 +47,28 @@ function getAuthCreateTableSql() {
       FOREIGN KEY(character_id) REFERENCES characters(id)
     )`,
     `CREATE INDEX IF NOT EXISTS idx_user_character_anchors_user_id ON user_character_anchors(user_id)`,
+    `CREATE TABLE IF NOT EXISTS edit_proposals (
+      id TEXT PRIMARY KEY,
+      proposed_by_user_id TEXT NOT NULL,
+      entity_route TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      relation_name TEXT,
+      relation_member_ids TEXT,
+      field_name TEXT NOT NULL,
+      old_value TEXT,
+      new_value TEXT NOT NULL,
+      proposal_type TEXT NOT NULL CHECK (proposal_type IN ('field-edit', 'relation-create')),
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+      rejected_reason TEXT,
+      created_at TEXT NOT NULL,
+      reviewed_by_user_id TEXT,
+      reviewed_at TEXT,
+      FOREIGN KEY(proposed_by_user_id) REFERENCES users(id),
+      FOREIGN KEY(reviewed_by_user_id) REFERENCES users(id)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_edit_proposals_status ON edit_proposals(status)`,
+    `CREATE INDEX IF NOT EXISTS idx_edit_proposals_proposed_by_user_id ON edit_proposals(proposed_by_user_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_edit_proposals_entity_route_id ON edit_proposals(entity_route, entity_id)`,
   ];
 }
 
