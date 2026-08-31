@@ -164,6 +164,7 @@ a:hover {
     margin-bottom: 1rem;
 }
 
+.view-header h1,
 .view-header h2 {
     margin: 0;
     font-family: var(--font-display);
