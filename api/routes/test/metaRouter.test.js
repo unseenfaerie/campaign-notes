@@ -63,9 +63,9 @@ describe('metaRouter', () => {
             format: 'slug',
         });
 
-        const ageField = character.fields.find((field) => field.name === 'age');
-        expect(ageField).toMatchObject({
-            type: 'number',
+        const birthdateField = character.fields.find((field) => field.name === 'birthdate');
+        expect(birthdateField).toMatchObject({
+            type: 'loreDate',
             required: false,
             primary: false,
         });
@@ -144,8 +144,8 @@ describe('metaRouter', () => {
             primary: false,
         });
 
-        const ageField = character.fields.find((field) => field.name === 'age');
-        expect(ageField.type).toBe('number');
+        const birthdateField = character.fields.find((field) => field.name === 'birthdate');
+        expect(birthdateField.type).toBe('loreDate');
     });
 
     it('exposes expository fields for dedicated detail-page presentation', async () => {

@@ -16,7 +16,7 @@ const domainManifest = {
                 player_character: { type: 'boolean', required: true },
                 is_public: { type: 'boolean', required: true, hidden: true },
                 name: { type: 'string', required: true },
-                age: { type: 'number' },
+                birthdate: { type: 'loreDate' },
                 ancestry: { type: 'string', enum: 'ancestry' },
                 class: { type: 'string' },
                 level: { type: 'string' },
@@ -27,7 +27,8 @@ const domainManifest = {
                 intelligence: { type: 'number' },
                 wisdom: { type: 'number' },
                 charisma: { type: 'number' },
-                total_health: { type: 'number' },
+                max_health: { type: 'number' },
+                retired: { type: 'boolean' },
                 deceased: { type: 'boolean', required: true },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: {
@@ -64,7 +65,7 @@ const domainManifest = {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
                 is_public: { type: 'boolean', required: true, hidden: true },
                 name: { type: 'string', required: true },
-                real_world_date: { type: 'string' },
+                real_world_date: { type: 'realDate' },
                 in_game_time_start: { type: 'loreDate' },
                 in_game_time_end: { type: 'loreDate' },
                 previous_event_id: { type: 'string', ref: 'Event' },
@@ -175,9 +176,10 @@ const domainManifest = {
                 adopted_date: { type: 'loreDate', required: true },
                 dissolution_date: { type: 'loreDate' },
                 relationship_type: { type: 'string' },
-                short_description: { type: 'string', required: true },
+                short_description: { type: 'string', required: true, expository: true },
                 long_explanation: {
                     type: 'string',
+                    expository: true,
                     access: {
                         playerPatch: {
                             ownership: {
@@ -202,9 +204,10 @@ const domainManifest = {
             payload: {
                 acquired_date: { type: 'loreDate', required: true },
                 relinquished_date: { type: 'loreDate' },
-                short_description: { type: 'string', required: true },
+                short_description: { type: 'string', required: true, expository: true },
                 long_explanation: {
                     type: 'string',
+                    expository: true,
                     access: {
                         playerPatch: {
                             ownership: {
@@ -229,9 +232,10 @@ const domainManifest = {
             payload: {
                 joined_date: { type: 'loreDate', required: true },
                 left_date: { type: 'loreDate' },
-                short_description: { type: 'string', required: true },
+                short_description: { type: 'string', required: true, expository: true },
                 long_explanation: {
                     type: 'string',
+                    expository: true,
                     access: {
                         playerPatch: {
                             ownership: {
@@ -256,9 +260,10 @@ const domainManifest = {
             payload: {
                 arrived_date: { type: 'loreDate', required: true },
                 left_date: { type: 'loreDate' },
-                short_description: { type: 'string', required: true },
+                short_description: { type: 'string', required: true, expository: true },
                 long_explanation: {
                     type: 'string',
+                    expository: true,
                     access: {
                         playerPatch: {
                             ownership: {
@@ -285,9 +290,10 @@ const domainManifest = {
                 established_date: { type: 'loreDate', required: true },
                 dissolution_date: { type: 'loreDate' },
                 relationship_type: { type: 'string', required: true, enum: 'characterRelationship' },
-                short_description: { type: 'string', required: true },
+                short_description: { type: 'string', required: true, expository: true },
                 long_explanation: {
                     type: 'string',
+                    expository: true,
                     access: {
                         playerPatch: {
                             ownership: {
@@ -328,9 +334,10 @@ const domainManifest = {
             ],
             keys: ['event_id', 'character_id'],
             payload: {
-                short_description: { type: 'string', required: true },
+                short_description: { type: 'string', required: true, expository: true },
                 long_explanation: {
                     type: 'string',
+                    expository: true,
                     access: {
                         playerPatch: {
                             ownership: {
@@ -351,8 +358,8 @@ const domainManifest = {
             ],
             keys: ['event_id', 'organization_id'],
             payload: {
-                short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
+                short_description: { type: 'string', required: true, expository: true },
+                long_explanation: { type: 'string', expository: true },
             },
         },
         EventPlace: {
@@ -374,8 +381,8 @@ const domainManifest = {
             ],
             keys: ['organization_id', 'place_id'],
             payload: {
-                short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
+                short_description: { type: 'string', required: true, expository: true },
+                long_explanation: { type: 'string', expository: true },
             },
         },
         ItemSpell: {

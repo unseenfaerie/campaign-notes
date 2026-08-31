@@ -5,12 +5,14 @@ import { createRelation, listEntities, type DomainEntity } from '../services/dom
 import { entityLabelFromRoute } from '../config/entities'
 import type { EntityFieldSchema, RelationFormSchema } from '../services/metaService'
 import LoreDateInput from './LoreDateInput.vue'
+import RealDateInput from './RealDateInput.vue'
 import SearchableSelect from './SearchableSelect.vue'
 
 const props = defineProps<{
   entityRoute: string
   id: string
   options: RelationFormSchema[]
+  defaultRelatedRoute?: string
 }>()
 
 const emit = defineEmits<{
@@ -22,7 +24,11 @@ const loadingTargets = ref(false)
 const submitting = ref(false)
 const errorMessage = ref('')
 const targets = ref<DomainEntity[]>([])
-const selectedRelatedRoute = ref('')
+const selectedRelatedRoute = ref(
+  props.defaultRelatedRoute && props.options.some((option) => option.relatedRoute === props.defaultRelatedRoute)
+    ? props.defaultRelatedRoute
+    : ''
+)
 const selectedTargetId = ref('')
 const formValues = ref<Record<string, any>>({})
 
@@ -234,6 +240,11 @@ watch(selectedRelatedRoute, () => {
         ></textarea>
         <LoreDateInput
           v-else-if="field.type === 'loreDate'"
+          v-model="formValues[field.name]"
+          :required="field.required"
+        />
+        <RealDateInput
+          v-else-if="field.type === 'realDate'"
           v-model="formValues[field.name]"
           :required="field.required"
         />

@@ -164,6 +164,7 @@ a:hover {
     margin-bottom: 1rem;
 }
 
+.view-header h1,
 .view-header h2 {
     margin: 0;
     font-family: var(--font-display);
@@ -212,14 +213,14 @@ a:hover {
 
 .section-heading-row {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 1rem;
 }
 
-.row-actions-end {
-    display: flex;
-    justify-content: flex-end;
+.history-record-actions {
+    float: right;
+    margin-left: 1rem;
 }
 
 .status-card {

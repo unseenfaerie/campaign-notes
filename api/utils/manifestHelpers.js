@@ -1,6 +1,7 @@
 const { domainManifest } = require('../../common/domainManifest');
 const { validateIdFormat } = require('./idUtils');
 const { isValidLoreDate } = require('../../common/dateSystem');
+const { isValidRealDate } = require('../../common/realDate');
 const { getEnumValues } = require('../../common/enums');
 
 function coerceValueByType(type, value, enumValues) {
@@ -9,6 +10,13 @@ function coerceValueByType(type, value, enumValues) {
     if (type === 'loreDate') {
         if (!isValidLoreDate(value)) {
             throw new Error(`Invalid lore date value: ${value}`);
+        }
+        return String(value);
+    }
+
+    if (type === 'realDate') {
+        if (!isValidRealDate(value)) {
+            throw new Error(`Invalid real date value: ${value}`);
         }
         return String(value);
     }

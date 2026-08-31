@@ -9,10 +9,10 @@
 const DAYS_PER_YEAR = 336;
 
 const ERAS = [
-    { id: 'age-of-elves', order: 0, name: 'Age of Elves' },
-    { id: 'age-of-ascension', order: 1, name: 'Age of Ascension' },
-    { id: 'age-of-descent', order: 2, name: 'Age of Descent' },
-    { id: 'age-of-light', order: 3, name: 'Age of Light' },
+    { id: 'age-of-elves', order: 0, name: 'Age of Elves', durationYears: 5500 },
+    { id: 'age-of-ascension', order: 1, name: 'Age of Ascension', durationYears: 3000 },
+    { id: 'age-of-descent', order: 2, name: 'Age of Descent', durationYears: 202 },
+    { id: 'age-of-light', order: 3, name: 'Age of Light', durationYears: null },
 ];
 
 function genericMonths() {
@@ -89,6 +89,22 @@ function getEra(eraId) {
 
 function getEraByOrder(order) {
     return ERAS.find((era) => era.order === order) || null;
+}
+
+function getEraStartYear(eraId) {
+    const era = getEra(eraId);
+    if (!era) {
+        throw new Error(`Unknown era: ${eraId}`);
+    }
+
+    return ERAS
+        .filter((candidate) => candidate.order < era.order)
+        .reduce((startYear, previousEra) => {
+            if (previousEra.durationYears === null) {
+                throw new Error(`Era ${previousEra.id} has no end date`);
+            }
+            return startYear + previousEra.durationYears;
+        }, 1);
 }
 
 function getCalendar(calendarId) {
@@ -209,6 +225,21 @@ function compareLoreDates(a, b) {
     return 0;
 }
 
+function getAbsoluteDay(value) {
+    const { eraId, year, dayOfYear } = decodeLoreDate(value);
+    return (getEraStartYear(eraId) + year - 2) * DAYS_PER_YEAR + dayOfYear - 1;
+}
+
+function calculateAgeInYears(birthDate, currentDate) {
+    const birthDay = getAbsoluteDay(birthDate);
+    const currentDay = getAbsoluteDay(currentDate);
+    if (currentDay < birthDay) {
+        throw new Error('Current date cannot be earlier than birth date');
+    }
+
+    return Math.floor((currentDay - birthDay) / DAYS_PER_YEAR);
+}
+
 function formatLoreDate(value) {
     const { day, monthName, year, era } = decodeLoreDate(value);
     return `${day} ${monthName}, Year ${year} of the ${era.name}`;
@@ -220,6 +251,7 @@ module.exports = {
     CALENDARS,
     getEra,
     getEraByOrder,
+    getEraStartYear,
     getCalendar,
     getCalendarsForEra,
     dayOfYearFromMonthDay,
@@ -228,5 +260,7 @@ module.exports = {
     decodeLoreDate,
     isValidLoreDate,
     compareLoreDates,
+    getAbsoluteDay,
+    calculateAgeInYears,
     formatLoreDate,
 };

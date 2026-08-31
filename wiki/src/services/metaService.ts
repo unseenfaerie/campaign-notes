@@ -3,7 +3,7 @@ import type { DateSystem } from '../utils/loreDate'
 
 export type EntityFieldSchema = {
     name: string
-    type: 'string' | 'number' | 'boolean' | 'loreDate'
+    type: 'string' | 'number' | 'boolean' | 'loreDate' | 'realDate'
     required: boolean
     primary: boolean
     ref?: string

@@ -7,6 +7,7 @@ import { createEntity, listEntities, type DomainEntity } from '../services/domai
 import { getEntitySchema, type EntityFieldSchema, type EntitySchema } from '../services/metaService'
 import { prettyEnumValue, prettyFieldName } from '../utils/formatting'
 import LoreDateInput from '../components/LoreDateInput.vue'
+import RealDateInput from '../components/RealDateInput.vue'
 import SearchableSelect from '../components/SearchableSelect.vue'
 
 const props = defineProps<{
@@ -227,6 +228,11 @@ watch(
         ></textarea>
         <LoreDateInput
           v-else-if="field.type === 'loreDate'"
+          v-model="formValues[field.name]"
+          :required="field.required"
+        />
+        <RealDateInput
+          v-else-if="field.type === 'realDate'"
           v-model="formValues[field.name]"
           :required="field.required"
         />
