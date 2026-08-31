@@ -6,6 +6,7 @@ export type LoreDateEra = {
     id: string
     order: number
     name: string
+    durationYears: number | null
 }
 
 export type LoreDateMonth = {

@@ -60,18 +60,18 @@ async function main() {
   const nowIso = new Date().toISOString();
   await seedUsers({ bcrypt, nowIso, runSql });
 
-  await runSql(`Inserting characters...`, `INSERT OR IGNORE INTO characters (id, player_character, is_public, name, age, ancestry, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, max_health, retired, deceased, short_description, long_explanation) VALUES
-    ('alann-barnett', true, false, 'Alann Barnett', 32, 'human', 'Cleric', '4', 'neutral-good', 13, 8, 11, 10, 14, 11, 20, false, false, 'A thoughtful and strong-willed adventurer.', NULL),
-    ('releas-neb', true, false, 'Releas Neb', 28, 'human', 'Magic User', '7', 'chaotic-good', 5, 14, 10, 18, 13, 9, 16, false, false, 'A clever and resourceful wizard.', NULL),
-    ('orlaith-of-the-mosswood', true, false, 'Orlaith of the Mosswood', 21, 'human', 'Druid', '1', 'chaotic-neutral', 12, 15, 11, 9, 15, 9, 2, false, false, 'A burgeoning druid with knowledge of herbs.', NULL),
-    ('djinn', true, false, 'Djinn Rat-Eater', 23, 'human', 'Assassin', '2', 'neutral-evil', 8, 18, 10, 4, 15, 10, 5, false, false, 'A deceptive and quick assassin.', NULL),
-    ('apollonia-palleday', true, false, 'Apollonia Palleday', 16, 'human', 'Magic User', '5', 'neutral-good', 13, 8, 11, 18, 14, 11, 18, false, false, 'A bright and curious spellcaster.', NULL),
-    ('durchir', true, false, 'Durchir', 35, 'half-elf', 'Fighter', '2', 'lawful-evil', 18, 10, 12, 15, 10, 11, 22, false, true, 'Durchir of the Angry Orchard, fallen hero.', NULL),
-    ('cormac', true, false, 'Cormac', 27, 'half-elf', 'Thief/Illusionist', '5/4', 'chaotic-good', 9, 16, 7, 15, 14, 7, 15, false, false, 'A clever and nimble adventurer.', NULL),
-    ('bert-verinwort', false, false, 'Bert Verinwort', 54, 'human', NULL, NULL, 'lawful-neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, false, 'A local notable in Wavethorn.', NULL),
-    ('sieg-ordoss', false, false, 'Sieg Ordoss', 57, 'human', NULL, NULL, 'lawful-neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, true, 'A mysterious figure.', NULL),
-    ('mildred-of-the-mosswood', false, false, 'Mildred of the Mosswood', 87, 'human', 'Druid', NULL, 'neutral-good', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, false, 'A wise old druid and herbal healer who lives in Lundgren.', NULL),
-    ('gereg', false, false, 'Gereg', 41, 'human', 'Thief', '5', 'neutral-evil', NULL, NULL, NULL, NULL, NULL, NULL, 20, false, false, 'A resident of Wavethorn.', NULL);
+  await runSql(`Inserting characters...`, `INSERT OR IGNORE INTO characters (id, player_character, is_public, name, birthdate, ancestry, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, max_health, retired, deceased, short_description, long_explanation) VALUES
+    ('alann-barnett', true, false, 'Alann Barnett', '0200190001_age-of-descent-default', 'human', 'Cleric', '4', 'neutral-good', 13, 8, 11, 10, 14, 11, 20, false, false, 'A thoughtful and strong-willed adventurer.', NULL),
+    ('releas-neb', true, false, 'Releas Neb', '0200194001_age-of-descent-default', 'human', 'Magic User', '7', 'chaotic-good', 5, 14, 10, 18, 13, 9, 16, false, false, 'A clever and resourceful wizard.', NULL),
+    ('orlaith-of-the-mosswood', true, false, 'Orlaith of the Mosswood', '0200197001_age-of-descent-default', 'human', 'Druid', '1', 'chaotic-neutral', 12, 15, 11, 9, 15, 9, 2, false, false, 'A burgeoning druid with knowledge of herbs.', NULL),
+    ('djinn', true, false, 'Djinn Rat-Eater', '0200195001_age-of-descent-default', 'human', 'Assassin', '2', 'neutral-evil', 8, 18, 10, 4, 15, 10, 5, false, false, 'A deceptive and quick assassin.', NULL),
+    ('apollonia-palleday', true, false, 'Apollonia Palleday', '0200198001_age-of-descent-default', 'human', 'Magic User', '5', 'neutral-good', 13, 8, 11, 18, 14, 11, 18, false, false, 'A bright and curious spellcaster.', NULL),
+    ('durchir', true, false, 'Durchir', '0200187001_age-of-descent-default', 'half-elf', 'Fighter', '2', 'lawful-evil', 18, 10, 12, 15, 10, 11, 22, false, true, 'Durchir of the Angry Orchard, fallen hero.', NULL),
+    ('cormac', true, false, 'Cormac', '0200193001_age-of-descent-default', 'half-elf', 'Thief/Illusionist', '5/4', 'chaotic-good', 9, 16, 7, 15, 14, 7, 15, false, false, 'A clever and nimble adventurer.', NULL),
+    ('bert-verinwort', false, false, 'Bert Verinwort', '0200166001_age-of-descent-default', 'human', NULL, NULL, 'lawful-neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, false, 'A local notable in Wavethorn.', NULL),
+    ('sieg-ordoss', false, false, 'Sieg Ordoss', '0200163001_age-of-descent-default', 'human', NULL, NULL, 'lawful-neutral', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, true, 'A mysterious figure.', NULL),
+    ('mildred-of-the-mosswood', false, false, 'Mildred of the Mosswood', '0200133001_age-of-descent-default', 'human', 'Druid', NULL, 'neutral-good', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, false, 'A wise old druid and herbal healer who lives in Lundgren.', NULL),
+    ('gereg', false, false, 'Gereg', '0200179001_age-of-descent-default', 'human', 'Thief', '5', 'neutral-evil', NULL, NULL, NULL, NULL, NULL, NULL, 20, false, false, 'A resident of Wavethorn.', NULL);
   `);
 
   await runSql(`Normalizing seeded character alignments...`, `UPDATE characters SET alignment = lower(replace(alignment, ' ', '-')) WHERE alignment IS NOT NULL;`);

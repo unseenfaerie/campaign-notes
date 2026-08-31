@@ -259,8 +259,11 @@ function relatedRecordId(record: DomainEntity): string {
   return String(record.id)
 }
 
-async function loadDetail() {
-  loading.value = true
+async function loadDetail(options: { silent?: boolean } = {}) {
+  // Silent refreshes keep the article mounted so open/closed relation sections aren't reset.
+  if (!options.silent) {
+    loading.value = true
+  }
   errorMessage.value = ''
   isEditing.value = false
   openAddFormRoute.value = null
@@ -461,7 +464,7 @@ async function saveEditRelation(relatedRoute: string, record: DomainEntity) {
     })
     await updateRelation(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), payload)
     editingRelationKey.value = null
-    await loadDetail()
+    await loadDetail({ silent: true })
   } catch (error) {
     if (error instanceof ApiError || error instanceof Error) {
       relationEditError.value = error.message
@@ -514,7 +517,7 @@ async function saveEditHistory(relatedRoute: string, record: DomainEntity) {
       historyEditOriginalSelector.value
     )
     editingHistoryKey.value = null
-    await loadDetail()
+    await loadDetail({ silent: true })
   } catch (error) {
     if (error instanceof ApiError || error instanceof Error) {
       historyEditError.value = error.message
@@ -548,7 +551,7 @@ function toggleAddForm(relatedRoute: string) {
 }
 
 async function onRelationCreated() {
-  await loadDetail()
+  await loadDetail({ silent: true })
 }
 
 function prettyFieldName(name: string): string {
@@ -816,6 +819,7 @@ watch(() => [props.entityRoute, props.id], loadDetail)
             :entity-route="entityRoute"
             :id="id"
             :options="relationSchemaForRoute(relatedRoute)"
+            :default-related-route="relatedRoute"
             @created="onRelationCreated"
             @cancel="openAddFormRoute = null"
           />

@@ -6,6 +6,9 @@ const {
     decodeLoreDate,
     isValidLoreDate,
     compareLoreDates,
+    getEraStartYear,
+    getAbsoluteDay,
+    calculateAgeInYears,
     formatLoreDate,
 } = require('../../../common/dateSystem');
 
@@ -119,6 +122,41 @@ describe('dateSystem', () => {
         });
 
         expect(compareLoreDates(earlierEraLateYear, laterEraEarlyYear)).toBeLessThan(0);
+    });
+
+    it('calculates era start years from completed era durations', () => {
+        expect(getEraStartYear('age-of-elves')).toBe(1);
+        expect(getEraStartYear('age-of-ascension')).toBe(5501);
+        expect(getEraStartYear('age-of-descent')).toBe(8501);
+        expect(getEraStartYear('age-of-light')).toBe(8703);
+    });
+
+    it('calculates age across an era boundary from a birthday', () => {
+        const birthday = encodeLoreDate({
+            eraId: 'age-of-descent',
+            year: 202,
+            calendarId: 'age-of-descent-default',
+            monthIndex: 0,
+            day: 1,
+        });
+        const dayBeforeBirthday = encodeLoreDate({
+            eraId: 'age-of-descent',
+            year: 202,
+            calendarId: 'age-of-descent-default',
+            monthIndex: 11,
+            day: 28,
+        });
+        const birthdayInLight = encodeLoreDate({
+            eraId: 'age-of-light',
+            year: 1,
+            calendarId: 'age-of-light-default',
+            monthIndex: 0,
+            day: 1,
+        });
+
+        expect(getAbsoluteDay(birthdayInLight) - getAbsoluteDay(birthday)).toBe(DAYS_PER_YEAR);
+        expect(calculateAgeInYears(birthday, dayBeforeBirthday)).toBe(0);
+        expect(calculateAgeInYears(birthday, birthdayInLight)).toBe(1);
     });
 
     it('formats a lore date for display', () => {

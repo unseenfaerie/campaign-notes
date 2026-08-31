@@ -11,6 +11,7 @@ const props = defineProps<{
   entityRoute: string
   id: string
   options: RelationFormSchema[]
+  defaultRelatedRoute?: string
 }>()
 
 const emit = defineEmits<{
@@ -22,7 +23,11 @@ const loadingTargets = ref(false)
 const submitting = ref(false)
 const errorMessage = ref('')
 const targets = ref<DomainEntity[]>([])
-const selectedRelatedRoute = ref('')
+const selectedRelatedRoute = ref(
+  props.defaultRelatedRoute && props.options.some((option) => option.relatedRoute === props.defaultRelatedRoute)
+    ? props.defaultRelatedRoute
+    : ''
+)
 const selectedTargetId = ref('')
 const formValues = ref<Record<string, any>>({})
 

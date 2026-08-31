@@ -16,7 +16,7 @@ const domainManifest = {
                 player_character: { type: 'boolean', required: true },
                 is_public: { type: 'boolean', required: true, hidden: true },
                 name: { type: 'string', required: true },
-                age: { type: 'number' },
+                birthdate: { type: 'loreDate' },
                 ancestry: { type: 'string', enum: 'ancestry' },
                 class: { type: 'string' },
                 level: { type: 'string' },
