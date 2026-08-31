@@ -381,17 +381,14 @@ const domainManifest = {
             },
         },
         EventPlace: {
-            kind: 'relationship',
+            kind: 'simple',
             table: 'event_places',
             members: [
                 { entity: 'Event', key: 'event_id', route: 'places' },
                 { entity: 'Place', key: 'place_id', route: 'events' },
             ],
             keys: ['event_id', 'place_id'],
-            payload: {
-                short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
-            },
+            payload: {},
         },
         OrganizationPlace: {
             kind: 'relationship',

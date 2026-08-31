@@ -163,6 +163,15 @@ async function main() {
     ('weather-sphere', true, 'Weather Sphere', 'Sphere of Weather.');
   `);
 
+  await runSql(`Inserting aliases...`, `INSERT OR IGNORE INTO aliases (is_public, entity_type, entity_id, alias) VALUES
+    (false, 'character', 'alann-barnett', 'Alann'),
+    (false, 'character', 'releas-neb', 'Rel'),
+    (false, 'deity', 'achiel', 'Achiel, God of Light'),
+    (false, 'place', 'wavethorn', 'City of Wavethorn'),
+    (false, 'character', 'djinn', 'Djinn'),
+    (false, 'event', 'coup-of-wavethorn', 'OOTID Session 1');
+  `);
+
   // // Join Tables
 
   await runSql(`Inserting character_deities...`, `INSERT OR IGNORE INTO character_deities (character_id, deity_id, adopted_date, dissolution_date, relationship_type, short_description, long_explanation) VALUES
@@ -252,8 +261,8 @@ async function main() {
     ('coup-of-wavethorn', 'mages-guild', 'Short description.', 'Long Explanation.');
   `);
 
-  await runSql(`Inserting event_places...`, `INSERT OR IGNORE INTO event_places (event_id, place_id, short_description, long_explanation) VALUES
-    ('coup-of-wavethorn', 'wavethorn', 'Short description.', 'Long Explanation.');
+  await runSql(`Inserting event_places...`, `INSERT OR IGNORE INTO event_places (event_id, place_id) VALUES
+    ('coup-of-wavethorn', 'wavethorn');
   `);
 
   await runSql(`Inserting organization_places...`, `INSERT OR IGNORE INTO organization_places (organization_id, place_id, short_description, long_explanation) VALUES
@@ -271,14 +280,6 @@ async function main() {
   await runSql(`Inserting spell_spheres...`, `INSERT OR IGNORE INTO spell_spheres (spell_id, sphere_id) VALUES
     ('raise-dead', 'necromantic'),
     ('healing-word', 'healing');
-  `);
-
-  await runSql(`Inserting aliases...`, `INSERT OR IGNORE INTO aliases (entity_type, entity_id, alias) VALUES
-    ('character', 'alann-barnett', 'Alann'),
-    ('character', 'releas-neb', 'Rel'),
-    ('deity', 'achiel', 'Achiel, God of Light'),
-    ('place', 'wavethorn', 'City of Wavethorn'),
-    ('event', 'coup-of-wavethorn', 'OOTID Session 1');
   `);
 
   console.log('Example data inserted.');

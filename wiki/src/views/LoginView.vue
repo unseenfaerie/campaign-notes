@@ -36,8 +36,8 @@ async function submitLogin() {
 
 <template>
   <section class="login-card">
-    <h2>Sign In To The Campaign Wiki</h2>
-    <p>Use your API credentials to browse world entities and their relation histories.</p>
+    <h2>Sign In</h2>
+    <p>Welcome to Ash's AD&D Campaign Wiki!</p>
 
     <form @submit.prevent="submitLogin">
       <div class="form-row">
