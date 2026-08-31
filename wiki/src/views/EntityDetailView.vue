@@ -570,6 +570,25 @@ function isLongTextField(field: EntityFieldSchema): boolean {
   return field.type === 'string' && /description|explanation|notes/i.test(field.name)
 }
 
+// Splits a relation/history payload into non-expository "facts" and expository (long-text) fields,
+// mirroring the core entity data box + description layout.
+function factsData(data: DomainEntity, fields?: EntityFieldSchema[]): DomainEntity {
+  return Object.fromEntries(
+    Object.entries(data).filter(([key]) => !fields?.some((field) => field.name === key && field.expository))
+  )
+}
+
+function factsFields(fields?: EntityFieldSchema[]): EntityFieldSchema[] {
+  return (fields || []).filter((field) => !field.expository)
+}
+
+function expositoryFieldEntries(data: DomainEntity, fields?: EntityFieldSchema[]): Array<{ name: string; value: string }> {
+  return (fields || []).flatMap((field) => {
+    const value = data[field.name]
+    return field.expository && typeof value === 'string' && value.trim() ? [{ name: field.name, value }] : []
+  })
+}
+
 async function startEdit() {
   saveError.value = ''
 
@@ -908,10 +927,26 @@ watch(() => [props.entityRoute, props.id], loadDetail)
             </form>
 
             <template v-else-if="showRelationMetadata(record)">
-              <FieldList
-                :data="relationDisplayPayload(record)"
-                :fields="relationSchemaForRoute(relatedRoute)[0]?.fields"
-              />
+              <div class="entity-overview">
+                <FieldList
+                  v-if="Object.keys(factsData(relationDisplayPayload(record), relationSchemaForRoute(relatedRoute)[0]?.fields)).length > 0"
+                  class="entity-facts"
+                  :data="factsData(relationDisplayPayload(record), relationSchemaForRoute(relatedRoute)[0]?.fields)"
+                  :fields="factsFields(relationSchemaForRoute(relatedRoute)[0]?.fields)"
+                />
+                <div
+                  v-if="expositoryFieldEntries(relationDisplayPayload(record), relationSchemaForRoute(relatedRoute)[0]?.fields).length > 0"
+                  class="entity-long-description"
+                >
+                  <template
+                    v-for="field in expositoryFieldEntries(relationDisplayPayload(record), relationSchemaForRoute(relatedRoute)[0]?.fields)"
+                    :key="field.name"
+                  >
+                    <h4>{{ prettyFieldName(field.name) }}</h4>
+                    <p><LinkifiedText :text="field.value" /></p>
+                  </template>
+                </div>
+              </div>
             </template>
 
             <template v-if="historyDisplayPayload(record).length > 0">
@@ -921,19 +956,6 @@ watch(() => [props.entityRoute, props.id], loadDetail)
                 :key="`${relatedRoute}-${index}-history-${historyIndex}`"
                 class="history-record"
               >
-                <div v-if="auth.isAdmin.value || canPlayerEditRelation(relatedRoute, record)" class="row-actions-end">
-                  <button
-                    v-if="editingHistoryKey !== `${relatedRoute}-${index}-history-${historyIndex}`"
-                    type="button"
-                    class="secondary-button"
-                    @click="
-                      startEditHistory(relatedRoute, historyEntry, `${relatedRoute}-${index}-history-${historyIndex}`)
-                    "
-                  >
-                    Edit
-                  </button>
-                </div>
-
                 <form
                   v-if="editingHistoryKey === `${relatedRoute}-${index}-history-${historyIndex}`"
                   class="entity-form"
@@ -1015,11 +1037,40 @@ watch(() => [props.entityRoute, props.id], loadDetail)
 
                   <p v-if="historyEditError" class="status-card error">{{ historyEditError }}</p>
                 </form>
-                <FieldList
-                  v-else
-                  :data="historyEntry"
-                  :fields="relationSchemaForRoute(relatedRoute)[0]?.fields"
-                />
+                <div v-else class="entity-overview">
+                  <div
+                    v-if="auth.isAdmin.value || canPlayerEditRelation(relatedRoute, record)"
+                    class="history-record-actions"
+                  >
+                    <button
+                      type="button"
+                      class="secondary-button"
+                      @click="
+                        startEditHistory(relatedRoute, historyEntry, `${relatedRoute}-${index}-history-${historyIndex}`)
+                      "
+                    >
+                      Edit
+                    </button>
+                  </div>
+                  <FieldList
+                    v-if="Object.keys(factsData(historyEntry, relationSchemaForRoute(relatedRoute)[0]?.fields)).length > 0"
+                    class="entity-facts"
+                    :data="factsData(historyEntry, relationSchemaForRoute(relatedRoute)[0]?.fields)"
+                    :fields="factsFields(relationSchemaForRoute(relatedRoute)[0]?.fields)"
+                  />
+                  <div
+                    v-if="expositoryFieldEntries(historyEntry, relationSchemaForRoute(relatedRoute)[0]?.fields).length > 0"
+                    class="entity-long-description"
+                  >
+                    <template
+                      v-for="field in expositoryFieldEntries(historyEntry, relationSchemaForRoute(relatedRoute)[0]?.fields)"
+                      :key="field.name"
+                    >
+                      <h4>{{ prettyFieldName(field.name) }}</h4>
+                      <p><LinkifiedText :text="field.value" /></p>
+                    </template>
+                  </div>
+                </div>
               </article>
             </template>
 
