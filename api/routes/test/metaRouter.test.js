@@ -40,6 +40,30 @@ describe('metaRouter', () => {
         expect(res.body.entities.length).toBeGreaterThan(0);
     });
 
+    it('exposes manifest-defined entity catalog metadata', async () => {
+        const res = await request(app)
+            .get('/api/meta')
+            .set('Authorization', bearerToken());
+
+        expect(res.status).toBe(200);
+
+        const character = res.body.entities.find((entity) => entity.route === 'characters');
+        expect(character).toMatchObject({
+            label: 'Characters',
+            singularLabel: 'Character',
+            navigation: true,
+            default: true,
+        });
+
+        const alias = res.body.entities.find((entity) => entity.route === 'aliases');
+        expect(alias).toMatchObject({
+            label: 'Aliases',
+            singularLabel: 'Alias',
+            navigation: false,
+            default: false,
+        });
+    });
+
     it('projects entity identity fields first', async () => {
         const res = await request(app)
             .get('/api/meta')
@@ -195,6 +219,7 @@ describe('metaRouter', () => {
             relationName: 'CharacterItem',
             kind: 'history',
             relatedEntityRoute: 'items',
+            relatedEntityLabel: 'Items',
         });
 
         const fieldNames = itemsRelation.fields.map((field) => field.name);

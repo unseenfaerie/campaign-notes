@@ -10,6 +10,7 @@ const domainManifest = {
         Character: {
             table: 'characters',
             route: 'characters',
+            ui: { label: 'Characters', singularLabel: 'Character', navigation: true, default: true },
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
@@ -47,6 +48,7 @@ const domainManifest = {
         Deity: {
             table: 'deities',
             route: 'deities',
+            ui: { label: 'Deities', singularLabel: 'Deity', navigation: true },
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
@@ -60,6 +62,7 @@ const domainManifest = {
         Event: {
             table: 'events',
             route: 'events',
+            ui: { label: 'Events', singularLabel: 'Event', navigation: true },
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
@@ -77,6 +80,7 @@ const domainManifest = {
         Item: {
             table: 'items',
             route: 'items',
+            ui: { label: 'Items', singularLabel: 'Item', navigation: true },
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
@@ -89,6 +93,7 @@ const domainManifest = {
         Organization: {
             table: 'organizations',
             route: 'organizations',
+            ui: { label: 'Organizations', singularLabel: 'Organization', navigation: true },
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
@@ -102,6 +107,7 @@ const domainManifest = {
         Place: {
             table: 'places',
             route: 'places',
+            ui: { label: 'Places', singularLabel: 'Place', navigation: true },
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
@@ -117,6 +123,7 @@ const domainManifest = {
         Spell: {
             table: 'spells',
             route: 'spells',
+            ui: { label: 'Spells', singularLabel: 'Spell', navigation: true },
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
@@ -136,6 +143,7 @@ const domainManifest = {
         Sphere: {
             table: 'spheres',
             route: 'spheres',
+            ui: { label: 'Spheres', singularLabel: 'Sphere', navigation: true },
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
@@ -147,6 +155,7 @@ const domainManifest = {
         Alias: {
             table: 'aliases',
             route: 'aliases',
+            ui: { label: 'Aliases', singularLabel: 'Alias', navigation: false },
             idField: 'id',
             fields: {
                 id: { type: 'number', primary: true, required: true, autoIncrement: true },
@@ -406,24 +415,6 @@ const domainManifest = {
             payload: {},
         },
     },
-
-    /**
-     * Player visibility hop limit: controls how many relationship hops players can traverse
-     * from their anchored characters to see related entities.
-     *
-     * Semantics:
-     * - null or undefined: unlimited (current behavior, players see all reachable entities via BFS)
-     * - 0: players see only their anchored characters + all public entities
-     * - 1: players see anchored characters + entities directly related (1 hop) + public entities
-     * - 2+: players see anchored characters + entities up to N hops away + public entities
-     *
-     * DM role always sees all entities regardless of this setting.
-     * Viewer role always sees only public entities (not affected by this setting).
-     * Public entities remain visible at any hop count.
-     *
-     * Implementation: limits BFS traversal depth in getVisibleEntityIdsForUser()
-     */
-    playerVisibilityHops: 3,
 };
 
 function buildEntityTableMap(manifest = domainManifest) {

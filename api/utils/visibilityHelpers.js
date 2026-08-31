@@ -12,6 +12,13 @@
 const { domainManifest } = require('../../common/domainManifest');
 
 /**
+ * Player visibility hop limit: how many relationship hops a player can traverse from their
+ * anchored characters to see related entities (0 = anchored characters + public only).
+ * Tune here directly; DM/viewer roles are unaffected (handled separately).
+ */
+const PLAYER_VISIBILITY_HOPS = 3;
+
+/**
  * Check if a user has the DM role
  */
 function isDm(user) {
@@ -589,6 +596,7 @@ async function getRelatedEntityIds(manifestCrudService, entityRoute, anchoredCha
 }
 
 module.exports = {
+    PLAYER_VISIBILITY_HOPS,
     isDm,
     isAnchoredCharacter,
     getEntityDefByRoute,

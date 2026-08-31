@@ -24,6 +24,7 @@ const {
     validateHistoryChronology,
 } = require('../utils/relationWriteHelpers');
 const {
+    PLAYER_VISIBILITY_HOPS,
     isEntityVisibleToUser,
     isRelationVisibleToUser,
     filterEntitiesByVisibility,
@@ -396,14 +397,14 @@ function isDm(auth) {
 /**
  * Get the player visibility hops limit for a user.
  * DMs always see all entities (unlimited/undefined).
- * Players get the manifest-configured limit.
+ * Players get the configured limit (see PLAYER_VISIBILITY_HOPS in visibilityHelpers.js).
  * Other roles (viewer, null) get unlimited (handled separately via public visibility).
  */
 function getPlayerVisibilityHops(auth) {
     if (!auth || auth.role !== 'player') {
         return undefined;
     }
-    return domainManifest.playerVisibilityHops;
+    return PLAYER_VISIBILITY_HOPS;
 }
 
 async function getAnchoredCharacterIds(req) {

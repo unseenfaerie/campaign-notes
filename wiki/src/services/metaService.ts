@@ -18,6 +18,10 @@ export type EntityFieldSchema = {
 export type EntitySchema = {
     name: string
     route: string
+    label: string
+    singularLabel: string
+    navigation: boolean
+    default: boolean
     idField: string
     fields: EntityFieldSchema[]
 }
@@ -27,6 +31,7 @@ export type RelationFormSchema = {
     relationName: string
     kind: 'simple' | 'relationship' | 'history'
     relatedEntityRoute: string
+    relatedEntityLabel: string
     historyKey?: string | null
     fields: EntityFieldSchema[]
 }
@@ -50,6 +55,11 @@ export function getEntitySchemas(): Promise<EntitySchemasResponse> {
 export async function getEntitySchema(entityRoute: string): Promise<EntitySchema | undefined> {
     const schemas = await getEntitySchemas()
     return schemas.entities.find((entity) => entity.route === entityRoute)
+}
+
+export async function getDefaultEntityRoute(): Promise<string> {
+    const schemas = await getEntitySchemas()
+    return schemas.entities.find((entity) => entity.default)?.route ?? schemas.entities[0]?.route ?? ''
 }
 
 export async function getRelationSchemas(entityRoute: string): Promise<RelationFormSchema[]> {

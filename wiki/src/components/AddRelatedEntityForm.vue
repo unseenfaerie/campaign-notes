@@ -2,7 +2,6 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { ApiError } from '../services/apiClient'
 import { createRelation, listEntities, type DomainEntity } from '../services/domainService'
-import { entityLabelFromRoute } from '../config/entities'
 import type { EntityFieldSchema, RelationFormSchema } from '../services/metaService'
 import LoreDateInput from './LoreDateInput.vue'
 import RealDateInput from './RealDateInput.vue'
@@ -53,6 +52,10 @@ function prettyEnumValue(value: string): string {
 
 function isLongTextField(field: EntityFieldSchema): boolean {
   return field.type === 'string' && /description|explanation|notes/i.test(field.name)
+}
+
+function relatedEntityLabel(): string {
+  return selectedSchema.value?.relatedEntityLabel ?? selectedRelatedRoute.value
 }
 
 function targetLabel(target: DomainEntity): string {
@@ -184,14 +187,14 @@ watch(selectedRelatedRoute, () => {
       <SearchableSelect
         id="add-relation-type"
         v-model="selectedRelatedRoute"
-        :options="options.map((option) => ({ value: option.relatedRoute, label: entityLabelFromRoute(option.relatedRoute) }))"
+        :options="options.map((option) => ({ value: option.relatedRoute, label: option.relatedEntityLabel }))"
         placeholder="Select one"
       />
     </div>
 
     <template v-if="selectedSchema">
       <div class="form-row">
-        <label for="add-relation-target">{{ entityLabelFromRoute(selectedRelatedRoute) }}</label>
+        <label for="add-relation-target">{{ relatedEntityLabel() }}</label>
         <SearchableSelect
           id="add-relation-target"
           v-model="selectedTargetId"

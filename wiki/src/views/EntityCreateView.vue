@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { entitySingularLabelFromRoute } from '../config/entities'
 import { ApiError } from '../services/apiClient'
 import { createEntity, listEntities, type DomainEntity } from '../services/domainService'
 import { getEntitySchema, type EntityFieldSchema, type EntitySchema } from '../services/metaService'
@@ -24,7 +23,7 @@ const formValues = ref<Record<string, any>>({})
 const placeOptions = ref<DomainEntity[]>([])
 const slugTouched = ref(false)
 
-const singularLabel = computed(() => entitySingularLabelFromRoute(props.entityRoute))
+const singularLabel = computed(() => schema.value?.singularLabel ?? props.entityRoute)
 
 const visibleFields = computed(() => {
   const fields = schema.value?.fields ?? []

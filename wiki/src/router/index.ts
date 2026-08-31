@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { DEFAULT_ENTITY_ROUTE, isKnownEntityRoute } from '../config/entities'
+import { getDefaultEntityRoute, getEntitySchemas } from '../services/metaService'
 import { useAuthStore } from '../stores/auth'
 import AdminUserCreateView from '../views/AdminUserCreateView.vue'
 import AdminUserDetailView from '../views/AdminUserDetailView.vue'
@@ -21,7 +21,9 @@ const router = createRouter({
         },
         {
             path: '/',
-            redirect: `/${DEFAULT_ENTITY_ROUTE}`,
+            name: 'home',
+            component: EntityListView,
+            props: { entityRoute: '' },
         },
         {
             path: '/:entityRoute/new',
@@ -85,8 +87,20 @@ router.beforeEach(async (to) => {
         await auth.bootstrap()
     }
 
+    if (to.name === 'home') {
+        if (!auth.isAuthenticated.value) {
+            return {
+                name: 'login',
+                query: { redirect: to.fullPath },
+            }
+        }
+
+        return { path: `/${await getDefaultEntityRoute()}` }
+    }
+
     if (to.name === 'login' && auth.isAuthenticated.value) {
-        const redirect = typeof to.query.redirect === 'string' ? to.query.redirect : `/${DEFAULT_ENTITY_ROUTE}`
+        const defaultEntityRoute = await getDefaultEntityRoute()
+        const redirect = typeof to.query.redirect === 'string' ? to.query.redirect : `/${defaultEntityRoute}`
         return redirect
     }
 
@@ -102,8 +116,12 @@ router.beforeEach(async (to) => {
     }
 
     const entityRouteNames = ['entity-list', 'entity-detail', 'entity-create']
-    if (entityRouteNames.includes(String(to.name)) && !isKnownEntityRoute(String(to.params.entityRoute))) {
-        return { name: 'not-found' }
+    if (entityRouteNames.includes(String(to.name))) {
+        const schemas = await getEntitySchemas()
+        const isKnownRoute = schemas.entities.some((entity) => entity.route === String(to.params.entityRoute))
+        if (!isKnownRoute) {
+            return { name: 'not-found' }
+        }
     }
 
     if (to.name === 'entity-create' && !auth.isAdmin.value) {
@@ -111,7 +129,7 @@ router.beforeEach(async (to) => {
     }
 
     if (to.meta.requiresAdmin && !auth.isAdmin.value) {
-        return { path: `/${DEFAULT_ENTITY_ROUTE}` }
+        return { path: `/${await getDefaultEntityRoute()}` }
     }
 
     return true
