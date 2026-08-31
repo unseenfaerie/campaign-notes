@@ -27,7 +27,8 @@ const domainManifest = {
                 intelligence: { type: 'number' },
                 wisdom: { type: 'number' },
                 charisma: { type: 'number' },
-                total_health: { type: 'number' },
+                max_health: { type: 'number' },
+                retired: { type: 'boolean' },
                 deceased: { type: 'boolean', required: true },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: {
