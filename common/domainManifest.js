@@ -415,24 +415,6 @@ const domainManifest = {
             payload: {},
         },
     },
-
-    /**
-     * Player visibility hop limit: controls how many relationship hops players can traverse
-     * from their anchored characters to see related entities.
-     *
-     * Semantics:
-     * - null or undefined: unlimited (current behavior, players see all reachable entities via BFS)
-     * - 0: players see only their anchored characters + all public entities
-     * - 1: players see anchored characters + entities directly related (1 hop) + public entities
-     * - 2+: players see anchored characters + entities up to N hops away + public entities
-     *
-     * DM role always sees all entities regardless of this setting.
-     * Viewer role always sees only public entities (not affected by this setting).
-     * Public entities remain visible at any hop count.
-     *
-     * Implementation: limits BFS traversal depth in getVisibleEntityIdsForUser()
-     */
-    playerVisibilityHops: 3,
 };
 
 function buildEntityTableMap(manifest = domainManifest) {
