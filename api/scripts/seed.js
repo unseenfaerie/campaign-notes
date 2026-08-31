@@ -120,17 +120,17 @@ async function main() {
     ('adventurers-guild', false, 'The Adventurer''s Guild', 'guild', 'A guild for adventurers in Novafell and Wavethorn.', 'Long Explanation.');
   `);
 
-  await runSql(`Inserting places...`, `INSERT OR IGNORE INTO places (id, is_public, name, type, parent_id, short_description, long_explanation) VALUES
-    ('the-universe', false, 'The Universe', 'universe', NULL, 'Everything in existence.', 'Long Explanation.'),
-    ('material-plane', false, 'The Material Plane', 'plane', 'the-universe', 'The plane of standard physical existence.', 'Long Explanation.'),
-    ('the-world', true, 'The World', 'planet', 'material-plane', 'The world of mists.', 'Long Explanation.'),
-    ('othlorin', true, 'Othlorin', 'continent', 'the-world', 'The old land of the elves, now a rapidly burgeoning human territory.', 'Long Explanation.'),
-    ('wavethorn', true, 'Wavethorn', 'city-state', 'othlorin', 'A city-state on the coast.', 'Long Explanation.'),
-    ('itholis', true, 'Itholis', 'country', 'othlorin', 'The largest country in Othlorin, composed of 6 Counties.', 'Long Explanation.'),
-    ('weinmere', true, 'Weinmere', 'region', 'itholis', 'A county in Itholis. Ruled over by Count Jirakby', 'Long Explanation.'),
-    ('tempusfen', true, 'Tempusfen', 'region', 'itholis', 'A former county in Itholis. Composed of swamps and misty forests.', 'Long Explanation.'),
-    ('anash', false, 'Anash', 'city', 'weinmere', 'A city in the Weinmere.', 'Long Explanation.'),
-    ('lundgren', false, 'Lundgren', 'town', 'tempusfen', 'A quiet logging town settled on the edge of the Misty Marsh.', 'Long Explanation.');
+  await runSql(`Inserting places...`, `INSERT OR IGNORE INTO places (id, is_public, name, type, parent_id, short_description, establishments, long_explanation) VALUES
+    ('the-universe', false, 'The Universe', 'universe', NULL, 'Everything in existence.', NULL, 'Long Explanation.'),
+    ('material-plane', false, 'The Material Plane', 'plane', 'the-universe', 'The plane of standard physical existence.', NULL, 'Long Explanation.'),
+    ('the-world', true, 'The World', 'planet', 'material-plane', 'The world of mists.', NULL, 'Long Explanation.'),
+    ('othlorin', true, 'Othlorin', 'continent', 'the-world', 'The old land of the elves, now a rapidly burgeoning human territory.', NULL, 'Long Explanation.'),
+    ('wavethorn', true, 'Wavethorn', 'city-state', 'othlorin', 'A city-state on the coast.', NULL, 'Long Explanation.'),
+    ('itholis', true, 'Itholis', 'country', 'othlorin', 'The largest country in Othlorin, composed of 6 Counties.', NULL, 'Long Explanation.'),
+    ('weinmere', true, 'Weinmere', 'region', 'itholis', 'A county in Itholis. Ruled over by Count Jirakby', NULL, 'Long Explanation.'),
+    ('tempusfen', true, 'Tempusfen', 'region', 'itholis', 'A former county in Itholis. Composed of swamps and misty forests.', NULL, 'Long Explanation.'),
+    ('anash', false, 'Anash', 'city', 'weinmere', 'A city in the Weinmere.', NULL, 'Long Explanation.'),
+    ('lundgren', false, 'Lundgren', 'town', 'tempusfen', 'A quiet logging town settled on the edge of the Misty Marsh.', '*The Sneaking Squirrel*\nRun by Angeline and Martin Acorn, this is the only inn Lundgren has to offer.', 'Long Explanation.');
   `);
 
   await runSql(`Inserting spells...`, `INSERT OR IGNORE INTO spells (id, is_public, type, name, level, school, casting_time, range, components, materials, duration, description) VALUES
@@ -168,8 +168,7 @@ async function main() {
     (false, 'character', 'releas-neb', 'Rel'),
     (false, 'deity', 'achiel', 'Achiel, God of Light'),
     (false, 'place', 'wavethorn', 'City of Wavethorn'),
-    (false, 'character', 'djinn', 'Djinn'),
-    (false, 'event', 'coup-of-wavethorn', 'OOTID Session 1');
+    (false, 'character', 'djinn', 'Djinn');
   `);
 
   // // Join Tables

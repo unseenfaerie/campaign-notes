@@ -109,6 +109,7 @@ const domainManifest = {
                 type: { type: 'string', required: true, enum: 'placeType' },
                 parent_id: { type: 'string', ref: 'Place' },
                 short_description: { type: 'string', required: true, expository: true },
+                establishments: { type: 'string', expository: true },
                 long_explanation: { type: 'string', expository: true },
             },
         },
