@@ -5,6 +5,7 @@ import { listEntities, type DomainEntity } from '../services/domainService'
 import { getMentionTargets, type MentionTarget } from '../services/mentionService'
 import { getDateSystem, type EntityFieldSchema } from '../services/metaService'
 import { formatLoreDate, isCanonicalLoreDate, type DateSystem } from '../utils/loreDate'
+import { formatRealDate, isCanonicalRealDate } from '../utils/realDate'
 import { linkifyText } from '../utils/linkify'
 
 type Props = {
@@ -108,6 +109,10 @@ function prettyValue(key: string, value: unknown): string {
 
   if (dateSystem.value && isCanonicalLoreDate(value) && (fieldType(key) === 'loreDate' || !props.fields)) {
     return formatLoreDate(dateSystem.value, value)
+  }
+
+  if (isCanonicalRealDate(value) && (fieldType(key) === 'realDate' || !props.fields)) {
+    return formatRealDate(value)
   }
 
   return String(value)

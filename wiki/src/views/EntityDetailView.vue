@@ -14,6 +14,7 @@ import {
   type RelationFormSchema,
 } from '../services/metaService'
 import LoreDateInput from '../components/LoreDateInput.vue'
+import RealDateInput from '../components/RealDateInput.vue'
 import SearchableSelect from '../components/SearchableSelect.vue'
 import LinkifiedText from '../components/LinkifiedText.vue'
 import { useAuthStore } from '../stores/auth'
@@ -418,7 +419,7 @@ function buildFieldsPayload(
       if (field.required) {
         throw new Error(`${prettyFieldName(field.name)} is required.`)
       }
-      if (clearOptionalLoreDates && field.type === 'loreDate') {
+      if (clearOptionalLoreDates && (field.type === 'loreDate' || field.type === 'realDate')) {
         payload[field.name] = null
       }
       if (clearOptionalReferences && field.ref) {
@@ -724,6 +725,11 @@ watch(() => [props.entityRoute, props.id], loadDetail)
               v-model="editValues[field.name]"
               :required="field.required"
             />
+            <RealDateInput
+              v-else-if="field.type === 'realDate'"
+              v-model="editValues[field.name]"
+              :required="field.required"
+            />
             <input
               v-else
               :id="`edit-field-${field.name}`"
@@ -904,6 +910,11 @@ watch(() => [props.entityRoute, props.id], loadDetail)
                   v-model="relationEditValues[field.name]"
                   :required="field.required"
                 />
+                <RealDateInput
+                  v-else-if="field.type === 'realDate'"
+                  v-model="relationEditValues[field.name]"
+                  :required="field.required"
+                />
                 <input
                   v-else
                   :id="`edit-relation-${relatedRoute}-${index}-${field.name}`"
@@ -1013,6 +1024,11 @@ watch(() => [props.entityRoute, props.id], loadDetail)
                     ></textarea>
                     <LoreDateInput
                       v-else-if="field.type === 'loreDate'"
+                      v-model="historyEditValues[field.name]"
+                      :required="field.required"
+                    />
+                    <RealDateInput
+                      v-else-if="field.type === 'realDate'"
                       v-model="historyEditValues[field.name]"
                       :required="field.required"
                     />

@@ -65,7 +65,7 @@ const domainManifest = {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
                 is_public: { type: 'boolean', required: true, hidden: true },
                 name: { type: 'string', required: true },
-                real_world_date: { type: 'string' },
+                real_world_date: { type: 'realDate' },
                 in_game_time_start: { type: 'loreDate' },
                 in_game_time_end: { type: 'loreDate' },
                 previous_event_id: { type: 'string', ref: 'Event' },
