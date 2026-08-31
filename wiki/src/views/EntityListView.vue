@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { entityLabelFromRoute, entitySingularLabelFromRoute } from '../config/entities'
 import { ApiError } from '../services/apiClient'
 import { listEntities, type DomainEntity } from '../services/domainService'
-import { getEntitySchema, type EntityFieldSchema } from '../services/metaService'
+import { getEntitySchema, type EntityFieldSchema, type EntitySchema } from '../services/metaService'
 import { prettyEnumValue, prettyFieldName } from '../utils/formatting'
 import { useAuthStore } from '../stores/auth'
 
@@ -23,8 +22,9 @@ const nameFilter = ref('')
 const booleanFilters = ref<Record<string, '' | 'true' | 'false'>>({})
 const enumFilters = ref<Record<string, string>>({})
 
-const title = computed(() => entityLabelFromRoute(props.entityRoute))
-const singularLabel = computed(() => entitySingularLabelFromRoute(props.entityRoute))
+const schema = ref<EntitySchema | null>(null)
+const title = computed(() => schema.value?.label ?? props.entityRoute)
+const singularLabel = computed(() => schema.value?.singularLabel ?? props.entityRoute)
 
 const booleanFilterFields = computed(() => filterableFields.value.filter((field) => field.type === 'boolean'))
 const enumFilterFields = computed(() => filterableFields.value.filter((field) => field.enum))
@@ -91,12 +91,13 @@ async function loadList() {
   enumFilters.value = {}
 
   try {
-    const [schema, entityRecords] = await Promise.all([
+    const [loadedSchema, entityRecords] = await Promise.all([
       getEntitySchema(props.entityRoute),
       listEntities(props.entityRoute),
     ])
 
-    filterableFields.value = (schema?.fields ?? []).filter(
+    schema.value = loadedSchema ?? null
+    filterableFields.value = (loadedSchema?.fields ?? []).filter(
       (field) => !field.hidden && !field.primary && (field.type === 'boolean' || field.enum)
     )
     records.value = entityRecords

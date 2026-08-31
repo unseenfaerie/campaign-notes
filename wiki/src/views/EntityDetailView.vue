@@ -3,7 +3,6 @@ import { computed, onMounted, ref, watch } from 'vue'
 import AddRelatedEntityForm from '../components/AddRelatedEntityForm.vue'
 import CollapseSection from '../components/CollapseSection.vue'
 import FieldList from '../components/FieldList.vue'
-import { entityLabelFromRoute } from '../config/entities'
 import { ApiError } from '../services/apiClient'
 import { getEntityFull, listEntities, updateEntity, updateRelation, type DomainEntity } from '../services/domainService'
 import {
@@ -59,7 +58,7 @@ const historyEditOriginalSelector = ref<{ key: string; value: string } | null>(n
 const historyEditSaving = ref(false)
 const historyEditError = ref('')
 
-const entityTitle = computed(() => entityLabelFromRoute(props.entityRoute))
+const entityTitle = computed(() => entitySchema.value?.label ?? props.entityRoute)
 const entityPageTitle = computed(() => {
   const entity = fullData.value?.entity
   if (!entity) {
@@ -304,6 +303,10 @@ function relationSchemaForRoute(relatedRoute: string): RelationFormSchema[] {
 
 function findRelationSchema(relatedRoute: string): RelationFormSchema | undefined {
   return relationSchemas.value.find((entry) => entry.relatedRoute === relatedRoute)
+}
+
+function relatedEntityLabel(relatedRoute: string): string {
+  return findRelationSchema(relatedRoute)?.relatedEntityLabel ?? relatedRoute
 }
 
 function isSimpleRelation(relatedRoute: string): boolean {
@@ -645,7 +648,7 @@ async function saveEdit() {
 }
 
 onMounted(loadDetail)
-watch(() => [props.entityRoute, props.id], loadDetail)
+watch(() => [props.entityRoute, props.id], () => loadDetail())
 </script>
 
 <template>
@@ -809,7 +812,7 @@ watch(() => [props.entityRoute, props.id], loadDetail)
         :key="relatedRoute"
         :ref="(instance) => setCollapseSectionRef(relatedRoute, instance)"
         class="article-section"
-        :title="titleCaseLabel(entityLabelFromRoute(relatedRoute))"
+        :title="titleCaseLabel(relatedEntityLabel(relatedRoute))"
         :count="records.length"
         :initially-open="false"
       >

@@ -1,14 +1,20 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
-import { ENTITY_ROUTES } from './config/entities'
+import { getEntitySchemas, type EntitySchema } from './services/metaService'
 import { useAuthStore } from './stores/auth'
 
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+const entitySchemas = ref<EntitySchema[]>([])
 
 const showShell = computed(() => auth.isAuthenticated.value && route.name !== 'login')
+const navigationEntities = computed(() => entitySchemas.value.filter((entity) => entity.navigation))
+
+onMounted(async () => {
+  entitySchemas.value = (await getEntitySchemas()).entities
+})
 
 async function handleLogout() {
   await auth.logout()
@@ -28,7 +34,7 @@ async function handleLogout() {
 
         <nav aria-label="Entity navigation" class="nav-links">
           <RouterLink
-            v-for="entity in ENTITY_ROUTES"
+            v-for="entity in navigationEntities"
             :key="entity.route"
             :to="`/${entity.route}`"
             class="nav-link"

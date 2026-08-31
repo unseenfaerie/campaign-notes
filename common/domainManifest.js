@@ -10,6 +10,7 @@ const domainManifest = {
         Character: {
             table: 'characters',
             route: 'characters',
+            ui: { label: 'Characters', singularLabel: 'Character', navigation: true, default: true },
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
@@ -47,6 +48,7 @@ const domainManifest = {
         Deity: {
             table: 'deities',
             route: 'deities',
+            ui: { label: 'Deities', singularLabel: 'Deity', navigation: true },
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
@@ -60,6 +62,7 @@ const domainManifest = {
         Event: {
             table: 'events',
             route: 'events',
+            ui: { label: 'Events', singularLabel: 'Event', navigation: true },
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
@@ -77,6 +80,7 @@ const domainManifest = {
         Item: {
             table: 'items',
             route: 'items',
+            ui: { label: 'Items', singularLabel: 'Item', navigation: true },
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
@@ -89,6 +93,7 @@ const domainManifest = {
         Organization: {
             table: 'organizations',
             route: 'organizations',
+            ui: { label: 'Organizations', singularLabel: 'Organization', navigation: true },
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
@@ -102,6 +107,7 @@ const domainManifest = {
         Place: {
             table: 'places',
             route: 'places',
+            ui: { label: 'Places', singularLabel: 'Place', navigation: true },
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
@@ -117,6 +123,7 @@ const domainManifest = {
         Spell: {
             table: 'spells',
             route: 'spells',
+            ui: { label: 'Spells', singularLabel: 'Spell', navigation: true },
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
@@ -136,6 +143,7 @@ const domainManifest = {
         Sphere: {
             table: 'spheres',
             route: 'spheres',
+            ui: { label: 'Spheres', singularLabel: 'Sphere', navigation: true },
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
@@ -147,6 +155,7 @@ const domainManifest = {
         Alias: {
             table: 'aliases',
             route: 'aliases',
+            ui: { label: 'Aliases', singularLabel: 'Alias', navigation: false },
             idField: 'id',
             fields: {
                 id: { type: 'number', primary: true, required: true, autoIncrement: true },

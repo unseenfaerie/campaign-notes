@@ -202,6 +202,10 @@ function buildEntityFormSchemas(manifest = domainManifest) {
         entities.push({
             name: entityName,
             route: entityDef.route,
+            label: entityDef.ui?.label || entityName,
+            singularLabel: entityDef.ui?.singularLabel || entityName,
+            navigation: entityDef.ui?.navigation !== false,
+            default: entityDef.ui?.default === true,
             idField: entityDef.idField,
             fields: orderEntityFields(mapFieldDefs(entityDef.fields), entityDef.idField),
         });
@@ -251,18 +255,23 @@ function buildRelationFormSchemas(manifest = domainManifest) {
 
     for (const entityDef of Object.values(manifest.entities)) {
         relationsByEntityRoute[entityDef.route] = getRelationsForEntityRoute(entityDef.route, manifest).map(
-            (relation) => ({
-                relatedRoute: relation.relatedRoute,
-                relationName: relation.relationName,
-                kind: relation.relationDef.kind,
-                relatedEntityRoute: relation.relatedEntityRoute,
-                historyKey: relation.relationDef.historyKey || null,
-                fields: mapFieldDefs(relation.relationDef.payload).map((field) =>
-                    relation.relationDef.historyKey && field.name === relation.relationDef.historyKey
-                        ? { ...field, primary: true }
-                        : field
-                ),
-            })
+            (relation) => {
+                const relatedEntityDef = manifest.entities[relation.relatedEntityName];
+
+                return {
+                    relatedRoute: relation.relatedRoute,
+                    relationName: relation.relationName,
+                    kind: relation.relationDef.kind,
+                    relatedEntityRoute: relation.relatedEntityRoute,
+                    relatedEntityLabel: relatedEntityDef.ui?.label || relation.relatedEntityName,
+                    historyKey: relation.relationDef.historyKey || null,
+                    fields: mapFieldDefs(relation.relationDef.payload).map((field) =>
+                        relation.relationDef.historyKey && field.name === relation.relationDef.historyKey
+                            ? { ...field, primary: true }
+                            : field
+                    ),
+                };
+            }
         );
     }
 
