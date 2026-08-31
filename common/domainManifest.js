@@ -341,32 +341,6 @@ const domainManifest = {
                 },
             },
         },
-        EventDeity: {
-            kind: 'relationship',
-            table: 'event_deities',
-            members: [
-                { entity: 'Event', key: 'event_id', route: 'deities' },
-                { entity: 'Deity', key: 'deity_id', route: 'events' },
-            ],
-            keys: ['event_id', 'deity_id'],
-            payload: {
-                short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
-            },
-        },
-        EventItem: {
-            kind: 'relationship',
-            table: 'event_items',
-            members: [
-                { entity: 'Event', key: 'event_id', route: 'items' },
-                { entity: 'Item', key: 'item_id', route: 'events' },
-            ],
-            keys: ['event_id', 'item_id'],
-            payload: {
-                short_description: { type: 'string', required: true },
-                long_explanation: { type: 'string' },
-            },
-        },
         EventOrganization: {
             kind: 'relationship',
             table: 'event_organizations',

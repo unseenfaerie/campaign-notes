@@ -84,7 +84,7 @@ async function main() {
     ('releas-neb', 'keith', ?);
   `, [nowIso, nowIso, nowIso, nowIso, nowIso]);
 
-  await runSql(`Inserting deities...`, `INSERT OR IGNORE INTO deities (id, is_public, name, pantheon, alignment, short_description, long_explanation) VALUES
+  await runSql(`Inserting deities...`, `INSERT OR IGNORE INTO deities (id, is_public, name, alignment, short_description, long_explanation) VALUES
     ('achiel', true, 'Achiel', 'lawful-good', 'God of Light.', 'Long Explanation.'),
     ('idona', true, 'Idona', 'chaotic-good', 'Goddess of Humanity.', 'The patron goddess of and mother to Humankind. Her nurturing guidance shows us what we need to know to thrive. Those that worship Idona are numerous within the Othlorin. She is primarily worshipped as Achiels Wife, deserving of respect and credence. There are some women who have dedicated their lives to interpreting the messages of the moon as those are what Idona intends.'),
     ('ponat', true, 'Ponat', 'lawful-good', 'God of fortress and protection.', 'Long Explanation.'),
@@ -244,16 +244,6 @@ async function main() {
   await runSql(`Inserting event_characters...`, `INSERT OR IGNORE INTO event_characters (event_id, character_id, short_description, long_explanation) VALUES
     ('coup-of-wavethorn', 'alann-barnett', 'Short description.', 'Long Explanation.'),
     ('coup-of-wavethorn', 'releas-neb', 'Short description.', 'Long Explanation.');
-  `);
-
-  await runSql(`Inserting event_deities...`, `INSERT OR IGNORE INTO event_deities (event_id, deity_id, short_description, long_explanation) VALUES
-    ('coup-of-wavethorn', 'achiel', 'Short description.', 'Long Explanation.'),
-    ('coup-of-wavethorn', 'wyaris', 'Short description.', 'Long Explanation.');
-  `);
-
-  await runSql(`Inserting event_items...`, `INSERT OR IGNORE INTO event_items (event_id, item_id, short_description, long_explanation) VALUES
-    ('coup-of-wavethorn', 'rel-s-spellbook', 'Short description.', 'Long Explanation.'),
-    ('coup-of-wavethorn', 'cormac-s-spellbook', 'Short description.', 'Long Explanation.');
   `);
 
   await runSql(`Inserting event_organizations...`, `INSERT OR IGNORE INTO event_organizations (event_id, organization_id, short_description, long_explanation) VALUES
