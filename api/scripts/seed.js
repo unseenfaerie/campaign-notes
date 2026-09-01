@@ -61,10 +61,10 @@ async function main() {
   await seedUsers({ bcrypt, nowIso, runSql });
 
   await runSql(`Inserting characters...`, `INSERT OR IGNORE INTO characters (id, player_character, is_public, name, birthdate, ancestry, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, max_health, retired, deceased, short_description, long_explanation) VALUES
-    ('alann-barnett', true, false, 'Alann Barnett', '0200190001_age-of-descent-default', 'human', 'Cleric', '4', 'neutral-good', 13, 8, 11, 10, 14, 11, 20, false, false, 'A thoughtful and strong-willed adventurer.', NULL),
-    ('releas-neb', true, false, 'Releas Neb', '0200194001_age-of-descent-default', 'human', 'Magic User', '7', 'chaotic-good', 5, 14, 10, 18, 13, 9, 16, false, false, 'A clever and resourceful wizard.', NULL),
-    ('orlaith-of-the-mosswood', true, false, 'Orlaith of the Mosswood', '0200197001_age-of-descent-default', 'human', 'Druid', '1', 'chaotic-neutral', 12, 15, 11, 9, 15, 9, 2, false, false, 'A burgeoning druid with knowledge of herbs.', NULL),
-    ('djinn', true, false, 'Djinn Rat-Eater', '0200195001_age-of-descent-default', 'human', 'Assassin', '2', 'neutral-evil', 8, 18, 10, 4, 15, 10, 5, false, false, 'A deceptive and quick assassin.', NULL),
+    ('alann-barnett', true, false, 'Alann Barnett', '0200190001_age-of-descent-default', 'human', 'Cleric', '4', 'neutral-good', 13, 8, 11, 10, 14, 11, 20, false, false, 'A lawful and strong-willed adventurer.', 'Alann found purpose in his deity, the god of law, Doh. He was known to be a bit of a hardass, but was extremely charitable.'),
+    ('releas-neb', true, false, 'Releas Neb', '0200194001_age-of-descent-default', 'human', 'Magic User', '7', 'chaotic-good', 5, 14, 10, 18, 13, 9, 16, false, false, 'A clever and resourceful wizard.', 'Rel came to Wavethorn with bright optimism in his heart. He fights for justice at every turn.'),
+    ('orlaith-of-the-mosswood', true, false, 'Orlaith of the Mosswood', '0200197001_age-of-descent-default', 'human', 'Druid', '1', 'chaotic-neutral', 12, 15, 11, 9, 15, 9, 2, false, false, 'A burgeoning druid with knowledge of herbs.', 'Orlaith was orphaned at a young age and was taken in by Mildred of the Mosswood in Lundgren. They are proficient in herbalism, singing, and hunting. They also can fix wagons and carts since they interned at the repair shop as a youth.'),
+    ('djinn', true, false, 'Djinn Rat-Eater', '0200195001_age-of-descent-default', 'human', 'Assassin', '2', 'neutral-evil', 8, 18, 10, 4, 15, 10, 5, false, false, 'A deceptive and quick assassin.', 'Djinn traveled extremely far to be in Othlorin, leaving a hard and traumatic life back in Skrazdagh. He fell in with a criminal gang in Wavethorn who now act as his family.'),
     ('apollonia-palleday', true, false, 'Apollonia Palleday', '0200198001_age-of-descent-default', 'human', 'Magic User', '5', 'neutral-good', 13, 8, 11, 18, 14, 11, 18, false, false, 'A bright and curious spellcaster.', NULL),
     ('durchir', true, false, 'Durchir', '0200187001_age-of-descent-default', 'half-elf', 'Fighter', '2', 'lawful-evil', 18, 10, 12, 15, 10, 11, 22, false, true, 'Durchir of the Angry Orchard, fallen hero.', NULL),
     ('cormac', true, false, 'Cormac', '0200193001_age-of-descent-default', 'half-elf', 'Thief/Illusionist', '5/4', 'chaotic-good', 9, 16, 7, 15, 14, 7, 15, false, false, 'A clever and nimble adventurer.', NULL),
@@ -184,10 +184,10 @@ async function main() {
   `);
 
   await runSql(`Inserting character_items...`, `INSERT OR IGNORE INTO character_items (character_id, item_id, acquired_date, relinquished_date, short_description) VALUES
-    ('releas-neb', 'rel-s-spellbook', '0200195034_age-of-descent-default', '0200200062_age-of-descent-default', 'Gained from his reclusive master in GatUn, then stolen by ruffians in Wavethorn.'),
-    ('releas-neb', 'rel-s-spellbook', '0200200122_age-of-descent-default', '', 'Recovered from street ruffians.'),
-    ('apollonia-palleday', 'polly-s-spellbook', '0200200189_age-of-descent-default', '', 'Received from her betrothed, Alaric Evermoon.'),
-    ('cormac', 'cormac-s-spellbook', '0200195152_age-of-descent-default', '', 'Received from his master.');
+    ('releas-neb', 'rels-spellbook', '0200195034_age-of-descent-default', '0200200062_age-of-descent-default', 'Gained from his reclusive master in GatUn, then stolen by ruffians in Wavethorn.'),
+    ('releas-neb', 'rels-spellbook', '0200200122_age-of-descent-default', NULL, 'Recovered from street ruffians.'),
+    ('apollonia-palleday', 'pollys-spellbook', '0200200189_age-of-descent-default', NULL, 'Received from her betrothed, Alaric Evermoon.'),
+    ('cormac', 'cormacs-spellbook', '0200195152_age-of-descent-default', NULL, 'Received from his master.');
   `);
 
   await runSql(`Inserting character_organizations...`, `INSERT OR IGNORE INTO character_organizations (character_id, organization_id, joined_date, left_date, short_description, long_explanation) VALUES
@@ -260,10 +260,10 @@ async function main() {
   `);
 
   await runSql(`Inserting item_spells...`, `INSERT OR IGNORE INTO item_spells (item_id, spell_id) VALUES
-    ('rel-s-spellbook', 'fireball'),
-    ('rel-s-spellbook', 'magic-missile'),
-    ('cormac-s-spellbook', 'change-self'),
-    ('cormac-s-spellbook', 'audible-glamer');
+    ('rels-spellbook', 'fireball'),
+    ('rels-spellbook', 'magic-missile'),
+    ('cormacs-spellbook', 'change-self'),
+    ('cormacs-spellbook', 'audible-glamer');
   `);
 
   await runSql(`Inserting spell_spheres...`, `INSERT OR IGNORE INTO spell_spheres (spell_id, sphere_id) VALUES

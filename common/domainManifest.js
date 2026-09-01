@@ -193,7 +193,6 @@ const domainManifest = {
                 acquired_date: { type: 'loreDate', required: true },
                 relinquished_date: { type: 'loreDate' },
                 short_description: { type: 'string', required: true, expository: true },
-                long_explanation: { type: 'string', expository: true },
             },
         },
         CharacterOrganization: {
