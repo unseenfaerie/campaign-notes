@@ -85,9 +85,9 @@ async function main() {
   `, [nowIso, nowIso, nowIso, nowIso, nowIso]);
 
   await runSql(`Inserting deities...`, `INSERT OR IGNORE INTO deities (id, is_public, name, alignment, short_description, long_explanation) VALUES
-    ('achiel', true, 'Achiel', 'lawful-good', 'God of Light.', NULL),
-    ('idona', true, 'Idona', 'chaotic-good', 'Goddess of Humanity.', 'The patron goddess of and mother to Humankind. Her nurturing guidance shows us what we need to know to thrive. Those that worship Idona are numerous within the Othlorin. She is primarily worshipped as Achiels Wife, deserving of respect and credence. There are some women who have dedicated their lives to interpreting the messages of the moon as those are what Idona intends.'),
-    ('ponat', true, 'Ponat', 'lawful-good', 'God of fortress and protection.', NULL),
+    ('achiel', true, 'Achiel', 'lawful-good', 'God of Light.', 'Achiel is infinite in his brilliance, providing his light of mercy and righteousness upon this wretched world. All other gods bow to his magnificence and benevolence. Without his guidance, humanity would be left in darkness and ignorance.'),
+    ('idona', true, 'Idona', 'chaotic-good', 'Goddess of Humanity.', 'The patron goddess of and mother to Humankind. Her nurturing guidance shows us what we need to know to thrive. Those that worship Idona are numerous within Othlorin. She is primarily worshipped as Achiel''s Wife, deserving of respect and credence. There are some women who have dedicated their lives to interpreting the messages of the moon as those are what Idona intends.'),
+    ('ponat', true, 'Ponat', 'lawful-good', 'God of fortress and protection.', 'Ponat is most known for creating the impenetrable fortress in which Achiel resides within Benevos. Ponat''s direct followers are few, with only two dedicated sects of worship known in the world. They tend to be supported materially by the communities their fortresses defend.'),
     ('wyaris', false, 'Wyaris', 'chaotic-good', 'Lady of Swords.', NULL),
     ('danaris', false, 'Danaris', 'chaotic-neutral', 'Lady of Death.', NULL),
     ('vaharis', false, 'Vaharis', 'lawful-neutral', 'Lady of Judgement.', NULL),
