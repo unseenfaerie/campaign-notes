@@ -221,6 +221,8 @@ a:hover {
 .history-record-actions {
     float: right;
     margin-left: 1rem;
+    display: flex;
+    gap: 0.5rem;
 }
 
 .status-card {
@@ -644,8 +646,53 @@ a:hover {
     cursor: not-allowed;
 }
 
+.danger-button {
+    border: 1px solid var(--warning);
+    border-radius: var(--radius-sm);
+    background: var(--paper);
+    color: var(--warning);
+    font: inherit;
+    font-weight: 600;
+    padding: 0.6rem 1.1rem;
+    cursor: pointer;
+}
+
+.danger-button:hover {
+    background: var(--warning);
+    color: var(--paper);
+}
+
+.danger-button:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
 .entity-form .status-card {
     margin-top: 0.85rem;
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(32, 33, 34, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.modal-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    max-width: 420px;
+    width: calc(100% - 2rem);
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.modal-card h3 {
+    margin-top: 0;
 }
 
 @media (max-width: 980px) {

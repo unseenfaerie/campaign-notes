@@ -28,6 +28,10 @@ export async function updateEntity(entityRoute: string, id: string, data: Domain
     return response.record
 }
 
+export async function deleteEntity(entityRoute: string, id: string): Promise<void> {
+    await requestJson<void>(`/${entityRoute}/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
 export async function createRelation(
     entityRoute: string,
     id: string,
@@ -55,6 +59,23 @@ export async function updateRelation(
     return requestJson<{ updated: number; record: DomainEntity }>(
         `/${entityRoute}/${encodeURIComponent(id)}/${relatedRoute}/${encodeURIComponent(relatedId)}${query}`,
         { method: 'PATCH', body: data }
+    )
+}
+
+export async function deleteRelation(
+    entityRoute: string,
+    id: string,
+    relatedRoute: string,
+    relatedId: string,
+    historySelector?: { key: string; value: string }
+): Promise<void> {
+    const query = historySelector
+        ? `?${encodeURIComponent(historySelector.key)}=${encodeURIComponent(historySelector.value)}`
+        : ''
+
+    await requestJson<void>(
+        `/${entityRoute}/${encodeURIComponent(id)}/${relatedRoute}/${encodeURIComponent(relatedId)}${query}`,
+        { method: 'DELETE' }
     )
 }
 

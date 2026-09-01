@@ -1,10 +1,23 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import AddRelatedEntityForm from '../components/AddRelatedEntityForm.vue'
 import CollapseSection from '../components/CollapseSection.vue'
+import ConfirmModal from '../components/ConfirmModal.vue'
 import FieldList from '../components/FieldList.vue'
 import { ApiError } from '../services/apiClient'
-import { getEntityFull, listEntities, updateEntity, updateRelation, getAliases, createAlias, routeToEntityType, type DomainEntity } from '../services/domainService'
+import {
+  getEntityFull,
+  listEntities,
+  updateEntity,
+  updateRelation,
+  deleteEntity,
+  deleteRelation,
+  getAliases,
+  createAlias,
+  routeToEntityType,
+  type DomainEntity,
+} from '../services/domainService'
 import { refreshMentionTargets } from '../services/mentionService'
 import {
   getEntitySchema,
@@ -31,6 +44,7 @@ const props = defineProps<{
 }>()
 
 const auth = useAuthStore()
+const router = useRouter()
 
 const loading = ref(true)
 const errorMessage = ref('')
@@ -64,6 +78,12 @@ const historyEditValues = ref<Record<string, any>>({})
 const historyEditOriginalSelector = ref<{ key: string; value: string } | null>(null)
 const historyEditSaving = ref(false)
 const historyEditError = ref('')
+
+const deleteModalOpen = ref(false)
+const deleteModalMessage = ref('')
+const deleteModalBusy = ref(false)
+const deleteModalError = ref('')
+const pendingDeleteAction = ref<(() => Promise<void>) | null>(null)
 
 const entityTitle = computed(() => entitySchema.value?.label ?? props.entityRoute)
 const entityPageTitle = computed(() => {
@@ -327,6 +347,80 @@ function isSimpleRelation(relatedRoute: string): boolean {
 
 function isRelationshipKind(relatedRoute: string): boolean {
   return findRelationSchema(relatedRoute)?.kind === 'relationship'
+}
+
+function isHistoryKind(relatedRoute: string): boolean {
+  return findRelationSchema(relatedRoute)?.kind === 'history'
+}
+
+function openDeleteConfirm(message: string, action: () => Promise<void>) {
+  deleteModalMessage.value = message
+  pendingDeleteAction.value = action
+  deleteModalError.value = ''
+  deleteModalOpen.value = true
+}
+
+function cancelDeleteConfirm() {
+  if (deleteModalBusy.value) {
+    return
+  }
+
+  deleteModalOpen.value = false
+  pendingDeleteAction.value = null
+}
+
+async function confirmDeleteConfirm() {
+  if (!pendingDeleteAction.value) {
+    return
+  }
+
+  deleteModalBusy.value = true
+  deleteModalError.value = ''
+
+  try {
+    await pendingDeleteAction.value()
+    deleteModalOpen.value = false
+    pendingDeleteAction.value = null
+  } catch (error) {
+    if (error instanceof ApiError || error instanceof Error) {
+      deleteModalError.value = error.message
+    } else {
+      deleteModalError.value = 'Could not delete this record.'
+    }
+  } finally {
+    deleteModalBusy.value = false
+  }
+}
+
+function confirmDeleteEntity() {
+  openDeleteConfirm(`Delete this ${entityPageTitle.value}? This cannot be undone.`, async () => {
+    await deleteEntity(props.entityRoute, props.id)
+    router.push({ name: 'entity-list', params: { entityRoute: props.entityRoute } })
+  })
+}
+
+function confirmDeleteRelation(relatedRoute: string, record: DomainEntity) {
+  openDeleteConfirm(
+    `Remove this ${relatedEntityLabel(relatedRoute)} relationship with ${relatedRecordLabel(record)}?`,
+    async () => {
+      await deleteRelation(props.entityRoute, props.id, relatedRoute, relatedRecordId(record))
+      await loadDetail({ silent: true })
+    }
+  )
+}
+
+function confirmDeleteHistoryEntry(relatedRoute: string, record: DomainEntity, historyEntry: DomainEntity) {
+  const schema = findRelationSchema(relatedRoute)
+  if (!schema || !schema.historyKey) {
+    return
+  }
+
+  const selector = { key: schema.historyKey, value: String(historyEntry[schema.historyKey] ?? '') }
+
+  openDeleteConfirm(`Delete this history record for ${relatedRecordLabel(record)}?`, async () => {
+    await deleteRelation(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), selector)
+    await loadDetail({ silent: true })
+  })
 }
 
 function editableFields(fields: EntityFieldSchema[]): EntityFieldSchema[] {
@@ -689,6 +783,14 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
             >
               Edit
             </button>
+            <button
+              v-if="auth.isAdmin.value && !isEditing"
+              type="button"
+              class="danger-button"
+              @click="confirmDeleteEntity"
+            >
+              Delete
+            </button>
           </div>
         </div>
 
@@ -898,6 +1000,14 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 @click="startEditRelation(relatedRoute, record)"
               >
                 Edit
+              </button>
+              <button
+                v-if="auth.isAdmin.value && !isHistoryKind(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}`"
+                type="button"
+                class="danger-button"
+                @click="confirmDeleteRelation(relatedRoute, record)"
+              >
+                Delete
               </button>
             </div>
 
@@ -1118,6 +1228,13 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                     >
                       Edit
                     </button>
+                    <button
+                      type="button"
+                      class="danger-button"
+                      @click="confirmDeleteHistoryEntry(relatedRoute, record, historyEntry)"
+                    >
+                      Delete
+                    </button>
                   </div>
                   <FieldList
                     v-if="Object.keys(factsData(historyEntry, relationSchemaForRoute(relatedRoute)[0]?.fields)).length > 0"
@@ -1176,5 +1293,15 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
         />
       </section>
     </article>
+
+    <ConfirmModal
+      :open="deleteModalOpen"
+      title="Confirm delete"
+      :message="deleteModalMessage"
+      :busy="deleteModalBusy"
+      :error-message="deleteModalError"
+      @confirm="confirmDeleteConfirm"
+      @cancel="cancelDeleteConfirm"
+    />
   </section>
 </template>
