@@ -993,22 +993,24 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 </RouterLink>
                 <template v-else>{{ relatedRecordLabel(record) }}</template>
               </h4>
-              <button
-                v-if="auth.isAdmin.value && isRelationshipKind(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}`"
-                type="button"
-                class="secondary-button"
-                @click="startEditRelation(relatedRoute, record)"
-              >
-                Edit
-              </button>
-              <button
-                v-if="auth.isAdmin.value && !isHistoryKind(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}`"
-                type="button"
-                class="danger-button"
-                @click="confirmDeleteRelation(relatedRoute, record)"
-              >
-                Delete
-              </button>
+              <div class="row-actions-end">
+                <button
+                  v-if="auth.isAdmin.value && isRelationshipKind(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}`"
+                  type="button"
+                  class="secondary-button"
+                  @click="startEditRelation(relatedRoute, record)"
+                >
+                  Edit
+                </button>
+                <button
+                  v-if="auth.isAdmin.value && !isHistoryKind(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}`"
+                  type="button"
+                  class="danger-button"
+                  @click="confirmDeleteRelation(relatedRoute, record)"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
 
             <form

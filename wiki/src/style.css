@@ -218,6 +218,11 @@ a:hover {
     gap: 1rem;
 }
 
+.row-actions-end {
+    display: flex;
+    gap: 0.5rem;
+}
+
 .history-record-actions {
     float: right;
     margin-left: 1rem;
