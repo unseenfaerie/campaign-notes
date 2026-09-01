@@ -16,3 +16,7 @@ export function getMentionTargets(): Promise<MentionTarget[]> {
 
     return mentionTargetsPromise
 }
+
+export function refreshMentionTargets(): void {
+    mentionTargetsPromise = null
+}

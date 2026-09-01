@@ -449,6 +449,43 @@ router.post('/:entityRoute', async (req, res) => {
         res.status(httpErr.status).json({ error: httpErr.message });
     }
 });
+
+// Special handler for filtering aliases by entity_type and entity_id
+router.get('/aliases', async (req, res) => {
+    try {
+        let entity_type = req.query.entity_type;
+        const entity_id = req.query.entity_id;
+
+        // If entity_type looks like a route name (plural), convert it to the entity type (singular, lowercase)
+        // e.g., 'characters' -> 'character', 'deities' -> 'deity'
+        if (entity_type) {
+            try {
+                const { entityName } = getEntityByRoute(String(entity_type));
+                entity_type = entityName.toLowerCase();
+            } catch {
+                // If it's not a valid route, use it as-is (might already be entity_type)
+                entity_type = String(entity_type).toLowerCase();
+            }
+        }
+
+        // If both filters are provided, apply them
+        if (entity_type && entity_id) {
+            const whereClause = {
+                entity_type: String(entity_type),
+                entity_id: String(entity_id),
+            };
+            const records = await manifestCrudService.getMany('Alias', whereClause);
+            return res.json(records);
+        }
+
+        // Otherwise fail with clear error
+        res.status(400).json({ error: 'Aliases endpoint requires entity_type and entity_id parameters' });
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
 // get all of this entity
 router.get('/:entityRoute', async (req, res) => {
     try {

@@ -692,3 +692,17 @@ a:hover {
         padding: 0.8rem;
     }
 }
+
+.button-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.aliases-section {
+    margin: 0.8rem 0;
+}
+
+.aliases-list {
+    margin: 0;
+    color: var(--text-soft);
+}

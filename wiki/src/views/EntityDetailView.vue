@@ -4,7 +4,8 @@ import AddRelatedEntityForm from '../components/AddRelatedEntityForm.vue'
 import CollapseSection from '../components/CollapseSection.vue'
 import FieldList from '../components/FieldList.vue'
 import { ApiError } from '../services/apiClient'
-import { getEntityFull, listEntities, updateEntity, updateRelation, type DomainEntity } from '../services/domainService'
+import { getEntityFull, listEntities, updateEntity, updateRelation, getAliases, createAlias, routeToEntityType, type DomainEntity } from '../services/domainService'
+import { refreshMentionTargets } from '../services/mentionService'
 import {
   getEntitySchema,
   getRelationSchemas,
@@ -40,6 +41,12 @@ const editFields = ref<EntityFieldSchema[]>([])
 const editValues = ref<Record<string, any>>({})
 const saving = ref(false)
 const saveError = ref('')
+
+const aliases = ref<DomainEntity[]>([])
+const showAddAliasForm = ref(false)
+const newAliasValue = ref('')
+const aliasFormError = ref('')
+const aliasSaving = ref(false)
 
 const relationSchemas = ref<RelationFormSchema[]>([])
 const entitySchema = ref<EntitySchema | null>(null)
@@ -270,16 +277,21 @@ async function loadDetail(options: { silent?: boolean } = {}) {
   showingNewRelatedPicker.value = false
   editingRelationKey.value = null
   editingHistoryKey.value = null
+  showAddAliasForm.value = false
+  newAliasValue.value = ''
+  aliasFormError.value = ''
 
   try {
-    const [full, schema, relations] = await Promise.all([
+    const [full, schema, relations, fetchedAliases] = await Promise.all([
       getEntityFull(props.entityRoute, props.id),
       getEntitySchema(props.entityRoute),
       getRelationSchemas(props.entityRoute),
+      getAliases(routeToEntityType(props.entityRoute), props.id),
     ])
     fullData.value = full
     entitySchema.value = schema || null
     relationSchemas.value = relations
+    aliases.value = fetchedAliases
     placeOptions.value = props.entityRoute === 'places'
       ? (await listEntities('places'))
           .filter((place) => String(place.id) !== props.id)
@@ -596,6 +608,53 @@ async function saveEdit() {
   }
 }
 
+function toggleAddAliasForm() {
+  showAddAliasForm.value = !showAddAliasForm.value
+  if (showAddAliasForm.value) {
+    newAliasValue.value = ''
+    aliasFormError.value = ''
+  }
+}
+
+async function submitAddAlias() {
+  aliasFormError.value = ''
+  
+  const aliasText = newAliasValue.value.trim()
+  if (!aliasText) {
+    aliasFormError.value = 'Alias cannot be empty.'
+    return
+  }
+
+  aliasSaving.value = true
+
+  try {
+    const entity = fullData.value?.entity
+    if (!entity) {
+      throw new Error('Entity data is not loaded.')
+    }
+
+    await createAlias(routeToEntityType(props.entityRoute), props.id, aliasText, Boolean(entity.is_public))
+    refreshMentionTargets()
+    newAliasValue.value = ''
+    showAddAliasForm.value = false
+    await loadDetail({ silent: true })
+  } catch (error) {
+    if (error instanceof ApiError || error instanceof Error) {
+      aliasFormError.value = error.message
+    } else {
+      aliasFormError.value = 'Could not create alias.'
+    }
+  } finally {
+    aliasSaving.value = false
+  }
+}
+
+function cancelAddAlias() {
+  showAddAliasForm.value = false
+  newAliasValue.value = ''
+  aliasFormError.value = ''
+}
+
 onMounted(loadDetail)
 watch(() => [props.entityRoute, props.id], () => loadDetail())
 </script>
@@ -613,15 +672,51 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
       <section class="core-data-section">
         <div class="section-heading-row">
           <h3>Core data</h3>
-          <button
-            v-if="auth.isAdmin.value && !isEditing"
-            type="button"
-            class="secondary-button"
-            @click="startEdit"
-          >
-            Edit
-          </button>
+          <div class="button-group">
+            <button
+              v-if="auth.isAdmin.value && !isEditing"
+              type="button"
+              class="secondary-button"
+              @click="toggleAddAliasForm"
+            >
+              {{ showAddAliasForm ? 'Cancel' : 'Add Alias' }}
+            </button>
+            <button
+              v-if="auth.isAdmin.value && !isEditing"
+              type="button"
+              class="secondary-button"
+              @click="startEdit"
+            >
+              Edit
+            </button>
+          </div>
         </div>
+
+        <div v-if="aliases.length > 0" class="aliases-section">
+          <p class="aliases-list"><em>Aliases: {{ aliases.map(a => a.alias).join(', ') }}</em></p>
+        </div>
+
+        <form v-if="showAddAliasForm" class="entity-form" @submit.prevent="submitAddAlias">
+          <div class="form-row">
+            <label for="new-alias-input">New Alias</label>
+            <input
+              id="new-alias-input"
+              v-model="newAliasValue"
+              type="text"
+              placeholder="Enter alias name"
+              :disabled="aliasSaving"
+            />
+          </div>
+
+          <div class="form-actions">
+            <button class="primary-button" type="submit" :disabled="aliasSaving">
+              {{ aliasSaving ? 'Saving...' : 'Save' }}
+            </button>
+            <button class="secondary-button" type="button" :disabled="aliasSaving" @click="cancelAddAlias">Cancel</button>
+          </div>
+
+          <p v-if="aliasFormError" class="status-card error">{{ aliasFormError }}</p>
+        </form>
 
         <form v-if="isEditing" class="entity-form" @submit.prevent="saveEdit">
           <div v-for="field in editableFields(editFields)" :key="field.name" class="form-row">

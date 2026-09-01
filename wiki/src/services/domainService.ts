@@ -57,3 +57,42 @@ export async function updateRelation(
         { method: 'PATCH', body: data }
     )
 }
+
+export async function getAliases(entityType: string, entityId: string): Promise<DomainEntity[]> {
+    const params = new URLSearchParams({
+        entity_type: entityType,
+        entity_id: entityId,
+    })
+    return requestJson<DomainEntity[]>(`/aliases?${params.toString()}`)
+}
+
+export async function createAlias(
+    entityType: string,
+    entityId: string,
+    alias: string,
+    isPublic: boolean
+): Promise<DomainEntity> {
+    return requestJson<DomainEntity>('/aliases', {
+        method: 'POST',
+        body: {
+            entity_type: entityType,
+            entity_id: entityId,
+            alias,
+            is_public: isPublic,
+        },
+    })
+}
+
+export async function deleteAlias(id: string): Promise<void> {
+    await requestJson<void>(`/aliases/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+export function routeToEntityType(route: string): string {
+    // Convert route to entity type: 'characters' -> 'character', 'deities' -> 'deity', etc.
+    let entityType = route.toLowerCase()
+    // Remove trailing 's' for common plurals
+    if (entityType.endsWith('s')) {
+        entityType = entityType.slice(0, -1)
+    }
+    return entityType
+}
