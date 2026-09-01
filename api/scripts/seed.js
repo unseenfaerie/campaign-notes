@@ -190,14 +190,14 @@ async function main() {
     ('cormac', 'cormacs-spellbook', '0200195152_age-of-descent-default', NULL, 'Received from his master.');
   `);
 
-  await runSql(`Inserting character_organizations...`, `INSERT OR IGNORE INTO character_organizations (character_id, organization_id, joined_date, left_date, short_description, long_explanation) VALUES
-    ('alann-barnett', 'adventurers-guild', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'Joined the Adventurers Guild to protect Wavethorn, left after the Night of Spiders.', NULL),
-    ('alann-barnett', 'adventurers-guild', '0200201001_age-of-descent-default', '', 'Rejoined due to pressure from the party.', NULL),
-    ('releas-neb', 'adventurers-guild', '0200200029_age-of-descent-default', '', 'Became a member of the Adventurers Guild.', NULL),
-    ('durchir', 'adventurers-guild', '0200200057_age-of-descent-default', '', 'Allied with the Adventurers Guild for information.', NULL),
-    ('orlaith-of-the-mosswood', 'orphans-of-lundgren', '0300006018_age-of-light-default', '', 'Formed the Orphans of Lundgren with Djinn.', NULL),
-    ('djinn', 'orphans-of-lundgren', '0300006018_age-of-light-default', '', 'Formed the Orphans of Lundgren with Orlaith.', NULL),
-    ('cormac', 'adventurers-guild', '0200200085_age-of-descent-default', '', 'Sworn to protect the realm as a knight.', NULL);
+  await runSql(`Inserting character_organizations...`, `INSERT OR IGNORE INTO character_organizations (character_id, organization_id, joined_date, left_date, role, short_description, long_explanation) VALUES
+    ('alann-barnett', 'adventurers-guild', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'Dragonbait', 'Joined the Adventurers Guild to protect Wavethorn, left after the Night of Spiders.', NULL),
+    ('alann-barnett', 'adventurers-guild', '0200201001_age-of-descent-default', NULL, 'Dragonbait', 'Rejoined due to pressure from the party.', NULL),
+    ('releas-neb', 'adventurers-guild', '0200200029_age-of-descent-default', NULL, 'Dragonbait', 'Became a member of the Adventurers Guild.', NULL),
+    ('durchir', 'adventurers-guild', '0200200057_age-of-descent-default', NULL, 'Dragonbait', 'Allied with the Adventurers Guild for information.', NULL),
+    ('orlaith-of-the-mosswood', 'orphans-of-lundgren', '0300006018_age-of-light-default', NULL, 'Member', 'Formed the Orphans of Lundgren with Djinn.', NULL),
+    ('djinn', 'orphans-of-lundgren', '0300006018_age-of-light-default', NULL, 'Member', 'Formed the Orphans of Lundgren with Orlaith.', NULL),
+    ('cormac', 'adventurers-guild', '0200200085_age-of-descent-default', NULL, 'Dragonbait', 'Sworn to protect the realm as a knight.', NULL);
   `);
 
   await runSql(`Inserting character_places...`, `INSERT OR IGNORE INTO character_places (character_id, place_id, arrived_date, left_date, short_description, long_explanation) VALUES

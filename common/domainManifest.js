@@ -208,6 +208,7 @@ const domainManifest = {
             payload: {
                 joined_date: { type: 'loreDate', required: true },
                 left_date: { type: 'loreDate' },
+                role: { type: 'string' },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
             },
