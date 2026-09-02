@@ -144,6 +144,22 @@ Set these environment variables before running in non-local environments:
 - `REFRESH_TOKEN_TTL` (default: `30d`)
 - `COOKIE_SECURE` (`true` in production over HTTPS)
 - `COOKIE_SAMESITE` (default: `strict`)
+- `REQUEST_BODY_LIMIT` (default: `1mb`)
+- `AUTH_RATE_LIMIT_WINDOW_MS` / `AUTH_RATE_LIMIT_MAX_REQUESTS` (defaults: 15 minutes / 10)
+- `API_RATE_LIMIT_WINDOW_MS` / `API_RATE_LIMIT_MAX_REQUESTS` (defaults: 15 minutes / 300)
+- `SHUTDOWN_TIMEOUT_MS` (default: `30000`)
+
+The API uses `helmet` security headers, rejects request bodies larger than
+`REQUEST_BODY_LIMIT` with HTTP 413, and returns HTTP 429 with `Retry-After`
+when a rate limit is exceeded. Login/token requests have a stricter per-IP
+limit than ordinary API requests. The in-memory limiter is suitable for the
+single-process deployment; shared storage is required before running multiple
+API processes.
+
+The API handles `SIGTERM` and `SIGINT` by stopping new HTTP connections,
+waiting up to `SHUTDOWN_TIMEOUT_MS` for active requests, and then closing the
+SQLite connection. Configure the process manager to send `SIGTERM` during
+deploys and restarts.
 
 Seeded development users (from `scripts/seedUsers.defaults.js` unless overridden by `scripts/seedUsers.local.js`):
 

@@ -87,6 +87,12 @@ function loadConfig(environment = process.env) {
             : path.join(__dirname, 'backups'),
         backupRetentionDays: Number(environment.BACKUP_RETENTION_DAYS || 30),
         dbBusyTimeoutMs: Number(environment.DB_BUSY_TIMEOUT_MS || 5000),
+        requestBodyLimit: environment.REQUEST_BODY_LIMIT || '1mb',
+        authRateLimitWindowMs: Number(environment.AUTH_RATE_LIMIT_WINDOW_MS || 900000),
+        authRateLimitMaxRequests: Number(environment.AUTH_RATE_LIMIT_MAX_REQUESTS || 10),
+        apiRateLimitWindowMs: Number(environment.API_RATE_LIMIT_WINDOW_MS || 900000),
+        apiRateLimitMaxRequests: Number(environment.API_RATE_LIMIT_MAX_REQUESTS || 300),
+        shutdownTimeoutMs: Number(environment.SHUTDOWN_TIMEOUT_MS || 30000),
     };
 
     if (config.cookieSameSite === 'none' && !config.cookieSecure) {
@@ -103,6 +109,19 @@ function loadConfig(environment = process.env) {
 
     if (!Number.isInteger(config.dbBusyTimeoutMs) || config.dbBusyTimeoutMs < 0) {
         throw new Error('DB_BUSY_TIMEOUT_MS must be a non-negative whole number');
+    }
+
+    const rateLimitSettings = [
+        ['AUTH_RATE_LIMIT_WINDOW_MS', config.authRateLimitWindowMs],
+        ['AUTH_RATE_LIMIT_MAX_REQUESTS', config.authRateLimitMaxRequests],
+        ['API_RATE_LIMIT_WINDOW_MS', config.apiRateLimitWindowMs],
+        ['API_RATE_LIMIT_MAX_REQUESTS', config.apiRateLimitMaxRequests],
+        ['SHUTDOWN_TIMEOUT_MS', config.shutdownTimeoutMs],
+    ];
+    for (const [name, value] of rateLimitSettings) {
+        if (!Number.isInteger(value) || value < 1) {
+            throw new Error(`${name} must be a positive whole number`);
+        }
     }
 
     return config;
