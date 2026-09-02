@@ -11,10 +11,31 @@ const metaRouter = require('./routes/metaRouter');
 const mentionsRouter = require('./routes/mentionsRouter');
 const { requireAuth, requireRole } = require('./middleware/authMiddleware');
 const { initializeDatabase } = require('./data/db');
+const config = require('./config');
 
 const app = express();
 
-app.use(cors());
+app.set('trust proxy', config.trustProxy);
+
+app.use((req, res, next) => {
+  if (
+    config.forceHttps &&
+    config.nodeEnv === 'production' &&
+    req.protocol !== 'https'
+  ) {
+    return res.redirect(301, `https://${req.get('host')}${req.originalUrl}`);
+  }
+
+  return next();
+});
+
+app.use(cors({
+  origin: config.corsOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400,
+}));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -34,7 +55,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Unexpected server error' });
 });
 
-async function startServer(port = process.env.PORT || 3001) {
+async function startServer(port = config.port) {
   await initializeDatabase();
 
   return new Promise((resolve) => {

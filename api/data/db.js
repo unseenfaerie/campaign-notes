@@ -1,9 +1,8 @@
 // db.js - SQLite database initialization using domainManifest-driven SQL
 const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
 const { buildAllCreateTableSql } = require('./schemaBuilder');
+const { dbPath } = require('../config');
 
-const dbPath = path.join(__dirname, '../campaign.db');
 const db = new sqlite3.Database(dbPath);
 
 function runStatement(database, sql) {

@@ -12,30 +12,23 @@ const {
   listAnchoredCharacterIdsByUserId,
 } = require('../data/authRepository');
 const { requireAuth } = require('../middleware/authMiddleware');
+const {
+  jwtAccessSecret: ACCESS_SECRET,
+  jwtRefreshSecret: REFRESH_SECRET,
+  accessTokenTtl: ACCESS_TOKEN_TTL,
+  refreshTokenTtl: REFRESH_TOKEN_TTL,
+  cookieSecure,
+  cookieSameSite,
+} = require('../config');
 
 const router = express.Router();
-
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'dev-access-secret-change-me';
-const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-change-me';
-const ACCESS_TOKEN_TTL = process.env.ACCESS_TOKEN_TTL || '15m';
-const REFRESH_TOKEN_TTL = process.env.REFRESH_TOKEN_TTL || '30d';
 const REFRESH_COOKIE_NAME = 'refresh_token';
-
-function isCookieSecure() {
-  if (process.env.COOKIE_SECURE === 'true') return true;
-  if (process.env.COOKIE_SECURE === 'false') return false;
-  return process.env.NODE_ENV === 'production';
-}
-
-function getCookieSameSite() {
-  return process.env.COOKIE_SAMESITE || 'strict';
-}
 
 function getRefreshCookieOptions() {
   return {
     httpOnly: true,
-    secure: isCookieSecure(),
-    sameSite: getCookieSameSite(),
+    secure: cookieSecure,
+    sameSite: cookieSameSite,
     path: '/api/auth',
   };
 }
