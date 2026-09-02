@@ -80,6 +80,20 @@ Run seed script:
 node scripts/seed.js
 ```
 
+The database path is controlled by `DB_PATH` and defaults to `api/campaign.db`.
+Keep the configured database path on persistent storage in deployed environments.
+
+Create a consistent SQLite backup and prune backups older than
+`BACKUP_RETENTION_DAYS`:
+
+```bash
+npm run backup
+```
+
+Copy backups to encrypted off-host storage and periodically verify that one can
+be opened as a separate SQLite database. Example seeding is blocked when
+`NODE_ENV=production` unless `ALLOW_SEED=true` is set intentionally.
+
 Optional local credential override (kept out of git):
 
 ```bash

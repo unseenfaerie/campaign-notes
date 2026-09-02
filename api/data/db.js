@@ -1,8 +1,14 @@
 // db.js - SQLite database initialization using domainManifest-driven SQL
 const sqlite3 = require('sqlite3').verbose();
+const fs = require('fs');
 const { buildAllCreateTableSql } = require('./schemaBuilder');
-const { dbPath } = require('../config');
+const { dbPath, dbBusyTimeoutMs } = require('../config');
 
+function ensureDatabaseDirectory(databasePath) {
+  fs.mkdirSync(require('path').dirname(databasePath), { recursive: true, mode: 0o750 });
+}
+
+ensureDatabaseDirectory(dbPath);
 const db = new sqlite3.Database(dbPath);
 
 function runStatement(database, sql) {
@@ -54,6 +60,9 @@ async function initializeDatabase(database = db) {
 
   // Keep FK enforcement aligned with table definitions at runtime.
   await runStatement(database, 'PRAGMA foreign_keys = ON');
+  await runStatement(database, 'PRAGMA journal_mode = WAL');
+  await runStatement(database, 'PRAGMA synchronous = NORMAL');
+  await runStatement(database, `PRAGMA busy_timeout = ${dbBusyTimeoutMs}`);
 
   for (const sql of statements) {
     await runStatement(database, sql);
@@ -81,6 +90,8 @@ if (require.main === module) {
 
 module.exports = {
   db,
+  dbPath,
+  ensureDatabaseDirectory,
   getAuthCreateTableSql,
   initializeDatabase,
 };

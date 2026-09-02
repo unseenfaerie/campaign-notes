@@ -1,6 +1,8 @@
 node_modules/
 .env
 campaign.db
+backups/
+api/backups/
 *.db-journal
 *.sqlite
 *.sqlite3

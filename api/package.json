@@ -5,6 +5,7 @@
     "main": "server.js",
     "scripts": {
         "start": "node server.js",
+        "backup": "node scripts/backup.js",
         "test": "jest"
     },
     "dependencies": {

@@ -82,6 +82,11 @@ function loadConfig(environment = process.env) {
         dbPath: environment.DB_PATH
             ? path.resolve(environment.DB_PATH)
             : path.join(__dirname, 'campaign.db'),
+        backupDir: environment.DB_BACKUP_DIR
+            ? path.resolve(environment.DB_BACKUP_DIR)
+            : path.join(__dirname, 'backups'),
+        backupRetentionDays: Number(environment.BACKUP_RETENTION_DAYS || 30),
+        dbBusyTimeoutMs: Number(environment.DB_BUSY_TIMEOUT_MS || 5000),
     };
 
     if (config.cookieSameSite === 'none' && !config.cookieSecure) {
@@ -90,6 +95,14 @@ function loadConfig(environment = process.env) {
 
     if (nodeEnv === 'production' && !config.cookieSecure) {
         throw new Error('COOKIE_SECURE=true is required in production');
+    }
+
+    if (!Number.isInteger(config.backupRetentionDays) || config.backupRetentionDays < 1) {
+        throw new Error('BACKUP_RETENTION_DAYS must be a positive whole number');
+    }
+
+    if (!Number.isInteger(config.dbBusyTimeoutMs) || config.dbBusyTimeoutMs < 0) {
+        throw new Error('DB_BUSY_TIMEOUT_MS must be a non-negative whole number');
     }
 
     return config;
