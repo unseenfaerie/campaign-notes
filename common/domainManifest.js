@@ -90,6 +90,8 @@ const domainManifest = {
                 is_public: { type: 'boolean', required: true, hidden: true },
                 name: { type: 'string', required: true },
                 type: { type: 'string', required: true, enum: 'organizationType' },
+                established: { type: 'loreDate' },
+                disbanded: { type: 'loreDate' },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
             },

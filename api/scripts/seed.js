@@ -109,15 +109,15 @@ async function main() {
     ('pollys-spellbook', false, 'Polly''s Spellbook', 'The first spellbook belonging to Polly.', 'This spellbook is a relic of a mysterious order of mages.');
   `);
 
-  await runSql(`Inserting organizations...`, `INSERT OR IGNORE INTO organizations (id, is_public, name, type, short_description, long_explanation) VALUES
-    ('church-of-achiels-light', true, 'Church of Achiel''s Light', 'religious', 'The main church of Achiel.', NULL),
-    ('order-of-the-iron-duch', false, 'The Order of the Iron Düch', 'adventuring-party', 'A party of heroes.', NULL),
-    ('orphans-of-lundgren', false, 'The Orphans of Lundgren', 'adventuring-party', 'A duo of misfits helping the citizens of Lundgren.', NULL),
-    ('wyvernfang', false, 'Wyvernfang', 'gang', 'A bandit group based around Wavethorn.', NULL),
-    ('three-sisters', false, 'The Three Sisters', 'pantheon', 'The Three Sister Goddesses.', NULL),
-    ('achielan-pantheon', true, 'Achielan Pantheon', 'pantheon', 'The primary deities worshipped by humans.', NULL),
-    ('ancient-elven-pantheon', false, 'The Ancient Elven Pantheon', 'pantheon', 'The primary deities worshipped by the ancient elves.', NULL),
-    ('adventurers-guild', false, 'The Adventurer''s Guild', 'guild', 'A guild for adventurers in Novafell and Wavethorn.', NULL);
+  await runSql(`Inserting organizations...`, `INSERT OR IGNORE INTO organizations (id, is_public, name, type, established, disbanded, short_description, long_explanation) VALUES
+    ('church-of-achiels-light', true, 'Church of Achiel''s Light', 'religious', NULL, NULL, 'The main church of Achiel.', NULL),
+    ('order-of-the-iron-duch', false, 'The Order of the Iron Düch', 'adventuring-party', NULL, NULL, 'A party of heroes.', NULL),
+    ('orphans-of-lundgren', false, 'The Orphans of Lundgren', 'adventuring-party', NULL, NULL, 'A duo of misfits helping the citizens of Lundgren.', NULL),
+    ('wyvernfang', false, 'Wyvernfang', 'gang', NULL, NULL, 'A bandit group based around Wavethorn.', NULL),
+    ('three-sisters', false, 'The Three Sisters', 'pantheon', NULL, NULL, 'The Three Sister Goddesses.', NULL),
+    ('achielan-pantheon', true, 'Achielan Pantheon', 'pantheon', NULL, NULL, 'The primary deities worshipped by humans.', NULL),
+    ('ancient-elven-pantheon', false, 'The Ancient Elven Pantheon', 'pantheon', NULL, NULL, 'The primary deities worshipped by the ancient elves.', NULL),
+    ('adventurers-guild', false, 'The Adventurer''s Guild', 'guild', NULL, NULL, 'A guild for adventurers in Novafell and Wavethorn.', NULL);
   `);
 
   await runSql(`Inserting places...`, `INSERT OR IGNORE INTO places (id, is_public, name, type, parent_id, short_description, establishments, long_explanation) VALUES

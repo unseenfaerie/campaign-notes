@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { getEntitySchemas, type EntitySchema } from './services/metaService'
 import { useAuthStore } from './stores/auth'
@@ -12,9 +12,14 @@ const entitySchemas = ref<EntitySchema[]>([])
 const showShell = computed(() => auth.isAuthenticated.value && route.name !== 'login')
 const navigationEntities = computed(() => entitySchemas.value.filter((entity) => entity.navigation))
 
-onMounted(async () => {
+watch(() => auth.isAuthenticated.value, async (isAuthenticated) => {
+  if (!isAuthenticated) {
+    entitySchemas.value = []
+    return
+  }
+
   entitySchemas.value = (await getEntitySchemas()).entities
-})
+}, { immediate: true })
 
 async function handleLogout() {
   await auth.logout()

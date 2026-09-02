@@ -329,6 +329,23 @@ a:hover {
     padding: 0.65rem 0.8rem;
 }
 
+.record-collapse-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin-right: 0.35rem;
+    font-size: 0.8rem;
+    line-height: 1;
+    color: var(--ink-700);
+    display: inline-block;
+    transition: transform 0.15s ease;
+}
+
+.record-collapse-toggle.is-expanded {
+    transform: rotate(90deg);
+}
+
 .badge {
     display: inline-block;
     border-radius: 999px;

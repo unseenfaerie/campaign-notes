@@ -353,6 +353,34 @@ function isHistoryKind(relatedRoute: string): boolean {
   return findRelationSchema(relatedRoute)?.kind === 'history'
 }
 
+// Simple relations only ever show a title/link, so there's nothing to collapse.
+function hasCollapsibleRecordBody(relatedRoute: string): boolean {
+  return !isSimpleRelation(relatedRoute)
+}
+
+const collapsedRecordKeys = ref<Set<string>>(new Set())
+
+function recordCollapseKey(relatedRoute: string, record: DomainEntity, index: number): string {
+  return `${relatedRoute}::${relatedRecordId(record) || index}`
+}
+
+function isRecordCollapsed(relatedRoute: string, record: DomainEntity, index: number): boolean {
+  return collapsedRecordKeys.value.has(recordCollapseKey(relatedRoute, record, index))
+}
+
+function expandRecord(relatedRoute: string, record: DomainEntity, index: number) {
+  collapsedRecordKeys.value.delete(recordCollapseKey(relatedRoute, record, index))
+}
+
+function toggleRecordCollapse(relatedRoute: string, record: DomainEntity, index: number) {
+  const key = recordCollapseKey(relatedRoute, record, index)
+  if (collapsedRecordKeys.value.has(key)) {
+    collapsedRecordKeys.value.delete(key)
+  } else {
+    collapsedRecordKeys.value.add(key)
+  }
+}
+
 function openDeleteConfirm(message: string, action: () => Promise<void>) {
   deleteModalMessage.value = message
   pendingDeleteAction.value = action
@@ -492,7 +520,7 @@ function buildFieldsPayload(
   return payload
 }
 
-function startEditRelation(relatedRoute: string, record: DomainEntity) {
+function startEditRelation(relatedRoute: string, record: DomainEntity, index: number) {
   const schema = findRelationSchema(relatedRoute)
   if (!schema) {
     return
@@ -501,6 +529,7 @@ function startEditRelation(relatedRoute: string, record: DomainEntity) {
   relationEditError.value = ''
   relationEditValues.value = fieldValuesFromRecord(editableFields(schema.fields), relationPayload(record))
   editingRelationKey.value = `${relatedRoute}::${relatedRecordId(record)}`
+  expandRecord(relatedRoute, record, index)
 }
 
 function cancelEditRelation() {
@@ -535,7 +564,7 @@ async function saveEditRelation(relatedRoute: string, record: DomainEntity) {
   }
 }
 
-function startEditHistory(relatedRoute: string, historyEntry: DomainEntity, historyKey: string) {
+function startEditHistory(relatedRoute: string, record: DomainEntity, index: number, historyEntry: DomainEntity, historyKey: string) {
   const schema = findRelationSchema(relatedRoute)
   if (!schema || !schema.historyKey) {
     return
@@ -547,6 +576,7 @@ function startEditHistory(relatedRoute: string, historyEntry: DomainEntity, hist
   historyEditValues.value = fieldValuesFromRecord(editableFields(schema.fields), historyEntry)
   historyEditOriginalSelector.value = { key: schema.historyKey, value: String(originalValue ?? '') }
   editingHistoryKey.value = historyKey
+  expandRecord(relatedRoute, record, index)
 }
 
 function cancelEditHistory() {
@@ -982,6 +1012,17 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
           <article v-for="(record, index) in records" :key="`${relatedRoute}-${index}`" class="related-record">
             <div class="section-heading-row">
               <h4>
+                <button
+                  v-if="hasCollapsibleRecordBody(relatedRoute)"
+                  type="button"
+                  class="record-collapse-toggle"
+                  :class="{ 'is-expanded': !isRecordCollapsed(relatedRoute, record, index) }"
+                  :aria-expanded="!isRecordCollapsed(relatedRoute, record, index)"
+                  :aria-label="isRecordCollapsed(relatedRoute, record, index) ? 'Expand details' : 'Collapse details'"
+                  @click="toggleRecordCollapse(relatedRoute, record, index)"
+                >
+                  ▸
+                </button>
                 <RouterLink
                   v-if="relatedRecordId(record)"
                   :to="{
@@ -998,7 +1039,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                   v-if="auth.isAdmin.value && isRelationshipKind(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}`"
                   type="button"
                   class="secondary-button"
-                  @click="startEditRelation(relatedRoute, record)"
+                  @click="startEditRelation(relatedRoute, record, index)"
                 >
                   Edit
                 </button>
@@ -1013,6 +1054,9 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               </div>
             </div>
 
+            <div
+              v-if="!hasCollapsibleRecordBody(relatedRoute) || !isRecordCollapsed(relatedRoute, record, index)"
+            >
             <form
               v-if="editingRelationKey === `${relatedRoute}::${relatedRecordId(record)}`"
               class="entity-form"
@@ -1225,7 +1269,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                       type="button"
                       class="secondary-button"
                       @click="
-                        startEditHistory(relatedRoute, historyEntry, `${relatedRoute}-${index}-history-${historyIndex}`)
+                        startEditHistory(relatedRoute, record, index, historyEntry, `${relatedRoute}-${index}-history-${historyIndex}`)
                       "
                     >
                       Edit
@@ -1271,6 +1315,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
             >
               No relationship metadata or history records for this entry.
             </p>
+            </div>
           </article>
         </div>
       </CollapseSection>
