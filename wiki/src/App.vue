@@ -32,8 +32,8 @@ async function handleLogout() {
     <div v-if="showShell" class="app-shell">
       <aside class="left-nav">
         <header>
-          <p class="nav-kicker">Campaign Notes</p>
-          <h1>World Wiki</h1>
+          <p class="nav-kicker">Campaign Wiki</p>
+          <h1>Digital Daercon</h1>
           <p class="nav-user">Signed in as {{ auth.user.value?.username }}</p>
         </header>
 

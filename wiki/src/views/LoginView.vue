@@ -39,7 +39,7 @@ async function submitLogin() {
 <template>
   <section class="login-card">
     <h2>Sign In</h2>
-    <p>Welcome to Ash's AD&D Campaign Wiki!</p>
+    <p>Digital Daercon - Ash's AD&D Notes Repository</p>
 
     <form @submit.prevent="submitLogin">
       <div class="form-row">
