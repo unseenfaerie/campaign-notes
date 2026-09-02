@@ -3,6 +3,8 @@ const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 const { buildAllCreateTableSql } = require('./schemaBuilder');
 const { dbPath, dbBusyTimeoutMs } = require('../config');
+const { domainManifest } = require('../../common/domainManifest');
+const { MigrationService } = require('../utils/migrationService');
 
 function ensureDatabaseDirectory(databasePath) {
   fs.mkdirSync(require('path').dirname(databasePath), { recursive: true, mode: 0o750 });
@@ -74,6 +76,11 @@ async function initializeDatabase(database = db) {
   }
 
   await runStatement(database, "UPDATE users SET role = 'player' WHERE role = 'viewer'");
+
+  const migrationService = new MigrationService(database, {
+    expectedVersion: domainManifest.schemaVersion,
+  });
+  await migrationService.applyLatest();
 
   console.log('Database tables created or verified from domainManifest.');
 }

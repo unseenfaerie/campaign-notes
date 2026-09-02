@@ -13,6 +13,7 @@ describe('server security configuration', () => {
         process.env.CORS_ORIGINS = 'https://wiki.example.test';
         process.env.TRUST_PROXY = 'true';
         process.env.FORCE_HTTPS = 'true';
+        process.env.COOKIE_SECURE = 'true';
         Object.assign(process.env, productionSecrets);
 
         jest.resetModules();
@@ -23,6 +24,7 @@ describe('server security configuration', () => {
         delete process.env.CORS_ORIGINS;
         delete process.env.TRUST_PROXY;
         delete process.env.FORCE_HTTPS;
+        delete process.env.COOKIE_SECURE;
         delete process.env.JWT_ACCESS_SECRET;
         delete process.env.JWT_REFRESH_SECRET;
         process.env.NODE_ENV = 'test';

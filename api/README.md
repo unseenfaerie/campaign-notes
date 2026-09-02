@@ -94,6 +94,24 @@ Copy backups to encrypted off-host storage and periodically verify that one can
 be opened as a separate SQLite database. Example seeding is blocked when
 `NODE_ENV=production` unless `ALLOW_SEED=true` is set intentionally.
 
+Check the current schema migration status:
+
+```bash
+npm run migrate -- status
+```
+
+Apply pending forward-only migrations before starting the new application
+version:
+
+```bash
+npm run migrate -- latest
+```
+
+Deployments should create a backup, stop or drain the old API process, apply
+migrations, start the new process, and then verify `/health`. Automatic
+rollback is not supported; restore a verified backup and deploy a compatible
+application version if recovery is required.
+
 Optional local credential override (kept out of git):
 
 ```bash
