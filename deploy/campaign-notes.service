@@ -1,0 +1,23 @@
+[Unit]
+Description=Campaign Notes API
+After=network.target
+
+[Service]
+Type=simple
+User=campaign-notes
+Group=campaign-notes
+WorkingDirectory=/opt/campaign-notes/current/api
+EnvironmentFile=/etc/campaign-notes/api.env
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=35
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/campaign-notes
+
+[Install]
+WantedBy=multi-user.target

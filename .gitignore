@@ -3,6 +3,7 @@ node_modules/
 campaign.db
 backups/
 api/backups/
+release/
 *.db-journal
 *.sqlite
 *.sqlite3

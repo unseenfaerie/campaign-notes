@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+archive="${1:?release archive path is required}"
+root=/opt/campaign-notes
+releases="$root/releases"
+incoming="$root/incoming"
+current="$root/current"
+release="$releases/$(date -u +%Y%m%d%H%M%S)-${RANDOM}"
+
+mkdir -p "$releases" "$incoming"
+mkdir -p "$release"
+tar -xzf "$archive" -C "$release"
+
+if [[ -e "$current" ]]; then
+    previous=$(readlink -f "$current")
+else
+    previous=''
+fi
+
+cleanup() {
+    if [[ "$activated" != true && -n "$previous" ]]; then
+        ln -sfn "$previous" "$current"
+        systemctl restart campaign-notes.service || true
+    fi
+}
+activated=false
+trap cleanup ERR
+
+chown -R campaign-notes:campaign-notes "$release"
+cd "$release"
+npm ci --omit=dev
+systemctl stop campaign-notes.service || true
+npm run --workspace api migrate -- latest
+ln -sfn "$release" "$current"
+systemctl start campaign-notes.service
+curl --fail --silent --show-error http://127.0.0.1:3001/health >/dev/null
+activated=true
+
+find "$releases" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' \
+    | sort -rn | awk 'NR > 3 { $1=""; sub(/^ /, ""); print }' \
+    | xargs -r rm -rf
+rm -f "$archive"
