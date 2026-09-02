@@ -33,7 +33,7 @@ describe('MigrationService', () => {
     it('applies the v1 baseline once and is idempotent', async () => {
         const service = new MigrationService(database, {
             expectedVersion: 1,
-            migrations: [{ version: 1, description: 'baseline', async up() {} }],
+            migrations: [{ version: 1, description: 'baseline', async up() { } }],
         });
 
         await expect(service.applyLatest()).resolves.toBe(1);
@@ -45,7 +45,7 @@ describe('MigrationService', () => {
         const service = new MigrationService(database, {
             expectedVersion: 2,
             migrations: [
-                { version: 1, description: 'baseline', async up() {} },
+                { version: 1, description: 'baseline', async up() { } },
                 {
                     version: 2,
                     description: 'failed change',
@@ -65,7 +65,7 @@ describe('MigrationService', () => {
     it('refuses a database created by a newer application', async () => {
         const service = new MigrationService(database, {
             expectedVersion: 1,
-            migrations: [{ version: 1, description: 'baseline', async up() {} }],
+            migrations: [{ version: 1, description: 'baseline', async up() { } }],
         });
         await service.ensureLedger();
         await run(database, 'INSERT INTO schema_migrations (version, description, applied_at) VALUES (2, ?, ?)', [
