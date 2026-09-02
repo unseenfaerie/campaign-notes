@@ -1,8 +1,8 @@
 // seed.js - Populate campaign.db with example data
 const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
 const bcrypt = require('bcryptjs');
 const { initializeDatabase } = require('../data/db');
+const { dbPath } = require('../config');
 
 const { seedUsers } = loadSeedUsersModule();
 
@@ -24,7 +24,6 @@ function loadSeedUsersModule() {
   }
 }
 
-const dbPath = path.join(__dirname, '../campaign.db');
 const db = new sqlite3.Database(dbPath);
 
 function runSql(label, sql, params = []) {
@@ -55,6 +54,10 @@ function closeDatabase() {
 }
 
 async function main() {
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SEED !== 'true') {
+    throw new Error('Example seeding is disabled in production; set ALLOW_SEED=true only for an intentional seed operation');
+  }
+
   await initializeDatabase(db);
 
   const nowIso = new Date().toISOString();

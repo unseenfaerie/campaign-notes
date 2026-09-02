@@ -1,9 +1,16 @@
 // db.js - SQLite database initialization using domainManifest-driven SQL
 const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const fs = require('fs');
 const { buildAllCreateTableSql } = require('./schemaBuilder');
+const { dbPath, dbBusyTimeoutMs } = require('../config');
+const { domainManifest } = require('../../common/domainManifest');
+const { MigrationService } = require('../utils/migrationService');
 
-const dbPath = path.join(__dirname, '../campaign.db');
+function ensureDatabaseDirectory(databasePath) {
+  fs.mkdirSync(require('path').dirname(databasePath), { recursive: true, mode: 0o750 });
+}
+
+ensureDatabaseDirectory(dbPath);
 const db = new sqlite3.Database(dbPath);
 
 function runStatement(database, sql) {
@@ -55,6 +62,9 @@ async function initializeDatabase(database = db) {
 
   // Keep FK enforcement aligned with table definitions at runtime.
   await runStatement(database, 'PRAGMA foreign_keys = ON');
+  await runStatement(database, 'PRAGMA journal_mode = WAL');
+  await runStatement(database, 'PRAGMA synchronous = NORMAL');
+  await runStatement(database, `PRAGMA busy_timeout = ${dbBusyTimeoutMs}`);
 
   for (const sql of statements) {
     await runStatement(database, sql);
@@ -66,6 +76,11 @@ async function initializeDatabase(database = db) {
   }
 
   await runStatement(database, "UPDATE users SET role = 'player' WHERE role = 'viewer'");
+
+  const migrationService = new MigrationService(database, {
+    expectedVersion: domainManifest.schemaVersion,
+  });
+  await migrationService.applyLatest();
 
   console.log('Database tables created or verified from domainManifest.');
 }
@@ -82,6 +97,8 @@ if (require.main === module) {
 
 module.exports = {
   db,
+  dbPath,
+  ensureDatabaseDirectory,
   getAuthCreateTableSql,
   initializeDatabase,
 };

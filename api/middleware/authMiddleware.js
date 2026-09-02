@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
-
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'dev-access-secret-change-me';
+const { jwtAccessSecret: ACCESS_SECRET } = require('../config');
 
 function parseBearerToken(authHeader) {
   if (!authHeader || typeof authHeader !== 'string') {

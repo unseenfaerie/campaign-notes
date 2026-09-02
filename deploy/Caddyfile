@@ -1,0 +1,12 @@
+campaign.example.com {
+    root * /opt/campaign-notes/current/wiki/dist
+
+    handle /api/* {
+        reverse_proxy 127.0.0.1:3001
+    }
+
+    handle {
+        try_files {path} /index.html
+        file_server
+    }
+}
