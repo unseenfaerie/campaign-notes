@@ -32,17 +32,7 @@ const domainManifest = {
                 retired: { type: 'boolean' },
                 deceased: { type: 'boolean', required: true },
                 short_description: { type: 'string', required: true, expository: true },
-                long_explanation: {
-                    type: 'string',
-                    expository: true,
-                    access: {
-                        playerPatch: {
-                            ownership: {
-                                type: 'anchored-character',
-                            },
-                        },
-                    },
-                },
+                long_explanation: { type: 'string', expository: true },
             },
         },
         Deity: {
@@ -100,6 +90,8 @@ const domainManifest = {
                 is_public: { type: 'boolean', required: true, hidden: true },
                 name: { type: 'string', required: true },
                 type: { type: 'string', required: true, enum: 'organizationType' },
+                established: { type: 'loreDate' },
+                disbanded: { type: 'loreDate' },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
             },
@@ -186,18 +178,7 @@ const domainManifest = {
                 dissolution_date: { type: 'loreDate' },
                 relationship_type: { type: 'string' },
                 short_description: { type: 'string', required: true, expository: true },
-                long_explanation: {
-                    type: 'string',
-                    expository: true,
-                    access: {
-                        playerPatch: {
-                            ownership: {
-                                type: 'anchored-character',
-                                relationMemberEntity: 'Character',
-                            },
-                        },
-                    },
-                },
+                long_explanation: { type: 'string', expository: true },
             },
         },
         CharacterItem: {
@@ -214,18 +195,6 @@ const domainManifest = {
                 acquired_date: { type: 'loreDate', required: true },
                 relinquished_date: { type: 'loreDate' },
                 short_description: { type: 'string', required: true, expository: true },
-                long_explanation: {
-                    type: 'string',
-                    expository: true,
-                    access: {
-                        playerPatch: {
-                            ownership: {
-                                type: 'anchored-character',
-                                relationMemberEntity: 'Character',
-                            },
-                        },
-                    },
-                },
             },
         },
         CharacterOrganization: {
@@ -241,19 +210,9 @@ const domainManifest = {
             payload: {
                 joined_date: { type: 'loreDate', required: true },
                 left_date: { type: 'loreDate' },
+                role: { type: 'string' },
                 short_description: { type: 'string', required: true, expository: true },
-                long_explanation: {
-                    type: 'string',
-                    expository: true,
-                    access: {
-                        playerPatch: {
-                            ownership: {
-                                type: 'anchored-character',
-                                relationMemberEntity: 'Character',
-                            },
-                        },
-                    },
-                },
+                long_explanation: { type: 'string', expository: true },
             },
         },
         CharacterPlace: {
@@ -270,24 +229,13 @@ const domainManifest = {
                 arrived_date: { type: 'loreDate', required: true },
                 left_date: { type: 'loreDate' },
                 short_description: { type: 'string', required: true, expository: true },
-                long_explanation: {
-                    type: 'string',
-                    expository: true,
-                    access: {
-                        playerPatch: {
-                            ownership: {
-                                type: 'anchored-character',
-                                relationMemberEntity: 'Character',
-                            },
-                        },
-                    },
-                },
+                long_explanation: { type: 'string', expository: true },
             },
         },
         CharacterRelationship: {
             kind: 'history',
             table: 'character_relationships',
-            directional: true,  // This is a one-way directional relation: character_id is the perspective holder, related_id is the subject. Each character's player independently creates records from their perspective.
+            directional: true,  // This is a one-way directional relation: character_id is the perspective holder, related_id is the subject.
             members: [
                 { entity: 'Character', key: 'character_id', route: 'characters' },
                 { entity: 'Character', key: 'related_id', route: 'characters' },
@@ -300,18 +248,7 @@ const domainManifest = {
                 dissolution_date: { type: 'loreDate' },
                 relationship_type: { type: 'string', required: true, enum: 'characterRelationship' },
                 short_description: { type: 'string', required: true, expository: true },
-                long_explanation: {
-                    type: 'string',
-                    expository: true,
-                    access: {
-                        playerPatch: {
-                            ownership: {
-                                type: 'anchored-character',
-                                relationMemberEntity: 'Character',
-                            },
-                        },
-                    },
-                },
+                long_explanation: { type: 'string', expository: true },
             },
         },
         DeitySphere: {
@@ -344,18 +281,7 @@ const domainManifest = {
             keys: ['event_id', 'character_id'],
             payload: {
                 short_description: { type: 'string', required: true, expository: true },
-                long_explanation: {
-                    type: 'string',
-                    expository: true,
-                    access: {
-                        playerPatch: {
-                            ownership: {
-                                type: 'anchored-character',
-                                relationMemberEntity: 'Character',
-                            },
-                        },
-                    },
-                },
+                long_explanation: { type: 'string', expository: true },
             },
         },
         EventOrganization: {

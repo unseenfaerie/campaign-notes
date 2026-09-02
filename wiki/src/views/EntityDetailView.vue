@@ -1,10 +1,24 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import AddRelatedEntityForm from '../components/AddRelatedEntityForm.vue'
 import CollapseSection from '../components/CollapseSection.vue'
+import ConfirmModal from '../components/ConfirmModal.vue'
 import FieldList from '../components/FieldList.vue'
 import { ApiError } from '../services/apiClient'
-import { getEntityFull, listEntities, updateEntity, updateRelation, type DomainEntity } from '../services/domainService'
+import {
+  getEntityFull,
+  listEntities,
+  updateEntity,
+  updateRelation,
+  deleteEntity,
+  deleteRelation,
+  getAliases,
+  createAlias,
+  routeToEntityType,
+  type DomainEntity,
+} from '../services/domainService'
+import { refreshMentionTargets } from '../services/mentionService'
 import {
   getEntitySchema,
   getRelationSchemas,
@@ -30,6 +44,7 @@ const props = defineProps<{
 }>()
 
 const auth = useAuthStore()
+const router = useRouter()
 
 const loading = ref(true)
 const errorMessage = ref('')
@@ -40,6 +55,12 @@ const editFields = ref<EntityFieldSchema[]>([])
 const editValues = ref<Record<string, any>>({})
 const saving = ref(false)
 const saveError = ref('')
+
+const aliases = ref<DomainEntity[]>([])
+const showAddAliasForm = ref(false)
+const newAliasValue = ref('')
+const aliasFormError = ref('')
+const aliasSaving = ref(false)
 
 const relationSchemas = ref<RelationFormSchema[]>([])
 const entitySchema = ref<EntitySchema | null>(null)
@@ -57,6 +78,12 @@ const historyEditValues = ref<Record<string, any>>({})
 const historyEditOriginalSelector = ref<{ key: string; value: string } | null>(null)
 const historyEditSaving = ref(false)
 const historyEditError = ref('')
+
+const deleteModalOpen = ref(false)
+const deleteModalMessage = ref('')
+const deleteModalBusy = ref(false)
+const deleteModalError = ref('')
+const pendingDeleteAction = ref<(() => Promise<void>) | null>(null)
 
 const entityTitle = computed(() => entitySchema.value?.label ?? props.entityRoute)
 const entityPageTitle = computed(() => {
@@ -270,16 +297,21 @@ async function loadDetail(options: { silent?: boolean } = {}) {
   showingNewRelatedPicker.value = false
   editingRelationKey.value = null
   editingHistoryKey.value = null
+  showAddAliasForm.value = false
+  newAliasValue.value = ''
+  aliasFormError.value = ''
 
   try {
-    const [full, schema, relations] = await Promise.all([
+    const [full, schema, relations, fetchedAliases] = await Promise.all([
       getEntityFull(props.entityRoute, props.id),
       getEntitySchema(props.entityRoute),
       getRelationSchemas(props.entityRoute),
+      getAliases(routeToEntityType(props.entityRoute), props.id),
     ])
     fullData.value = full
     entitySchema.value = schema || null
     relationSchemas.value = relations
+    aliases.value = fetchedAliases
     placeOptions.value = props.entityRoute === 'places'
       ? (await listEntities('places'))
           .filter((place) => String(place.id) !== props.id)
@@ -317,60 +349,111 @@ function isRelationshipKind(relatedRoute: string): boolean {
   return findRelationSchema(relatedRoute)?.kind === 'relationship'
 }
 
+function isHistoryKind(relatedRoute: string): boolean {
+  return findRelationSchema(relatedRoute)?.kind === 'history'
+}
+
+// Simple relations only ever show a title/link, so there's nothing to collapse.
+function hasCollapsibleRecordBody(relatedRoute: string): boolean {
+  return !isSimpleRelation(relatedRoute)
+}
+
+const collapsedRecordKeys = ref<Set<string>>(new Set())
+
+function recordCollapseKey(relatedRoute: string, record: DomainEntity, index: number): string {
+  return `${relatedRoute}::${relatedRecordId(record) || index}`
+}
+
+function isRecordCollapsed(relatedRoute: string, record: DomainEntity, index: number): boolean {
+  return collapsedRecordKeys.value.has(recordCollapseKey(relatedRoute, record, index))
+}
+
+function expandRecord(relatedRoute: string, record: DomainEntity, index: number) {
+  collapsedRecordKeys.value.delete(recordCollapseKey(relatedRoute, record, index))
+}
+
+function toggleRecordCollapse(relatedRoute: string, record: DomainEntity, index: number) {
+  const key = recordCollapseKey(relatedRoute, record, index)
+  if (collapsedRecordKeys.value.has(key)) {
+    collapsedRecordKeys.value.delete(key)
+  } else {
+    collapsedRecordKeys.value.add(key)
+  }
+}
+
+function openDeleteConfirm(message: string, action: () => Promise<void>) {
+  deleteModalMessage.value = message
+  pendingDeleteAction.value = action
+  deleteModalError.value = ''
+  deleteModalOpen.value = true
+}
+
+function cancelDeleteConfirm() {
+  if (deleteModalBusy.value) {
+    return
+  }
+
+  deleteModalOpen.value = false
+  pendingDeleteAction.value = null
+}
+
+async function confirmDeleteConfirm() {
+  if (!pendingDeleteAction.value) {
+    return
+  }
+
+  deleteModalBusy.value = true
+  deleteModalError.value = ''
+
+  try {
+    await pendingDeleteAction.value()
+    deleteModalOpen.value = false
+    pendingDeleteAction.value = null
+  } catch (error) {
+    if (error instanceof ApiError || error instanceof Error) {
+      deleteModalError.value = error.message
+    } else {
+      deleteModalError.value = 'Could not delete this record.'
+    }
+  } finally {
+    deleteModalBusy.value = false
+  }
+}
+
+function confirmDeleteEntity() {
+  openDeleteConfirm(`Delete this ${entityPageTitle.value}? This cannot be undone.`, async () => {
+    await deleteEntity(props.entityRoute, props.id)
+    router.push({ name: 'entity-list', params: { entityRoute: props.entityRoute } })
+  })
+}
+
+function confirmDeleteRelation(relatedRoute: string, record: DomainEntity) {
+  openDeleteConfirm(
+    `Remove this ${relatedEntityLabel(relatedRoute)} relationship with ${relatedRecordLabel(record)}?`,
+    async () => {
+      await deleteRelation(props.entityRoute, props.id, relatedRoute, relatedRecordId(record))
+      await loadDetail({ silent: true })
+    }
+  )
+}
+
+function confirmDeleteHistoryEntry(relatedRoute: string, record: DomainEntity, historyEntry: DomainEntity) {
+  const schema = findRelationSchema(relatedRoute)
+  if (!schema || !schema.historyKey) {
+    return
+  }
+
+  const selector = { key: schema.historyKey, value: String(historyEntry[schema.historyKey] ?? '') }
+
+  openDeleteConfirm(`Delete this history record for ${relatedRecordLabel(record)}?`, async () => {
+    await deleteRelation(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), selector)
+    await loadDetail({ silent: true })
+  })
+}
+
 function editableFields(fields: EntityFieldSchema[]): EntityFieldSchema[] {
   return fields.filter((field) => !field.primary)
 }
-
-// Non-admin players are limited to fields the manifest marks as player-editable.
-function fieldsForRole(fields: EntityFieldSchema[]): EntityFieldSchema[] {
-  const nonPrimary = editableFields(fields)
-  return auth.isAdmin.value ? nonPrimary : nonPrimary.filter((field) => field.playerEditable)
-}
-
-function characterCandidateIdsForRelation(relatedRoute: string, record: DomainEntity): string[] {
-  const schema = findRelationSchema(relatedRoute)
-  const ids: string[] = []
-
-  if (props.entityRoute === 'characters') {
-    ids.push(props.id)
-  }
-
-  if (schema?.relatedEntityRoute === 'characters') {
-    const relatedId = relatedRecordId(record)
-    if (relatedId) {
-      ids.push(relatedId)
-    }
-  }
-
-  return ids
-}
-
-function canPlayerEditRelation(relatedRoute: string, record: DomainEntity): boolean {
-  const schema = findRelationSchema(relatedRoute)
-  if (!schema || !schema.fields.some((field) => field.playerEditable)) {
-    return false
-  }
-
-  const candidateIds = characterCandidateIdsForRelation(relatedRoute, record)
-  return candidateIds.some((candidateId) => auth.anchoredCharacterIds.value.includes(candidateId))
-}
-
-const canPlayerEditEntity = computed(() => {
-  if (props.entityRoute !== 'characters') {
-    return false
-  }
-
-  const fields = entitySchema.value?.fields ?? []
-  if (!fields.some((field) => field.playerEditable)) {
-    return false
-  }
-
-  return auth.anchoredCharacterIds.value.includes(props.id)
-})
-
-const visibleEditFields = computed(() =>
-  auth.isAdmin.value ? editFields.value : editFields.value.filter((field) => field.playerEditable)
-)
 
 function primaryFields(fields: EntityFieldSchema[]): EntityFieldSchema[] {
   return fields.filter((field) => field.primary)
@@ -437,15 +520,16 @@ function buildFieldsPayload(
   return payload
 }
 
-function startEditRelation(relatedRoute: string, record: DomainEntity) {
+function startEditRelation(relatedRoute: string, record: DomainEntity, index: number) {
   const schema = findRelationSchema(relatedRoute)
   if (!schema) {
     return
   }
 
   relationEditError.value = ''
-  relationEditValues.value = fieldValuesFromRecord(fieldsForRole(schema.fields), relationPayload(record))
+  relationEditValues.value = fieldValuesFromRecord(editableFields(schema.fields), relationPayload(record))
   editingRelationKey.value = `${relatedRoute}::${relatedRecordId(record)}`
+  expandRecord(relatedRoute, record, index)
 }
 
 function cancelEditRelation() {
@@ -463,7 +547,7 @@ async function saveEditRelation(relatedRoute: string, record: DomainEntity) {
   relationEditSaving.value = true
 
   try {
-    const payload = buildFieldsPayload(fieldsForRole(schema.fields), relationEditValues.value, {
+    const payload = buildFieldsPayload(editableFields(schema.fields), relationEditValues.value, {
       clearOptionalLoreDates: true,
     })
     await updateRelation(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), payload)
@@ -480,7 +564,7 @@ async function saveEditRelation(relatedRoute: string, record: DomainEntity) {
   }
 }
 
-function startEditHistory(relatedRoute: string, historyEntry: DomainEntity, historyKey: string) {
+function startEditHistory(relatedRoute: string, record: DomainEntity, index: number, historyEntry: DomainEntity, historyKey: string) {
   const schema = findRelationSchema(relatedRoute)
   if (!schema || !schema.historyKey) {
     return
@@ -489,9 +573,10 @@ function startEditHistory(relatedRoute: string, historyEntry: DomainEntity, hist
   const originalValue = historyEntry[schema.historyKey]
 
   historyEditError.value = ''
-  historyEditValues.value = fieldValuesFromRecord(fieldsForRole(schema.fields), historyEntry)
+  historyEditValues.value = fieldValuesFromRecord(editableFields(schema.fields), historyEntry)
   historyEditOriginalSelector.value = { key: schema.historyKey, value: String(originalValue ?? '') }
   editingHistoryKey.value = historyKey
+  expandRecord(relatedRoute, record, index)
 }
 
 function cancelEditHistory() {
@@ -509,7 +594,7 @@ async function saveEditHistory(relatedRoute: string, record: DomainEntity) {
   historyEditSaving.value = true
 
   try {
-    const payload = buildFieldsPayload(fieldsForRole(schema.fields), historyEditValues.value, {
+    const payload = buildFieldsPayload(editableFields(schema.fields), historyEditValues.value, {
       clearOptionalLoreDates: true,
     })
     await updateRelation(
@@ -617,7 +702,7 @@ function cancelEdit() {
 }
 
 function buildEditPayload(): Record<string, unknown> {
-  const payload = buildFieldsPayload(fieldsForRole(editFields.value), editValues.value, {
+  const payload = buildFieldsPayload(editableFields(editFields.value), editValues.value, {
     clearOptionalLoreDates: true,
     clearOptionalReferences: true,
   })
@@ -647,6 +732,53 @@ async function saveEdit() {
   }
 }
 
+function toggleAddAliasForm() {
+  showAddAliasForm.value = !showAddAliasForm.value
+  if (showAddAliasForm.value) {
+    newAliasValue.value = ''
+    aliasFormError.value = ''
+  }
+}
+
+async function submitAddAlias() {
+  aliasFormError.value = ''
+  
+  const aliasText = newAliasValue.value.trim()
+  if (!aliasText) {
+    aliasFormError.value = 'Alias cannot be empty.'
+    return
+  }
+
+  aliasSaving.value = true
+
+  try {
+    const entity = fullData.value?.entity
+    if (!entity) {
+      throw new Error('Entity data is not loaded.')
+    }
+
+    await createAlias(routeToEntityType(props.entityRoute), props.id, aliasText, Boolean(entity.is_public))
+    refreshMentionTargets()
+    newAliasValue.value = ''
+    showAddAliasForm.value = false
+    await loadDetail({ silent: true })
+  } catch (error) {
+    if (error instanceof ApiError || error instanceof Error) {
+      aliasFormError.value = error.message
+    } else {
+      aliasFormError.value = 'Could not create alias.'
+    }
+  } finally {
+    aliasSaving.value = false
+  }
+}
+
+function cancelAddAlias() {
+  showAddAliasForm.value = false
+  newAliasValue.value = ''
+  aliasFormError.value = ''
+}
+
 onMounted(loadDetail)
 watch(() => [props.entityRoute, props.id], () => loadDetail())
 </script>
@@ -664,18 +796,62 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
       <section class="core-data-section">
         <div class="section-heading-row">
           <h3>Core data</h3>
-          <button
-            v-if="(auth.isAdmin.value || canPlayerEditEntity) && !isEditing"
-            type="button"
-            class="secondary-button"
-            @click="startEdit"
-          >
-            Edit
-          </button>
+          <div class="button-group">
+            <button
+              v-if="auth.isAdmin.value && !isEditing"
+              type="button"
+              class="secondary-button"
+              @click="toggleAddAliasForm"
+            >
+              {{ showAddAliasForm ? 'Cancel' : 'Add Alias' }}
+            </button>
+            <button
+              v-if="auth.isAdmin.value && !isEditing"
+              type="button"
+              class="secondary-button"
+              @click="startEdit"
+            >
+              Edit
+            </button>
+            <button
+              v-if="auth.isAdmin.value && !isEditing"
+              type="button"
+              class="danger-button"
+              @click="confirmDeleteEntity"
+            >
+              Delete
+            </button>
+          </div>
         </div>
 
+        <div v-if="aliases.length > 0" class="aliases-section">
+          <p class="aliases-list"><em>Aliases: {{ aliases.map(a => a.alias).join(', ') }}</em></p>
+        </div>
+
+        <form v-if="showAddAliasForm" class="entity-form" @submit.prevent="submitAddAlias">
+          <div class="form-row">
+            <label for="new-alias-input">New Alias</label>
+            <input
+              id="new-alias-input"
+              v-model="newAliasValue"
+              type="text"
+              placeholder="Enter alias name"
+              :disabled="aliasSaving"
+            />
+          </div>
+
+          <div class="form-actions">
+            <button class="primary-button" type="submit" :disabled="aliasSaving">
+              {{ aliasSaving ? 'Saving...' : 'Save' }}
+            </button>
+            <button class="secondary-button" type="button" :disabled="aliasSaving" @click="cancelAddAlias">Cancel</button>
+          </div>
+
+          <p v-if="aliasFormError" class="status-card error">{{ aliasFormError }}</p>
+        </form>
+
         <form v-if="isEditing" class="entity-form" @submit.prevent="saveEdit">
-          <div v-for="field in visibleEditFields" :key="field.name" class="form-row">
+          <div v-for="field in editableFields(editFields)" :key="field.name" class="form-row">
             <label :for="`edit-field-${field.name}`">
               {{ prettyFieldName(field.name) }}
               <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
@@ -836,6 +1012,17 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
           <article v-for="(record, index) in records" :key="`${relatedRoute}-${index}`" class="related-record">
             <div class="section-heading-row">
               <h4>
+                <button
+                  v-if="hasCollapsibleRecordBody(relatedRoute)"
+                  type="button"
+                  class="record-collapse-toggle"
+                  :class="{ 'is-expanded': !isRecordCollapsed(relatedRoute, record, index) }"
+                  :aria-expanded="!isRecordCollapsed(relatedRoute, record, index)"
+                  :aria-label="isRecordCollapsed(relatedRoute, record, index) ? 'Expand details' : 'Collapse details'"
+                  @click="toggleRecordCollapse(relatedRoute, record, index)"
+                >
+                  ▸
+                </button>
                 <RouterLink
                   v-if="relatedRecordId(record)"
                   :to="{
@@ -847,16 +1034,29 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 </RouterLink>
                 <template v-else>{{ relatedRecordLabel(record) }}</template>
               </h4>
-              <button
-                v-if="(auth.isAdmin.value || canPlayerEditRelation(relatedRoute, record)) && isRelationshipKind(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}`"
-                type="button"
-                class="secondary-button"
-                @click="startEditRelation(relatedRoute, record)"
-              >
-                Edit
-              </button>
+              <div class="row-actions-end">
+                <button
+                  v-if="auth.isAdmin.value && isRelationshipKind(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}`"
+                  type="button"
+                  class="secondary-button"
+                  @click="startEditRelation(relatedRoute, record, index)"
+                >
+                  Edit
+                </button>
+                <button
+                  v-if="auth.isAdmin.value && !isHistoryKind(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}`"
+                  type="button"
+                  class="danger-button"
+                  @click="confirmDeleteRelation(relatedRoute, record)"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
 
+            <div
+              v-if="!hasCollapsibleRecordBody(relatedRoute) || !isRecordCollapsed(relatedRoute, record, index)"
+            >
             <form
               v-if="editingRelationKey === `${relatedRoute}::${relatedRecordId(record)}`"
               class="entity-form"
@@ -868,7 +1068,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               />
 
               <div
-                v-for="field in fieldsForRole(relationSchemaForRoute(relatedRoute)[0]?.fields ?? [])"
+                v-for="field in editableFields(relationSchemaForRoute(relatedRoute)[0]?.fields ?? [])"
                 :key="field.name"
                 class="form-row"
               >
@@ -985,7 +1185,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                   />
 
                   <div
-                    v-for="field in fieldsForRole(relationSchemaForRoute(relatedRoute)[0]?.fields ?? [])"
+                    v-for="field in editableFields(relationSchemaForRoute(relatedRoute)[0]?.fields ?? [])"
                     :key="field.name"
                     class="form-row"
                   >
@@ -1062,17 +1262,24 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 </form>
                 <div v-else class="entity-overview">
                   <div
-                    v-if="auth.isAdmin.value || canPlayerEditRelation(relatedRoute, record)"
+                    v-if="auth.isAdmin.value"
                     class="history-record-actions"
                   >
                     <button
                       type="button"
                       class="secondary-button"
                       @click="
-                        startEditHistory(relatedRoute, historyEntry, `${relatedRoute}-${index}-history-${historyIndex}`)
+                        startEditHistory(relatedRoute, record, index, historyEntry, `${relatedRoute}-${index}-history-${historyIndex}`)
                       "
                     >
                       Edit
+                    </button>
+                    <button
+                      type="button"
+                      class="danger-button"
+                      @click="confirmDeleteHistoryEntry(relatedRoute, record, historyEntry)"
+                    >
+                      Delete
                     </button>
                   </div>
                   <FieldList
@@ -1108,6 +1315,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
             >
               No relationship metadata or history records for this entry.
             </p>
+            </div>
           </article>
         </div>
       </CollapseSection>
@@ -1132,5 +1340,15 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
         />
       </section>
     </article>
+
+    <ConfirmModal
+      :open="deleteModalOpen"
+      title="Confirm delete"
+      :message="deleteModalMessage"
+      :busy="deleteModalBusy"
+      :error-message="deleteModalError"
+      @confirm="confirmDeleteConfirm"
+      @cancel="cancelDeleteConfirm"
+    />
   </section>
 </template>

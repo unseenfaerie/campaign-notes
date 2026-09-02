@@ -25,11 +25,6 @@ describe('visibilityHelpers', () => {
             expect(isDm(user)).toBe(false);
         });
 
-        it('should return false for viewer role', () => {
-            const user = { role: 'viewer', userId: '1' };
-            expect(isDm(user)).toBe(false);
-        });
-
         it('should return false for null user', () => {
             expect(isDm(null)).toBe(false);
         });
@@ -138,26 +133,6 @@ describe('visibilityHelpers', () => {
             });
         });
 
-        describe('Viewer visibility', () => {
-            const viewerUser = { role: 'viewer' };
-
-            it('should see only public entities', () => {
-                expect(isEntityVisibleToUser(publicEntity, 'deities', viewerUser, [])).toBe(true);
-                expect(isEntityVisibleToUser(publicEntity, 'places', viewerUser, [])).toBe(true);
-            });
-
-            it('should not see any private entities', () => {
-                expect(isEntityVisibleToUser(privateEntity, 'characters', viewerUser, [])).toBe(false);
-                expect(isEntityVisibleToUser(privateEntity, 'items', viewerUser, [])).toBe(false);
-            });
-
-            it('should not see even anchored private entities', () => {
-                const anchorIds = ['char-1'];
-                const privateChar = { id: 'char-1', is_public: false };
-                expect(isEntityVisibleToUser(privateChar, 'characters', viewerUser, anchorIds)).toBe(false);
-            });
-        });
-
         describe('Null user visibility', () => {
             it('should see only public entities with null user', () => {
                 expect(isEntityVisibleToUser(publicEntity, 'deities', null, [])).toBe(true);
@@ -213,19 +188,6 @@ describe('visibilityHelpers', () => {
             });
         });
 
-        describe('Viewer visibility', () => {
-            const viewerUser = { role: 'viewer' };
-
-            it('should see relation only if both members are public', () => {
-                expect(isRelationVisibleToUser('DeitySphere', [publicMember1, publicMember2], viewerUser, [])).toBe(true);
-            });
-
-            it('should not see relation if any member is private', () => {
-                expect(isRelationVisibleToUser('EventCharacter', [publicMember1, privateMember1], viewerUser, [])).toBe(false);
-                expect(isRelationVisibleToUser('CharacterItem', [privateMember1, privateMember2], viewerUser, [])).toBe(false);
-            });
-        });
-
         describe('Null user visibility', () => {
             it('should see relation only if both members are public', () => {
                 expect(isRelationVisibleToUser('DeitySphere', [publicMember1, publicMember2], null, [])).toBe(true);
@@ -272,23 +234,6 @@ describe('visibilityHelpers', () => {
                 expect(result.some(e => e.id === 'public-char')).toBe(true);
                 expect(result.some(e => e.id === 'private-1')).toBe(true);
                 expect(result.some(e => e.id === 'private-3')).toBe(false);
-            });
-        });
-
-        describe('Viewer filtering', () => {
-            it('should return only public entities for viewer', () => {
-                const viewerUser = { role: 'viewer' };
-                const result = filterEntitiesByVisibility(entities, 'items', viewerUser, []);
-                expect(result).toHaveLength(2);
-                expect(result.every(e => e.is_public === true)).toBe(true);
-            });
-
-            it('should not include anchored private entities for viewer', () => {
-                const viewerUser = { role: 'viewer' };
-                const anchorIds = ['private-1'];
-                const result = filterEntitiesByVisibility(entities, 'characters', viewerUser, anchorIds);
-                expect(result).toHaveLength(2);
-                expect(result.every(e => e.is_public === true)).toBe(true);
             });
         });
 

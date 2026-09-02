@@ -61,10 +61,10 @@ async function main() {
   await seedUsers({ bcrypt, nowIso, runSql });
 
   await runSql(`Inserting characters...`, `INSERT OR IGNORE INTO characters (id, player_character, is_public, name, birthdate, ancestry, class, level, alignment, strength, dexterity, constitution, intelligence, wisdom, charisma, max_health, retired, deceased, short_description, long_explanation) VALUES
-    ('alann-barnett', true, false, 'Alann Barnett', '0200190001_age-of-descent-default', 'human', 'Cleric', '4', 'neutral-good', 13, 8, 11, 10, 14, 11, 20, false, false, 'A thoughtful and strong-willed adventurer.', NULL),
-    ('releas-neb', true, false, 'Releas Neb', '0200194001_age-of-descent-default', 'human', 'Magic User', '7', 'chaotic-good', 5, 14, 10, 18, 13, 9, 16, false, false, 'A clever and resourceful wizard.', NULL),
-    ('orlaith-of-the-mosswood', true, false, 'Orlaith of the Mosswood', '0200197001_age-of-descent-default', 'human', 'Druid', '1', 'chaotic-neutral', 12, 15, 11, 9, 15, 9, 2, false, false, 'A burgeoning druid with knowledge of herbs.', NULL),
-    ('djinn', true, false, 'Djinn Rat-Eater', '0200195001_age-of-descent-default', 'human', 'Assassin', '2', 'neutral-evil', 8, 18, 10, 4, 15, 10, 5, false, false, 'A deceptive and quick assassin.', NULL),
+    ('alann-barnett', true, false, 'Alann Barnett', '0200190001_age-of-descent-default', 'human', 'Cleric', '4', 'neutral-good', 13, 8, 11, 10, 14, 11, 20, false, false, 'A lawful and strong-willed adventurer.', 'Alann found purpose in his deity, the god of law, Doh. He was known to be a bit of a hardass, but was extremely charitable.'),
+    ('releas-neb', true, false, 'Releas Neb', '0200194001_age-of-descent-default', 'human', 'Magic User', '7', 'chaotic-good', 5, 14, 10, 18, 13, 9, 16, false, false, 'A clever and resourceful wizard.', 'Rel came to Wavethorn with bright optimism in his heart. He fights for justice at every turn.'),
+    ('orlaith-of-the-mosswood', true, false, 'Orlaith of the Mosswood', '0200197001_age-of-descent-default', 'human', 'Druid', '1', 'chaotic-neutral', 12, 15, 11, 9, 15, 9, 2, false, false, 'A burgeoning druid with knowledge of herbs.', 'Orlaith was orphaned at a young age and was taken in by Mildred of the Mosswood in Lundgren. They are proficient in herbalism, singing, and hunting. They also can fix wagons and carts since they interned at the repair shop as a youth.'),
+    ('djinn', true, false, 'Djinn Rat-Eater', '0200195001_age-of-descent-default', 'human', 'Assassin', '2', 'neutral-evil', 8, 18, 10, 4, 15, 10, 5, false, false, 'A deceptive and quick assassin.', 'Djinn traveled extremely far to be in Othlorin, leaving a hard and traumatic life back in Skrazdagh. He fell in with a criminal gang in Wavethorn who now act as his family.'),
     ('apollonia-palleday', true, false, 'Apollonia Palleday', '0200198001_age-of-descent-default', 'human', 'Magic User', '5', 'neutral-good', 13, 8, 11, 18, 14, 11, 18, false, false, 'A bright and curious spellcaster.', NULL),
     ('durchir', true, false, 'Durchir', '0200187001_age-of-descent-default', 'half-elf', 'Fighter', '2', 'lawful-evil', 18, 10, 12, 15, 10, 11, 22, false, true, 'Durchir of the Angry Orchard, fallen hero.', NULL),
     ('cormac', true, false, 'Cormac', '0200193001_age-of-descent-default', 'half-elf', 'Thief/Illusionist', '5/4', 'chaotic-good', 9, 16, 7, 15, 14, 7, 15, false, false, 'A clever and nimble adventurer.', NULL),
@@ -85,9 +85,9 @@ async function main() {
   `, [nowIso, nowIso, nowIso, nowIso, nowIso]);
 
   await runSql(`Inserting deities...`, `INSERT OR IGNORE INTO deities (id, is_public, name, alignment, short_description, long_explanation) VALUES
-    ('achiel', true, 'Achiel', 'lawful-good', 'God of Light.', NULL),
-    ('idona', true, 'Idona', 'chaotic-good', 'Goddess of Humanity.', 'The patron goddess of and mother to Humankind. Her nurturing guidance shows us what we need to know to thrive. Those that worship Idona are numerous within the Othlorin. She is primarily worshipped as Achiels Wife, deserving of respect and credence. There are some women who have dedicated their lives to interpreting the messages of the moon as those are what Idona intends.'),
-    ('ponat', true, 'Ponat', 'lawful-good', 'God of fortress and protection.', NULL),
+    ('achiel', true, 'Achiel', 'lawful-good', 'God of Light.', 'Achiel is infinite in his brilliance, providing his light of mercy and righteousness upon this wretched world. All other gods bow to his magnificence and benevolence. Without his guidance, humanity would be left in darkness and ignorance.'),
+    ('idona', true, 'Idona', 'chaotic-good', 'Goddess of Humanity.', 'The patron goddess of and mother to Humankind. Her nurturing guidance shows us what we need to know to thrive. Those that worship Idona are numerous within Othlorin. She is primarily worshipped as Achiel''s Wife, deserving of respect and credence. There are some women who have dedicated their lives to interpreting the messages of the moon as those are what Idona intends.'),
+    ('ponat', true, 'Ponat', 'lawful-good', 'God of fortress and protection.', 'Ponat is most known for creating the impenetrable fortress in which Achiel resides within Benevos. Ponat''s direct followers are few, with only two dedicated sects of worship known in the world. They tend to be supported materially by the communities their fortresses defend.'),
     ('wyaris', false, 'Wyaris', 'chaotic-good', 'Lady of Swords.', NULL),
     ('danaris', false, 'Danaris', 'chaotic-neutral', 'Lady of Death.', NULL),
     ('vaharis', false, 'Vaharis', 'lawful-neutral', 'Lady of Judgement.', NULL),
@@ -109,15 +109,15 @@ async function main() {
     ('pollys-spellbook', false, 'Polly''s Spellbook', 'The first spellbook belonging to Polly.', 'This spellbook is a relic of a mysterious order of mages.');
   `);
 
-  await runSql(`Inserting organizations...`, `INSERT OR IGNORE INTO organizations (id, is_public, name, type, short_description, long_explanation) VALUES
-    ('church-of-achiels-light', true, 'Church of Achiel''s Light', 'religious', 'The main church of Achiel.', NULL),
-    ('order-of-the-iron-duch', false, 'The Order of the Iron Düch', 'adventuring-party', 'A party of heroes.', NULL),
-    ('orphans-of-lundgren', false, 'The Orphans of Lundgren', 'adventuring-party', 'A duo of misfits helping the citizens of Lundgren.', NULL),
-    ('wyvernfang', false, 'Wyvernfang', 'gang', 'A bandit group based around Wavethorn.', NULL),
-    ('three-sisters', false, 'The Three Sisters', 'pantheon', 'The Three Sister Goddesses.', NULL),
-    ('achielan-pantheon', true, 'Achielan Pantheon', 'pantheon', 'The primary deities worshipped by humans.', NULL),
-    ('ancient-elven-pantheon', false, 'The Ancient Elven Pantheon', 'pantheon', 'The primary deities worshipped by the ancient elves.', NULL),
-    ('adventurers-guild', false, 'The Adventurer''s Guild', 'guild', 'A guild for adventurers in Novafell and Wavethorn.', NULL);
+  await runSql(`Inserting organizations...`, `INSERT OR IGNORE INTO organizations (id, is_public, name, type, established, disbanded, short_description, long_explanation) VALUES
+    ('church-of-achiels-light', true, 'Church of Achiel''s Light', 'religious', NULL, NULL, 'The main church of Achiel.', NULL),
+    ('order-of-the-iron-duch', false, 'The Order of the Iron Düch', 'adventuring-party', NULL, NULL, 'A party of heroes.', NULL),
+    ('orphans-of-lundgren', false, 'The Orphans of Lundgren', 'adventuring-party', NULL, NULL, 'A duo of misfits helping the citizens of Lundgren.', NULL),
+    ('wyvernfang', false, 'Wyvernfang', 'gang', NULL, NULL, 'A bandit group based around Wavethorn.', NULL),
+    ('three-sisters', false, 'The Three Sisters', 'pantheon', NULL, NULL, 'The Three Sister Goddesses.', NULL),
+    ('achielan-pantheon', true, 'Achielan Pantheon', 'pantheon', NULL, NULL, 'The primary deities worshipped by humans.', NULL),
+    ('ancient-elven-pantheon', false, 'The Ancient Elven Pantheon', 'pantheon', NULL, NULL, 'The primary deities worshipped by the ancient elves.', NULL),
+    ('adventurers-guild', false, 'The Adventurer''s Guild', 'guild', NULL, NULL, 'A guild for adventurers in Novafell and Wavethorn.', NULL);
   `);
 
   await runSql(`Inserting places...`, `INSERT OR IGNORE INTO places (id, is_public, name, type, parent_id, short_description, establishments, long_explanation) VALUES
@@ -184,20 +184,20 @@ async function main() {
   `);
 
   await runSql(`Inserting character_items...`, `INSERT OR IGNORE INTO character_items (character_id, item_id, acquired_date, relinquished_date, short_description) VALUES
-    ('releas-neb', 'rel-s-spellbook', '0200195034_age-of-descent-default', '0200200062_age-of-descent-default', 'Gained from his reclusive master in GatUn, then stolen by ruffians in Wavethorn.'),
-    ('releas-neb', 'rel-s-spellbook', '0200200122_age-of-descent-default', '', 'Recovered from street ruffians.'),
-    ('apollonia-palleday', 'polly-s-spellbook', '0200200189_age-of-descent-default', '', 'Received from her betrothed, Alaric Evermoon.'),
-    ('cormac', 'cormac-s-spellbook', '0200195152_age-of-descent-default', '', 'Received from his master.');
+    ('releas-neb', 'rels-spellbook', '0200195034_age-of-descent-default', '0200200062_age-of-descent-default', 'Gained from his reclusive master in GatUn, then stolen by ruffians in Wavethorn.'),
+    ('releas-neb', 'rels-spellbook', '0200200122_age-of-descent-default', NULL, 'Recovered from street ruffians.'),
+    ('apollonia-palleday', 'pollys-spellbook', '0200200189_age-of-descent-default', NULL, 'Received from her betrothed, Alaric Evermoon.'),
+    ('cormac', 'cormacs-spellbook', '0200195152_age-of-descent-default', NULL, 'Received from his master.');
   `);
 
-  await runSql(`Inserting character_organizations...`, `INSERT OR IGNORE INTO character_organizations (character_id, organization_id, joined_date, left_date, short_description, long_explanation) VALUES
-    ('alann-barnett', 'adventurers-guild', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'Joined the Adventurers Guild to protect Wavethorn, left after the Night of Spiders.', NULL),
-    ('alann-barnett', 'adventurers-guild', '0200201001_age-of-descent-default', '', 'Rejoined due to pressure from the party.', NULL),
-    ('releas-neb', 'adventurers-guild', '0200200029_age-of-descent-default', '', 'Became a member of the Adventurers Guild.', NULL),
-    ('durchir', 'adventurers-guild', '0200200057_age-of-descent-default', '', 'Allied with the Adventurers Guild for information.', NULL),
-    ('orlaith-of-the-mosswood', 'orphans-of-lundgren', '0300006018_age-of-achiel-default', '', 'Formed the Orphans of Lundgren with Djinn.', NULL),
-    ('djinn', 'orphans-of-lundgren', '0300006018_age-of-achiel-default', '', 'Formed the Orphans of Lundgren with Orlaith.', NULL),
-    ('cormac', 'adventurers-guild', '0200200085_age-of-descent-default', '', 'Sworn to protect the realm as a knight.', NULL);
+  await runSql(`Inserting character_organizations...`, `INSERT OR IGNORE INTO character_organizations (character_id, organization_id, joined_date, left_date, role, short_description, long_explanation) VALUES
+    ('alann-barnett', 'adventurers-guild', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'Dragonbait', 'Joined the Adventurers Guild to protect Wavethorn, left after the Night of Spiders.', NULL),
+    ('alann-barnett', 'adventurers-guild', '0200201001_age-of-descent-default', NULL, 'Dragonbait', 'Rejoined due to pressure from the party.', NULL),
+    ('releas-neb', 'adventurers-guild', '0200200029_age-of-descent-default', NULL, 'Dragonbait', 'Became a member of the Adventurers Guild.', NULL),
+    ('durchir', 'adventurers-guild', '0200200057_age-of-descent-default', NULL, 'Dragonbait', 'Allied with the Adventurers Guild for information.', NULL),
+    ('orlaith-of-the-mosswood', 'orphans-of-lundgren', '0300006018_age-of-light-default', NULL, 'Member', 'Formed the Orphans of Lundgren with Djinn.', NULL),
+    ('djinn', 'orphans-of-lundgren', '0300006018_age-of-light-default', NULL, 'Member', 'Formed the Orphans of Lundgren with Orlaith.', NULL),
+    ('cormac', 'adventurers-guild', '0200200085_age-of-descent-default', NULL, 'Dragonbait', 'Sworn to protect the realm as a knight.', NULL);
   `);
 
   await runSql(`Inserting character_places...`, `INSERT OR IGNORE INTO character_places (character_id, place_id, arrived_date, left_date, short_description, long_explanation) VALUES
@@ -260,10 +260,10 @@ async function main() {
   `);
 
   await runSql(`Inserting item_spells...`, `INSERT OR IGNORE INTO item_spells (item_id, spell_id) VALUES
-    ('rel-s-spellbook', 'fireball'),
-    ('rel-s-spellbook', 'magic-missile'),
-    ('cormac-s-spellbook', 'change-self'),
-    ('cormac-s-spellbook', 'audible-glamer');
+    ('rels-spellbook', 'fireball'),
+    ('rels-spellbook', 'magic-missile'),
+    ('cormacs-spellbook', 'change-self'),
+    ('cormacs-spellbook', 'audible-glamer');
   `);
 
   await runSql(`Inserting spell_spheres...`, `INSERT OR IGNORE INTO spell_spheres (spell_id, sphere_id) VALUES

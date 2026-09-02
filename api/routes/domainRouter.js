@@ -398,7 +398,7 @@ function isDm(auth) {
  * Get the player visibility hops limit for a user.
  * DMs always see all entities (unlimited/undefined).
  * Players get the configured limit (see PLAYER_VISIBILITY_HOPS in visibilityHelpers.js).
- * Other roles (viewer, null) get unlimited (handled separately via public visibility).
+ * Unauthenticated requests have no player visibility-hop limit.
  */
 function getPlayerVisibilityHops(auth) {
     if (!auth || auth.role !== 'player') {
@@ -426,151 +426,6 @@ function ensureDmForMutation(req) {
     return { status: 403, error: 'Only dm users can modify canonical domain data' };
 }
 
-function getPlayerPatchRule(fieldDef) {
-    if (!fieldDef || !fieldDef.access) {
-        return null;
-    }
-
-    return fieldDef.access.playerPatch || null;
-}
-
-function isPlayer(auth) {
-    return auth && auth.role === 'player';
-}
-
-function normalizeOwnershipRule(playerPatchRule) {
-    if (!playerPatchRule || typeof playerPatchRule !== 'object') {
-        return null;
-    }
-
-    return playerPatchRule.ownership || null;
-}
-
-async function getAnchoredCharacterIdSetForRequest(auth) {
-    const anchoredIds = await listAnchoredCharacterIdsByUserId(auth.userId);
-    return new Set(anchoredIds);
-}
-
-async function authorizeEntityPatch(req, entityName, entityDef, idValue, updates) {
-    if (!req.auth) {
-        return { status: 401, error: 'Unauthorized' };
-    }
-
-    if (isDm(req.auth)) {
-        return null;
-    }
-
-    if (!isPlayer(req.auth)) {
-        return { status: 403, error: 'Only dm and player users can patch domain resources' };
-    }
-
-    const updateKeys = Object.keys(updates || {});
-    if (updateKeys.length === 0) {
-        return { status: 403, error: 'No player-editable fields were provided' };
-    }
-
-    for (const key of updateKeys) {
-        const fieldDef = entityDef.fields[key];
-        const playerPatchRule = getPlayerPatchRule(fieldDef);
-        if (!playerPatchRule) {
-            return { status: 403, error: `Field is dm-only: ${key}` };
-        }
-
-        const ownershipRule = normalizeOwnershipRule(playerPatchRule);
-        if (!ownershipRule) {
-            continue;
-        }
-
-        if (ownershipRule.type !== 'anchored-character') {
-            return { status: 403, error: `Unsupported ownership rule for field: ${key}` };
-        }
-
-        if (entityName !== 'Character') {
-            return { status: 403, error: `Anchored player edits are not configured for entity: ${entityName}` };
-        }
-
-        const anchoredIds = await getAnchoredCharacterIdSetForRequest(req.auth);
-        if (!anchoredIds.has(idValue)) {
-            return { status: 403, error: 'Players may only patch anchored character records' };
-        }
-    }
-
-    return null;
-}
-
-function getRelationMemberIdsByEntity(members, anchorMemberIndex, sourceId, relatedId, entityName) {
-    return members
-        .map((member, memberIndex) => {
-            if (member.entity !== entityName) {
-                return null;
-            }
-
-            return memberIndex === anchorMemberIndex ? sourceId : relatedId;
-        })
-        .filter((idValue) => idValue !== null && idValue !== undefined);
-}
-
-async function authorizeRelationPatch(req, relationDef, members, anchorMemberIndex, sourceId, relatedId, updates) {
-    if (!req.auth) {
-        return { status: 401, error: 'Unauthorized' };
-    }
-
-    if (isDm(req.auth)) {
-        return null;
-    }
-
-    if (!isPlayer(req.auth)) {
-        return { status: 403, error: 'Only dm and player users can patch domain resources' };
-    }
-
-    const updateKeys = Object.keys(updates || {});
-    if (updateKeys.length === 0) {
-        return { status: 403, error: 'No player-editable fields were provided' };
-    }
-
-    const anchoredIds = await getAnchoredCharacterIdSetForRequest(req.auth);
-
-    for (const key of updateKeys) {
-        const fieldDef = relationDef.payload && relationDef.payload[key];
-        const playerPatchRule = getPlayerPatchRule(fieldDef);
-        if (!playerPatchRule) {
-            return { status: 403, error: `Field is dm-only: ${key}` };
-        }
-
-        const ownershipRule = normalizeOwnershipRule(playerPatchRule);
-        if (!ownershipRule) {
-            continue;
-        }
-
-        if (ownershipRule.type !== 'anchored-character') {
-            return { status: 403, error: `Unsupported ownership rule for field: ${key}` };
-        }
-
-        const relationMemberEntity = ownershipRule.relationMemberEntity || 'Character';
-        const relationEntityIds = getRelationMemberIdsByEntity(
-            members,
-            anchorMemberIndex,
-            sourceId,
-            relatedId,
-            relationMemberEntity
-        );
-
-        if (relationEntityIds.length === 0) {
-            return { status: 403, error: `No ${relationMemberEntity} member is available for anchored ownership checks` };
-        }
-
-        const hasAnchoredMember = relationEntityIds.some((relationEntityId) =>
-            anchoredIds.has(relationEntityId)
-        );
-
-        if (!hasAnchoredMember) {
-            return { status: 403, error: 'Players may only patch relation records tied to anchored characters' };
-        }
-    }
-
-    return null;
-}
-
 /* BASIC ENTITY ROUTES */
 // create entity
 router.post('/:entityRoute', async (req, res) => {
@@ -594,6 +449,43 @@ router.post('/:entityRoute', async (req, res) => {
         res.status(httpErr.status).json({ error: httpErr.message });
     }
 });
+
+// Special handler for filtering aliases by entity_type and entity_id
+router.get('/aliases', async (req, res) => {
+    try {
+        let entity_type = req.query.entity_type;
+        const entity_id = req.query.entity_id;
+
+        // If entity_type looks like a route name (plural), convert it to the entity type (singular, lowercase)
+        // e.g., 'characters' -> 'character', 'deities' -> 'deity'
+        if (entity_type) {
+            try {
+                const { entityName } = getEntityByRoute(String(entity_type));
+                entity_type = entityName.toLowerCase();
+            } catch {
+                // If it's not a valid route, use it as-is (might already be entity_type)
+                entity_type = String(entity_type).toLowerCase();
+            }
+        }
+
+        // If both filters are provided, apply them
+        if (entity_type && entity_id) {
+            const whereClause = {
+                entity_type: String(entity_type),
+                entity_id: String(entity_id),
+            };
+            const records = await manifestCrudService.getMany('Alias', whereClause);
+            return res.json(records);
+        }
+
+        // Otherwise fail with clear error
+        res.status(400).json({ error: 'Aliases endpoint requires entity_type and entity_id parameters' });
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
 // get all of this entity
 router.get('/:entityRoute', async (req, res) => {
     try {
@@ -621,7 +513,7 @@ router.get('/:entityRoute', async (req, res) => {
                 return visibleEntityIds.has(r.id) || isEntityVisibleToUser(r, req.params.entityRoute, req.auth, anchoredCharacterIds);
             });
         } else {
-            // Use standard visibility filtering (DM sees all, viewer sees public, null user sees public)
+            // Use standard visibility filtering (DM sees all; unauthenticated users see public data).
             resultRecords = filterEntitiesByVisibility(
                 records,
                 req.params.entityRoute,
@@ -676,14 +568,15 @@ router.get('/:entityRoute/:id', async (req, res) => {
 // edit this entity
 router.patch('/:entityRoute/:id', async (req, res) => {
     try {
+        const authErr = ensureDmForMutation(req);
+        if (authErr) {
+            return res.status(authErr.status).json({ error: authErr.error });
+        }
+
         const { entityName, entityDef, idField, idValue } = getEntityLookup(req.params);
         const updates = conformObjectToEntity(req.body, entityDef);
         if (entityName === 'Place' && Object.prototype.hasOwnProperty.call(updates, 'parent_id')) {
             await validatePlaceParent(updates.parent_id, idValue);
-        }
-        const authErr = await authorizeEntityPatch(req, entityName, entityDef, idValue, updates);
-        if (authErr) {
-            return res.status(authErr.status).json({ error: authErr.error });
         }
 
         const result = await manifestCrudService.update(entityName, {
@@ -1028,6 +921,11 @@ router.get('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
 // update this one specific relation between these entities
 router.patch('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
     try {
+        const authErr = ensureDmForMutation(req);
+        if (authErr) {
+            return res.status(authErr.status).json({ error: authErr.error });
+        }
+
         const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
         const { relationName, relationDef, anchorMemberIndex } = getRelationByRoutes(
             req.params.entityRoute,
@@ -1067,18 +965,6 @@ router.patch('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
                 startValue: historyValue,
                 endValue: updates[relationDef.historyEndKey],
             });
-        }
-        const authErr = await authorizeRelationPatch(
-            req,
-            relationDef,
-            members,
-            anchorMemberIndex,
-            sourceId,
-            relatedId,
-            updates
-        );
-        if (authErr) {
-            return res.status(authErr.status).json({ error: authErr.error });
         }
 
         const whereCandidates = buildRelationWhereCandidates({

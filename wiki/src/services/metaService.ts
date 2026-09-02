@@ -12,7 +12,6 @@ export type EntityFieldSchema = {
     enum?: string[]
     hidden?: boolean
     expository?: boolean
-    playerEditable?: boolean
 }
 
 export type EntitySchema = {

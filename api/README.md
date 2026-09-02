@@ -117,7 +117,6 @@ Seeded development users (from `scripts/seedUsers.defaults.js` unless overridden
 
 - `dm-admin` / `change-me-dm-password`
 - `player-one` / `change-me-player-password`
-- `viewer-one` / `change-me-viewer-password`
 
 Change these passwords immediately in shared environments.
 
@@ -222,15 +221,7 @@ Fetch associated target records for a source entity.
 curl http://localhost:3001/api/characters/releas-neb/items
 ```
 
-Note: direct domain mutation routes (`POST`, `PATCH`, `DELETE`) now require a `dm` role access token.
-
-Player mutation exception:
-
-- `player` users may call `PATCH` for fields that define `access.playerPatch` in `common/domainManifest.js`.
-- Current baseline grants player edits to:
-  - `Character.long_explanation` for characters anchored to that user.
-  - Relation `long_explanation` payload fields when the relation includes at least one anchored character for that user.
-- All non-marked fields remain canonical and `dm`-only.
+Note: direct domain mutation routes (`POST`, `PATCH`, `DELETE`) require a `dm` role access token. Players have read-only access.
 
 ## Auth Router (`/api/auth`)
 
@@ -345,7 +336,7 @@ curl -X PATCH http://localhost:3001/api/admin/users/player-one \
 Delete user.
 
 ```bash
-curl -X DELETE http://localhost:3001/api/admin/users/viewer-one \
+curl -X DELETE http://localhost:3001/api/admin/users/player-one \
   -H "Authorization: Bearer <dm-access-token>"
 ```
 

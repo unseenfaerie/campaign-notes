@@ -144,6 +144,19 @@ describe('adminRouter', () => {
         );
     });
 
+    it('POST /api/admin/users rejects the removed viewer role', async () => {
+        const app = createApp();
+
+        const response = await request(app)
+            .post('/api/admin/users')
+            .set('x-test-role', 'dm')
+            .send({ id: 'old-viewer', username: 'old-viewer', password: 'strong-pass-1', role: 'viewer' });
+
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual({ error: 'Invalid role value' });
+        expect(createUser).not.toHaveBeenCalled();
+    });
+
     it('PATCH /api/admin/me/username lets authenticated user change own username', async () => {
         const app = createApp();
 
