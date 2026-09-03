@@ -129,29 +129,32 @@ watch(() => props.entityRoute, loadList)
       </RouterLink>
     </header>
 
-    <div v-if="!loading && !errorMessage && records.length > 0" class="filter-bar">
-      <div class="form-row">
-        <label for="filter-name">Name</label>
-        <input id="filter-name" v-model="nameFilter" type="text" placeholder="Search by name..." />
-      </div>
+    <details v-if="!loading && !errorMessage && records.length > 0" class="filter-panel">
+      <summary>Filters</summary>
+      <div class="filter-bar">
+        <div class="form-row">
+          <label for="filter-name">Name</label>
+          <input id="filter-name" v-model="nameFilter" type="text" placeholder="Search by name..." />
+        </div>
 
-      <div v-for="field in booleanFilterFields" :key="field.name" class="form-row">
-        <label :for="`filter-${field.name}`">{{ prettyFieldName(field.name) }}</label>
-        <select :id="`filter-${field.name}`" v-model="booleanFilters[field.name]">
-          <option value="">Any</option>
-          <option value="true">Yes</option>
-          <option value="false">No</option>
-        </select>
-      </div>
+        <div v-for="field in booleanFilterFields" :key="field.name" class="form-row">
+          <label :for="`filter-${field.name}`">{{ prettyFieldName(field.name) }}</label>
+          <select :id="`filter-${field.name}`" v-model="booleanFilters[field.name]">
+            <option value="">Any</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
 
-      <div v-for="field in enumFilterFields" :key="field.name" class="form-row">
-        <label :for="`filter-${field.name}`">{{ prettyFieldName(field.name) }}</label>
-        <select :id="`filter-${field.name}`" v-model="enumFilters[field.name]">
-          <option value="">Any</option>
-          <option v-for="value in field.enum" :key="value" :value="value">{{ prettyEnumValue(value) }}</option>
-        </select>
+        <div v-for="field in enumFilterFields" :key="field.name" class="form-row">
+          <label :for="`filter-${field.name}`">{{ prettyFieldName(field.name) }}</label>
+          <select :id="`filter-${field.name}`" v-model="enumFilters[field.name]">
+            <option value="">Any</option>
+            <option v-for="value in field.enum" :key="value" :value="value">{{ prettyEnumValue(value) }}</option>
+          </select>
+        </div>
       </div>
-    </div>
+    </details>
 
     <p v-if="loading" class="status-card">Loading records...</p>
     <p v-else-if="errorMessage" class="status-card error">{{ errorMessage }}</p>
