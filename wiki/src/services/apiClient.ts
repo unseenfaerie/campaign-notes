@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_URL = 'http://localhost:3001/api'
+const DEFAULT_API_BASE_URL = '/api'
 
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL as string | undefined
 export const API_BASE_URL = rawBaseUrl?.trim() || DEFAULT_API_BASE_URL
