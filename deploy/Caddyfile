@@ -5,6 +5,10 @@ daercon.com {
         reverse_proxy 127.0.0.1:3001
     }
 
+    handle /health {
+        reverse_proxy 127.0.0.1:3001
+    }
+
     handle {
         try_files {path} /index.html
         file_server

@@ -34,8 +34,19 @@ systemctl stop campaign-notes.service || true
 npm run --workspace api migrate -- latest
 ln -sfn "$release" "$current"
 systemctl start campaign-notes.service
-curl --fail --silent --show-error http://127.0.0.1:3001/health >/dev/null
-activated=true
+
+for attempt in {1..30}; do
+    if curl --fail --silent --show-error http://127.0.0.1:3001/health >/dev/null; then
+        activated=true
+        break
+    fi
+    sleep 1
+done
+
+if [[ "$activated" != true ]]; then
+    echo "Campaign Notes API did not become healthy within 30 seconds." >&2
+    exit 1
+fi
 
 find "$releases" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' \
     | sort -rn | awk 'NR > 3 { $1=""; sub(/^ /, ""); print }' \
