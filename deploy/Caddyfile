@@ -1,4 +1,4 @@
-campaign.example.com {
+daercon.com {
     root * /opt/campaign-notes/current/wiki/dist
 
     handle /api/* {
