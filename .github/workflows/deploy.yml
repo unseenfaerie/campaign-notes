@@ -19,7 +19,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            wiki/package-lock.json
       - run: npm ci
+      - run: npm --prefix wiki ci
       - run: npm run release:verify
       - run: npm run release:package
       - name: Upload release

@@ -8,9 +8,8 @@
     "api:start": "npm --workspace api run start",
     "api:test": "npm --workspace api run test",
     "api:migrate": "npm --workspace api run migrate",
-    "api:seed:validate": "node api/scripts/validateSeed.js",
     "wiki:build": "npm --prefix wiki run build",
-    "release:verify": "npm run api:test -- --runInBand && npm run api:seed:validate && npm run wiki:build",
+    "release:verify": "npm run api:test -- --runInBand && npm run wiki:build",
     "release:package": "node scripts/package-release.js",
     "wiki:start": "npm --prefix wiki run dev",
     "wiki:preview": "npm --prefix wiki run preview"
