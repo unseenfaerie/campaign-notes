@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { getEntitySchemas, type EntitySchema } from './services/metaService'
 import { useAuthStore } from './stores/auth'
@@ -8,6 +8,9 @@ const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 const entitySchemas = ref<EntitySchema[]>([])
+const navOpen = ref(true)
+const compactNavQuery = '(max-width: 980px)'
+let compactNavMediaQuery: MediaQueryList | null = null
 
 const showShell = computed(() => auth.isAuthenticated.value && route.name !== 'login')
 const navigationEntities = computed(() => entitySchemas.value.filter((entity) => entity.navigation))
@@ -25,6 +28,24 @@ async function handleLogout() {
   await auth.logout()
   await router.push({ name: 'login' })
 }
+
+function updateNavForLayout(mediaQuery: MediaQueryList | MediaQueryListEvent) {
+  navOpen.value = !mediaQuery.matches
+}
+
+function handleNavToggle(event: Event) {
+  navOpen.value = (event.currentTarget as HTMLDetailsElement).open
+}
+
+onMounted(() => {
+  compactNavMediaQuery = window.matchMedia(compactNavQuery)
+  updateNavForLayout(compactNavMediaQuery)
+  compactNavMediaQuery.addEventListener('change', updateNavForLayout)
+})
+
+onBeforeUnmount(() => {
+  compactNavMediaQuery?.removeEventListener('change', updateNavForLayout)
+})
 </script>
 
 <template>
@@ -35,24 +56,29 @@ async function handleLogout() {
           <p class="nav-kicker">Campaign Wiki</p>
           <h1>Digital Daercon</h1>
           <p class="nav-user">Signed in as {{ auth.user.value?.username }}</p>
+          <button class="logout-button" type="button" @click="handleLogout">Logout</button>
         </header>
 
-        <nav aria-label="Entity navigation" class="nav-links">
-          <RouterLink
-            v-for="entity in navigationEntities"
-            :key="entity.route"
-            :to="`/${entity.route}`"
-            class="nav-link"
-          >
-            {{ entity.label }}
-          </RouterLink>
-        </nav>
+        <details class="nav-panel" :open="navOpen" @toggle="handleNavToggle">
+          <summary>Navigation</summary>
+          <div class="nav-panel-body">
+            <nav aria-label="Entity navigation" class="nav-links">
+              <RouterLink
+                v-for="entity in navigationEntities"
+                :key="entity.route"
+                :to="`/${entity.route}`"
+                class="nav-link"
+              >
+                {{ entity.label }}
+              </RouterLink>
+            </nav>
 
-        <nav v-if="auth.isAdmin.value" aria-label="Admin navigation" class="nav-links admin-nav">
-          <RouterLink :to="{ name: 'admin-users' }" class="nav-link">Manage Users</RouterLink>
-        </nav>
+            <nav v-if="auth.isAdmin.value" aria-label="Admin navigation" class="nav-links admin-nav">
+              <RouterLink :to="{ name: 'admin-users' }" class="nav-link">Manage Users</RouterLink>
+            </nav>
+          </div>
+        </details>
 
-        <button class="logout-button" type="button" @click="handleLogout">Logout</button>
       </aside>
 
       <main class="content-area">
