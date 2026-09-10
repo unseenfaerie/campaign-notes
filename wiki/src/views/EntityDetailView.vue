@@ -659,7 +659,7 @@ function prettyEnumValue(value: string): string {
 }
 
 function isLongTextField(field: EntityFieldSchema): boolean {
-  return field.type === 'string' && /description|explanation|notes/i.test(field.name)
+  return field.type === 'string' && !!field.expository
 }
 
 // Splits a relation/history payload into non-expository "facts" and expository (long-text) fields,

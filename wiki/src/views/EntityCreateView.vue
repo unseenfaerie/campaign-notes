@@ -41,7 +41,7 @@ const nameField = computed(() => {
 })
 
 function isLongTextField(field: EntityFieldSchema): boolean {
-  return field.type === 'string' && /description|explanation|notes/i.test(field.name)
+  return field.type === 'string' && !!field.expository
 }
 
 function slugify(value: string): string {
