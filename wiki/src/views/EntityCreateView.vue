@@ -115,6 +115,17 @@ function buildPayload(): Record<string, unknown> {
       continue
     }
 
+    if (field.type === 'number') {
+      if (rawValue === '' || rawValue === null || rawValue === undefined) {
+        if (field.required) {
+          throw new Error(`${prettyFieldName(field.name)} is required.`)
+        }
+        continue
+      }
+      payload[field.name] = Number(rawValue)
+      continue
+    }
+
     const text = typeof rawValue === 'string' ? rawValue.trim() : ''
 
     if (text === '') {
@@ -124,7 +135,7 @@ function buildPayload(): Record<string, unknown> {
       continue
     }
 
-    payload[field.name] = field.type === 'number' ? Number(text) : text
+    payload[field.name] = text
   }
 
   return payload
