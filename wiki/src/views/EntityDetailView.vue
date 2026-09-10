@@ -64,7 +64,7 @@ const aliasSaving = ref(false)
 
 const relationSchemas = ref<RelationFormSchema[]>([])
 const entitySchema = ref<EntitySchema | null>(null)
-const placeOptions = ref<DomainEntity[]>([])
+const refOptionsByRoute = ref<Record<string, DomainEntity[]>>({})
 const openAddFormRoute = ref<string | null>(null)
 const showingNewRelatedPicker = ref(false)
 
@@ -312,11 +312,17 @@ async function loadDetail(options: { silent?: boolean } = {}) {
     entitySchema.value = schema || null
     relationSchemas.value = relations
     aliases.value = fetchedAliases
-    placeOptions.value = props.entityRoute === 'places'
-      ? (await listEntities('places'))
-          .filter((place) => String(place.id) !== props.id)
-          .sort((left, right) => String(left.name || left.id).localeCompare(String(right.name || right.id)))
-      : []
+
+    const refRoutes = [...new Set((schema?.fields ?? []).map((field) => field.ref).filter((route): route is string => !!route))]
+    const loadedOptions = await Promise.all(refRoutes.map((route) => listEntities(route)))
+    refOptionsByRoute.value = Object.fromEntries(
+      refRoutes.map((route, index) => [
+        route,
+        loadedOptions[index]
+          .filter((option) => !(route === props.entityRoute && String(option.id) === props.id))
+          .sort((left, right) => String(left.name || left.id).localeCompare(String(right.name || right.id))),
+      ])
+    )
   } catch (error) {
     if (error instanceof ApiError) {
       errorMessage.value = error.message
@@ -659,7 +665,11 @@ function prettyEnumValue(value: string): string {
 }
 
 function isLongTextField(field: EntityFieldSchema): boolean {
-  return field.type === 'string' && /description|explanation|notes/i.test(field.name)
+  return field.type === 'string' && !!field.expository
+}
+
+function refOptionsFor(field: EntityFieldSchema): DomainEntity[] {
+  return field.ref ? refOptionsByRoute.value[field.ref] ?? [] : []
 }
 
 // Splits a relation/history payload into non-expository "facts" and expository (long-text) fields,
@@ -875,13 +885,14 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               :required="field.required"
             />
             <SearchableSelect
-              v-else-if="entityRoute === 'places' && field.name === 'parent_id'"
+              v-else-if="field.ref"
               :id="`edit-field-${field.name}`"
               v-model="editValues[field.name]"
               :options="[
-                { value: '', label: 'No parent' },
-                ...placeOptions.map((place) => ({ value: String(place.id), label: String(place.name || place.id) })),
+                ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
+                ...refOptionsFor(field).map((option) => ({ value: String(option.id), label: String(option.name || option.id) })),
               ]"
+              :required="field.required"
             />
             <input
               v-else-if="field.type === 'number'"

@@ -20,8 +20,12 @@ const submitting = ref(false)
 const errorMessage = ref('')
 const schema = ref<EntitySchema | undefined>()
 const formValues = ref<Record<string, any>>({})
-const placeOptions = ref<DomainEntity[]>([])
+const refOptionsByRoute = ref<Record<string, DomainEntity[]>>({})
 const slugTouched = ref(false)
+
+function refOptionsFor(field: EntityFieldSchema): DomainEntity[] {
+  return field.ref ? refOptionsByRoute.value[field.ref] ?? [] : []
+}
 
 const singularLabel = computed(() => schema.value?.singularLabel ?? props.entityRoute)
 
@@ -41,7 +45,7 @@ const nameField = computed(() => {
 })
 
 function isLongTextField(field: EntityFieldSchema): boolean {
-  return field.type === 'string' && /description|explanation|notes/i.test(field.name)
+  return field.type === 'string' && !!field.expository
 }
 
 function slugify(value: string): string {
@@ -61,7 +65,7 @@ async function loadSchema() {
   errorMessage.value = ''
   schema.value = undefined
   formValues.value = {}
-  placeOptions.value = []
+  refOptionsByRoute.value = {}
   slugTouched.value = false
 
   try {
@@ -73,11 +77,14 @@ async function loadSchema() {
 
     schema.value = found
 
-    if (props.entityRoute === 'places') {
-      placeOptions.value = (await listEntities('places')).sort((left, right) =>
-        String(left.name || left.id).localeCompare(String(right.name || right.id))
-      )
-    }
+    const refRoutes = [...new Set(found.fields.map((field) => field.ref).filter((route): route is string => !!route))]
+    const loadedOptions = await Promise.all(refRoutes.map((route) => listEntities(route)))
+    refOptionsByRoute.value = Object.fromEntries(
+      refRoutes.map((route, index) => [
+        route,
+        loadedOptions[index].sort((left, right) => String(left.name || left.id).localeCompare(String(right.name || right.id))),
+      ])
+    )
 
     const initialValues: Record<string, any> = {}
     for (const field of found.fields) {
@@ -192,13 +199,14 @@ watch(
           type="checkbox"
         />
         <SearchableSelect
-          v-else-if="entityRoute === 'places' && field.name === 'parent_id'"
+          v-else-if="field.ref"
           :id="`create-field-${field.name}`"
           v-model="formValues[field.name]"
           :options="[
-            { value: '', label: 'No parent' },
-            ...placeOptions.map((place) => ({ value: String(place.id), label: String(place.name || place.id) })),
+            ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
+            ...refOptionsFor(field).map((option) => ({ value: String(option.id), label: String(option.name || option.id) })),
           ]"
+          :required="field.required"
         />
         <SearchableSelect
           v-else-if="field.enum"
