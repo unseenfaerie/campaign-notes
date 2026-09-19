@@ -6,7 +6,7 @@
 const { getEnumValues } = require('./enums');
 
 const domainManifest = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     entities: {
         Character: {
             table: 'characters',
@@ -15,8 +15,8 @@ const domainManifest = {
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
-                player_character: { type: 'boolean', required: true },
-                is_public: { type: 'boolean', required: true, hidden: true },
+                player_character: { type: 'boolean', required: true, access: { playerProposable: false } },
+                is_public: { type: 'boolean', required: true, hidden: true, access: { playerProposable: false } },
                 name: { type: 'string', required: true },
                 birthdate: { type: 'loreDate' },
                 ancestry: { type: 'string', enum: 'ancestry' },
@@ -43,7 +43,7 @@ const domainManifest = {
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
-                is_public: { type: 'boolean', required: true, hidden: true },
+                is_public: { type: 'boolean', required: true, hidden: true, access: { playerProposable: false } },
                 name: { type: 'string', required: true },
                 alignment: { type: 'string', enum: 'alignment' },
                 short_description: { type: 'string', required: true, expository: true },
@@ -57,7 +57,7 @@ const domainManifest = {
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
-                is_public: { type: 'boolean', required: true, hidden: true },
+                is_public: { type: 'boolean', required: true, hidden: true, access: { playerProposable: false } },
                 name: { type: 'string', required: true },
                 real_world_date: { type: 'realDate' },
                 in_game_time_start: { type: 'loreDate' },
@@ -75,7 +75,7 @@ const domainManifest = {
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
-                is_public: { type: 'boolean', required: true, hidden: true },
+                is_public: { type: 'boolean', required: true, hidden: true, access: { playerProposable: false } },
                 name: { type: 'string', required: true },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
@@ -88,7 +88,7 @@ const domainManifest = {
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
-                is_public: { type: 'boolean', required: true, hidden: true },
+                is_public: { type: 'boolean', required: true, hidden: true, access: { playerProposable: false } },
                 name: { type: 'string', required: true },
                 type: { type: 'string', required: true, enum: 'organizationType' },
                 established: { type: 'loreDate' },
@@ -104,7 +104,7 @@ const domainManifest = {
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
-                is_public: { type: 'boolean', required: true, hidden: true },
+                is_public: { type: 'boolean', required: true, hidden: true, access: { playerProposable: false } },
                 name: { type: 'string', required: true },
                 type: { type: 'string', required: true, enum: 'placeType' },
                 parent_id: { type: 'string', ref: 'Place' },
@@ -120,7 +120,7 @@ const domainManifest = {
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
-                is_public: { type: 'boolean', required: true, hidden: true },
+                is_public: { type: 'boolean', required: true, hidden: true, access: { playerProposable: false } },
                 type: { type: 'string' },
                 name: { type: 'string', required: true },
                 level: { type: 'number' },
@@ -140,7 +140,7 @@ const domainManifest = {
             idField: 'id',
             fields: {
                 id: { type: 'string', primary: true, required: true, format: 'slug' },
-                is_public: { type: 'boolean', required: true, hidden: true },
+                is_public: { type: 'boolean', required: true, hidden: true, access: { playerProposable: false } },
                 name: { type: 'string', required: true },
                 short_description: { type: 'string', required: true, expository: true },
             },
@@ -152,7 +152,7 @@ const domainManifest = {
             idField: 'id',
             fields: {
                 id: { type: 'number', primary: true, required: true, autoIncrement: true },
-                is_public: { type: 'boolean', required: true, hidden: true },
+                is_public: { type: 'boolean', required: true, hidden: true, access: { playerProposable: false } },
                 entity_type: { type: 'string', required: true },
                 entity_id: { type: 'string', required: true },
                 alias: { type: 'string', required: true },
@@ -175,8 +175,8 @@ const domainManifest = {
             historyEndKey: 'dissolution_date',
             keys: ['character_id', 'deity_id', 'adopted_date'],
             payload: {
-                adopted_date: { type: 'loreDate', required: true },
-                dissolution_date: { type: 'loreDate' },
+                adopted_date: { type: 'loreDate', required: true, access: { playerProposable: false } },
+                dissolution_date: { type: 'loreDate', access: { playerProposable: false } },
                 relationship_type: { type: 'string' },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
@@ -193,8 +193,8 @@ const domainManifest = {
             historyEndKey: 'relinquished_date',
             keys: ['character_id', 'item_id', 'acquired_date'],
             payload: {
-                acquired_date: { type: 'loreDate', required: true },
-                relinquished_date: { type: 'loreDate' },
+                acquired_date: { type: 'loreDate', required: true, access: { playerProposable: false } },
+                relinquished_date: { type: 'loreDate', access: { playerProposable: false } },
                 short_description: { type: 'string', required: true, expository: true },
             },
         },
@@ -209,8 +209,8 @@ const domainManifest = {
             historyEndKey: 'left_date',
             keys: ['character_id', 'organization_id', 'joined_date'],
             payload: {
-                joined_date: { type: 'loreDate', required: true },
-                left_date: { type: 'loreDate' },
+                joined_date: { type: 'loreDate', required: true, access: { playerProposable: false } },
+                left_date: { type: 'loreDate', access: { playerProposable: false } },
                 role: { type: 'string' },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
@@ -227,8 +227,8 @@ const domainManifest = {
             historyEndKey: 'left_date',
             keys: ['character_id', 'place_id', 'arrived_date'],
             payload: {
-                arrived_date: { type: 'loreDate', required: true },
-                left_date: { type: 'loreDate' },
+                arrived_date: { type: 'loreDate', required: true, access: { playerProposable: false } },
+                left_date: { type: 'loreDate', access: { playerProposable: false } },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
             },
@@ -245,8 +245,8 @@ const domainManifest = {
             historyEndKey: 'dissolution_date',
             keys: ['character_id', 'related_id', 'established_date'],
             payload: {
-                established_date: { type: 'loreDate', required: true },
-                dissolution_date: { type: 'loreDate' },
+                established_date: { type: 'loreDate', required: true, access: { playerProposable: false } },
+                dissolution_date: { type: 'loreDate', access: { playerProposable: false } },
                 relationship_type: { type: 'string', required: true, enum: 'characterRelationship' },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },

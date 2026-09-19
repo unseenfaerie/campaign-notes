@@ -13,6 +13,16 @@ jest.mock('../../data/genericCrudService', () => ({
 
 jest.mock('../../data/authRepository', () => ({
     listAnchoredCharacterIdsByUserId: jest.fn(),
+    findUserById: jest.fn(),
+}));
+
+jest.mock('../../data/editProposalRepository', () => ({
+    createProposal: jest.fn(),
+    getProposalById: jest.fn(),
+    getPendingProposalForTarget: jest.fn().mockResolvedValue(null),
+    getPendingProposalsForResource: jest.fn().mockResolvedValue([]),
+    markAccepted: jest.fn(),
+    markRejected: jest.fn(),
 }));
 
 jest.mock('../../utils/manifestHelpers', () => ({
@@ -122,7 +132,11 @@ jest.mock('../../../common/domainManifest', () => ({
 }));
 
 const { manifestCrudService } = require('../../data/genericCrudService');
-const { listAnchoredCharacterIdsByUserId } = require('../../data/authRepository');
+const { listAnchoredCharacterIdsByUserId, findUserById } = require('../../data/authRepository');
+const {
+    getPendingProposalForTarget,
+    getPendingProposalsForResource,
+} = require('../../data/editProposalRepository');
 const manifestHelpers = require('../../utils/manifestHelpers');
 const router = require('../domainRouter');
 
@@ -132,6 +146,7 @@ function createTestApp() {
     app.use((req, _res, next) => {
         req.auth = {
             userId: req.headers['x-test-user'] || 'dm-admin',
+            username: req.headers['x-test-username'] || 'dm-admin',
             role: req.headers['x-test-role'] || 'dm',
         };
         next();
@@ -158,6 +173,9 @@ function buildEntity(entityName, route, idType = 'string') {
 beforeEach(() => {
     jest.resetAllMocks();
     listAnchoredCharacterIdsByUserId.mockResolvedValue([]);
+    findUserById.mockResolvedValue(null);
+    getPendingProposalForTarget.mockResolvedValue(null);
+    getPendingProposalsForResource.mockResolvedValue([]);
 
     manifestHelpers.coerceValueByType.mockImplementation((type, value) => {
         if (type === 'number') {
@@ -397,7 +415,7 @@ describe('domainRouter isolated unit tests', () => {
 
         expect(response.status).toBe(200);
         expect(response.body).toEqual({
-            entity: { id: 'char-1', name: 'Hero' },
+            entity: { id: 'char-1', name: 'Hero', pendingProposal: null },
             related: {
                 items: [
                     {
@@ -408,6 +426,7 @@ describe('domainRouter isolated unit tests', () => {
                                 acquired_date: 'jan-01-200',
                                 relinquished_date: null,
                                 short_description: 'Current possession',
+                                pendingProposal: null,
                             },
                         ],
                     },
@@ -418,6 +437,7 @@ describe('domainRouter isolated unit tests', () => {
                         name: 'Sun God',
                         relationship: {
                             short_description: 'Favored by the dawn',
+                            pendingProposal: null,
                         },
                     },
                 ],
@@ -438,7 +458,7 @@ describe('domainRouter isolated unit tests', () => {
 
         expect(response.status).toBe(200);
         expect(response.body).toEqual({
-            entity: { id: 'place-1', name: 'Othlorin' },
+            entity: { id: 'place-1', name: 'Othlorin', pendingProposal: null },
             related: {},
             children: [
                 { id: 'place-2', name: 'Wavethorn', parent_id: 'place-1' },
@@ -509,11 +529,13 @@ describe('domainRouter isolated unit tests', () => {
                         acquired_date: 'jan-01-200',
                         relinquished_date: 'jan-05-200',
                         short_description: 'First possession',
+                        pendingProposal: null,
                     },
                     {
                         acquired_date: 'jan-10-200',
                         relinquished_date: null,
                         short_description: 'Second possession',
+                        pendingProposal: null,
                     },
                 ],
             },
@@ -786,7 +808,8 @@ describe('domainRouter isolated unit tests', () => {
         expect(manifestCrudService.update).toHaveBeenCalledWith(
             'Character',
             { id: 'char-1' },
-            { name: 'Updated Name' }
+            { name: 'Updated Name' },
+            { actorUsername: 'dm-admin' }
         );
     });
 
@@ -900,7 +923,8 @@ describe('domainRouter isolated unit tests', () => {
         expect(manifestCrudService.update).toHaveBeenCalledWith(
             'EventItem',
             { character_id: 'char-1', item_id: 'item-1' },
-            { short_description: 'updated context' }
+            { short_description: 'updated context' },
+            { actorUsername: 'dm-admin' }
         );
     });
 
@@ -963,7 +987,8 @@ describe('domainRouter isolated unit tests', () => {
                 item_id: 'item-1',
                 acquired_date: '0200100001_age-of-descent-default',
             },
-            { relinquished_date: '0200100002_age-of-descent-default' }
+            { relinquished_date: '0200100002_age-of-descent-default' },
+            { actorUsername: 'dm-admin' }
         );
     });
 
@@ -1120,14 +1145,14 @@ describe('domainRouter isolated unit tests', () => {
             established_date: '100-01-01',
         }, {
             short_description: 'Mutual trust',
-        });
+        }, { actorUsername: 'dm-admin' });
         expect(manifestCrudService.update).toHaveBeenNthCalledWith(2, 'CharacterRelationship', {
             related_id: 'char-1',
             character_id: 'char-2',
             established_date: '100-01-01',
         }, {
             short_description: 'Mutual trust',
-        });
+        }, { actorUsername: 'dm-admin' });
     });
 
     it('DELETE /:entityRoute/:id/:relatedRoute/:relatedId deletes non-history relation', async () => {
@@ -1308,7 +1333,7 @@ describe('domainRouter isolated unit tests', () => {
         expect(manifestCrudService.insert).toHaveBeenCalledWith('CharacterItem', {
             character_id: 'char-1',
             item_id: 'item-1',
-        });
+        }, { actorUsername: 'dm-admin' });
     });
 
     it('POST /:entityRoute/:id/:relatedRoute creates relation with payload metadata', async () => {
@@ -1364,7 +1389,7 @@ describe('domainRouter isolated unit tests', () => {
             deity_id: 'deity-1',
             adopted_date: '100-01-01',
             short_description: 'Chosen by prophecy',
-        });
+        }, { actorUsername: 'dm-admin' });
     });
 
     it('POST /:entityRoute/:id/:relatedRoute returns 400 when history end date is not after start date', async () => {

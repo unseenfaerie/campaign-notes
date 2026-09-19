@@ -12,6 +12,7 @@ export type EntityFieldSchema = {
     enum?: string[]
     hidden?: boolean
     expository?: boolean
+    proposable?: boolean
 }
 
 export type EntitySchema = {

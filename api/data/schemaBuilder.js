@@ -6,6 +6,10 @@ function toSqlType(type) {
     return 'TEXT';
 }
 
+// Every entity/relation table gets these two audit columns; they aren't manifest fields so
+// that domainManifest.js doesn't need repeated boilerplate on every entity/relation.
+const AUDIT_COLUMNS_SQL = ['last_edited_by TEXT', 'last_edited_at TEXT'];
+
 function makeEntityTableSql(def) {
     const cols = [];
     const primary = [];
@@ -27,6 +31,8 @@ function makeEntityTableSql(def) {
         const pk = primary[0];
         cols.splice(cols.findIndex((c) => c.startsWith(pk + ' ')), 1, cols.find((c) => c.startsWith(pk + ' ')) + ' PRIMARY KEY');
     }
+
+    cols.push(...AUDIT_COLUMNS_SQL);
 
     if (primary.length > 1) cols.push('PRIMARY KEY (' + primary.join(', ') + ')');
 
@@ -61,6 +67,7 @@ function makeRelationTableSql(relName, rel, manifest) {
         cols.push(col);
     }
 
+    cols.push(...AUDIT_COLUMNS_SQL);
     cols.push('PRIMARY KEY (' + rel.keys.join(', ') + ')');
 
     return 'CREATE TABLE IF NOT EXISTS ' + rel.table + ' (\n  ' + cols.concat(fks).join(',\n  ') + '\n)';
