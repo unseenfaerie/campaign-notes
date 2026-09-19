@@ -514,7 +514,7 @@ function fieldsForRole(fields: EntityFieldSchema[]): EntityFieldSchema[] {
 // Merges any pending proposal's changes on top of the live record when the viewer has the
 // "Proposed" toggle selected; otherwise shows the plain (currently accepted) record.
 function withProposalView(record: DomainEntity, proposal: PendingProposal | null | undefined, viewKey: string): DomainEntity {
-  if (!proposal || viewModeByKey.value[viewKey] !== 'proposed') {
+  if (!proposal || getViewMode(viewKey) !== 'proposed') {
     return record
   }
   return { ...record, ...proposal.proposedChanges }
