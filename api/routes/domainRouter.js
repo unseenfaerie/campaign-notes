@@ -444,6 +444,14 @@ function ensurePlayerForProposal(req) {
     return null;
 }
 
+// Players may propose edits to anything they can see except other players' character
+// records (and, transitively, relations that directly involve one of those characters).
+function isForeignPlayerCharacter(entityName, record, anchoredCharacterIds) {
+    return Boolean(
+        entityName === 'Character' && record && record.player_character && !anchoredCharacterIds.includes(record.id)
+    );
+}
+
 async function assertNoPendingProposal(resourceName, targetKey) {
     const pending = await getPendingProposalForTarget(resourceName, targetKey);
     if (pending) {
@@ -462,6 +470,7 @@ async function toProposalView(proposal) {
         id: proposal.id,
         proposedChanges: proposal.proposed_changes,
         baseSnapshot: proposal.base_snapshot,
+        proposedById: proposal.proposed_by,
         proposedByUsername: proposer ? proposer.username : proposal.proposed_by,
         proposedAt: proposal.proposed_at,
     };
@@ -555,6 +564,37 @@ router.post('/proposals/:proposalId/reject', async (req, res) => {
             reviewedBy: req.auth.userId,
             reviewedAt: new Date().toISOString(),
             reviewNote: req.body && req.body.note,
+        });
+
+        return res.json(await toProposalView(updated));
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
+// revoke a pending proposal (author-only): discards it and releases the record's lock
+router.post('/proposals/:proposalId/revoke', async (req, res) => {
+    try {
+        if (!req.auth) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const proposal = await getProposalById(req.params.proposalId);
+        if (!proposal) {
+            return res.status(404).json({ error: 'Proposal not found' });
+        }
+        if (proposal.status !== 'pending') {
+            return res.status(409).json({ error: 'Proposal is not pending' });
+        }
+        if (proposal.proposed_by !== req.auth.userId) {
+            return res.status(403).json({ error: 'Only the proposal author can revoke it' });
+        }
+
+        const updated = await markRejected(req.params.proposalId, {
+            reviewedBy: req.auth.userId,
+            reviewedAt: new Date().toISOString(),
+            reviewNote: 'Revoked by author',
         });
 
         return res.json(await toProposalView(updated));
@@ -783,6 +823,10 @@ router.post('/:entityRoute/:id/propose', async (req, res) => {
         }
         if (!isVisible) {
             return res.status(404).json({ error: 'Record not found' });
+        }
+
+        if (isForeignPlayerCharacter(entityName, record, anchoredCharacterIds)) {
+            return res.status(403).json({ error: "Cannot propose edits to another player's character" });
         }
 
         const targetKey = buildEntityTargetKey(idField, idValue);
@@ -1318,6 +1362,13 @@ router.post('/:entityRoute/:id/:relatedRoute/:relatedId/propose', async (req, re
 
         if (!sourceEntity || !relatedEntity || !isRelationVisibleToUser(relationName, memberEntities, req.auth, anchoredCharacterIds)) {
             return res.status(404).json({ error: 'Record not found' });
+        }
+
+        if (
+            isForeignPlayerCharacter(entityName, sourceEntity, anchoredCharacterIds) ||
+            isForeignPlayerCharacter(relatedMember.entity, relatedEntity, anchoredCharacterIds)
+        ) {
+            return res.status(403).json({ error: "Cannot propose edits to another player's character" });
         }
 
         const targetKey = buildRelationWhere({ members, anchorMemberIndex, sourceId, relatedId, relationDef, historyValue });
