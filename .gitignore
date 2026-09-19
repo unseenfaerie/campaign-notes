@@ -10,3 +10,5 @@ release/
 *.db-wal
 *.db-shm
 api/scripts/seedUsers.local.js
+deploy/fetch-backup.local.sh
+deploy/fetch-backup.local.sh

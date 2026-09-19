@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Copy this file to fetch-backup.local.sh (gitignored) and fill in your own
+# values. fetch-backup.sh sources it automatically if present.
+
+VPS_HOST={VPS_IP_Address}
+DEPLOY_KEY="$HOME/.ssh/{key_name}"

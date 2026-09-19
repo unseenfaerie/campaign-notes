@@ -1,4 +1,4 @@
-# Download a Database Backup to a Local Machine
+# Manually Download a Database Backup to a Local Machine
 
 These instructions create a consistent SQLite backup on the VPS, download it
 using the `deploy` SSH account, verify it locally, and remove the temporary
@@ -7,6 +7,18 @@ transfer copy from the VPS.
 The production database is `/var/lib/campaign-notes/campaign.db`. The API's
 backup command writes timestamped backups to
 `/var/lib/campaign-notes/backups/` using the configured `DB_BACKUP_DIR`.
+
+For routine backups, use `deploy/fetch-backup.sh` instead, which automates
+all of the steps below in one command:
+
+```bash
+./deploy/fetch-backup.sh
+```
+
+Copy `deploy/fetch-backup.local.sh.example` to `deploy/fetch-backup.local.sh`
+(gitignored, not committed) and fill in your `VPS_HOST`/`DEPLOY_KEY`. It
+assumes you can `ssh root@<host>` directly. Use the manual steps below if you
+need to troubleshoot a failure or don't have root SSH access.
 
 ## 1. Create a backup on the VPS
 
@@ -38,7 +50,7 @@ Set the path in a shell variable on the VPS. Replace the example filename with
 the actual backup filename:
 
 ```bash
-backup_path=/var/lib/campaign-notes/backups/campaign_backup_2026-09-03T12-34-56-000Z.db
+backup_path=/var/lib/campaign-notes/backups/campaign_backup_2026-09-19T19-16-37-689Z.db
 ```
 
 ## 2. Stage a temporary download copy
