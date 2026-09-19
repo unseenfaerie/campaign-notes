@@ -125,23 +125,26 @@ describe('dateSystem', () => {
     });
 
     it('calculates era start years from completed era durations', () => {
-        expect(getEraStartYear('age-of-elves')).toBe(1);
-        expect(getEraStartYear('age-of-ascension')).toBe(5501);
-        expect(getEraStartYear('age-of-descent')).toBe(8501);
-        expect(getEraStartYear('age-of-light')).toBe(8703);
+        const sortedEras = [...ERAS].sort((a, b) => a.order - b.order);
+        let expectedStartYear = 1;
+        for (const era of sortedEras) {
+            expect(getEraStartYear(era.id)).toBe(expectedStartYear);
+            expectedStartYear += era.durationYears;
+        }
     });
 
     it('calculates age across an era boundary from a birthday', () => {
+        const finalYearOfDescent = ERAS.find((era) => era.id === 'age-of-descent').durationYears;
         const birthday = encodeLoreDate({
             eraId: 'age-of-descent',
-            year: 202,
+            year: finalYearOfDescent,
             calendarId: 'age-of-descent-default',
             monthIndex: 0,
             day: 1,
         });
         const dayBeforeBirthday = encodeLoreDate({
             eraId: 'age-of-descent',
-            year: 202,
+            year: finalYearOfDescent,
             calendarId: 'age-of-descent-default',
             monthIndex: 11,
             day: 28,
@@ -168,6 +171,6 @@ describe('dateSystem', () => {
             day: 3,
         });
 
-        expect(formatLoreDate(encoded)).toBe('3 October, Year 200 of the Age of Descent');
+        expect(formatLoreDate(encoded)).toBe('3 October, Year 200 AD');
     });
 });

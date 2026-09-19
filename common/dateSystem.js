@@ -9,10 +9,10 @@
 const DAYS_PER_YEAR = 336;
 
 const ERAS = [
-    { id: 'age-of-elves', order: 0, name: 'Age of Elves', durationYears: 5500 },
-    { id: 'age-of-ascension', order: 1, name: 'Age of Ascension', durationYears: 3000 },
-    { id: 'age-of-descent', order: 2, name: 'Age of Descent', durationYears: 202 },
-    { id: 'age-of-light', order: 3, name: 'Age of Light', durationYears: null },
+    { id: 'age-of-elves', order: 0, name: 'Age of Elves', abbreviation: 'AE', durationYears: 5500 },
+    { id: 'age-of-ascension', order: 1, name: 'Age of Ascension', abbreviation: 'AA', durationYears: 1000 },
+    { id: 'age-of-descent', order: 2, name: 'Age of Descent', abbreviation: 'AD', durationYears: 201 },
+    { id: 'age-of-light', order: 3, name: 'Age of Light', abbreviation: 'AL', durationYears: null },
 ];
 
 function genericMonths() {
@@ -242,7 +242,7 @@ function calculateAgeInYears(birthDate, currentDate) {
 
 function formatLoreDate(value) {
     const { day, monthName, year, era } = decodeLoreDate(value);
-    return `${day} ${monthName}, Year ${year} of the ${era.name}`;
+    return `${day} ${monthName}, Year ${year} ${era.abbreviation}`;
 }
 
 module.exports = {

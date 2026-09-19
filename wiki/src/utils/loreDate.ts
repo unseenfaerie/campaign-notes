@@ -6,6 +6,7 @@ export type LoreDateEra = {
     id: string
     order: number
     name: string
+    abbreviation: string
     durationYears: number | null
 }
 
@@ -123,5 +124,5 @@ export function formatLoreDate(dateSystem: DateSystem, value: string): string {
     if (!decoded) {
         return value
     }
-    return `${decoded.day} ${decoded.monthName}, Year ${decoded.year} of the ${decoded.era.name}`
+    return `${decoded.day} ${decoded.monthName}, Year ${decoded.year} ${decoded.era.abbreviation}`
 }
