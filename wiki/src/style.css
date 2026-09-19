@@ -785,26 +785,21 @@ a:hover {
     gap: 0.5rem;
 }
 
-.view-mode-toggle {
-    display: inline-flex;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-}
-
-.view-mode-toggle button {
-    border: none;
-    background: var(--paper);
-    color: var(--ink-900);
-    font: inherit;
+.proposal-view-toggle {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.35rem;
+    font-size: 0.78rem;
     font-weight: 600;
-    padding: 0.35rem 0.75rem;
+    color: var(--ink-500, #6b6b6b);
     cursor: pointer;
+    white-space: nowrap;
 }
 
-.view-mode-toggle button.is-active {
-    background: var(--ink-900);
-    color: var(--paper);
+.proposal-view-toggle input {
+    margin: 0;
 }
 
 

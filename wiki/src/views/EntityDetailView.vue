@@ -7,6 +7,7 @@ import ConfirmModal from '../components/ConfirmModal.vue'
 import FieldList from '../components/FieldList.vue'
 import LastEditedStamp from '../components/LastEditedStamp.vue'
 import ProposalBanner from '../components/ProposalBanner.vue'
+import ProposalViewToggle from '../components/ProposalViewToggle.vue'
 import { ApiError } from '../services/apiClient'
 import {
   getEntityFull,
@@ -91,22 +92,6 @@ const historyEditError = ref('')
 const viewModeByKey = ref<Record<string, 'proposed' | 'accepted'>>({})
 const proposalActionBusy = ref(false)
 const proposalActionError = ref('')
-
-const proposingEntity = ref(false)
-const entityProposeValues = ref<Record<string, any>>({})
-const entityProposeSaving = ref(false)
-const entityProposeError = ref('')
-
-const proposingRelationKey = ref<string | null>(null)
-const relationProposeValues = ref<Record<string, any>>({})
-const relationProposeSaving = ref(false)
-const relationProposeError = ref('')
-
-const proposingHistoryKey = ref<string | null>(null)
-const historyProposeValues = ref<Record<string, any>>({})
-const historyProposeOriginalSelector = ref<{ key: string; value: string } | null>(null)
-const historyProposeSaving = ref(false)
-const historyProposeError = ref('')
 
 const deleteModalOpen = ref(false)
 const deleteModalMessage = ref('')
@@ -520,6 +505,12 @@ function proposableFields(fields: EntityFieldSchema[]): EntityFieldSchema[] {
   return fields.filter((field) => field.proposable)
 }
 
+// The single edit/propose form uses this to decide which fields it renders: admins get the full
+// editable set, everyone else is limited to manifest-flagged proposable fields.
+function fieldsForRole(fields: EntityFieldSchema[]): EntityFieldSchema[] {
+  return auth.isAdmin.value ? editableFields(fields) : proposableFields(fields)
+}
+
 // Merges any pending proposal's changes on top of the live record when the viewer has the
 // "Proposed" toggle selected; otherwise shows the plain (currently accepted) record.
 function withProposalView(record: DomainEntity, proposal: PendingProposal | null | undefined, viewKey: string): DomainEntity {
@@ -651,7 +642,7 @@ function startEditRelation(relatedRoute: string, record: DomainEntity, index: nu
   }
 
   relationEditError.value = ''
-  relationEditValues.value = fieldValuesFromRecord(editableFields(schema.fields), relationPayload(record))
+  relationEditValues.value = fieldValuesFromRecord(fieldsForRole(schema.fields), relationPayload(record))
   editingRelationKey.value = `${relatedRoute}::${relatedRecordId(record)}`
   expandRecord(relatedRoute, record, index)
 }
@@ -671,10 +662,14 @@ async function saveEditRelation(relatedRoute: string, record: DomainEntity) {
   relationEditSaving.value = true
 
   try {
-    const payload = buildFieldsPayload(editableFields(schema.fields), relationEditValues.value, {
+    const payload = buildFieldsPayload(fieldsForRole(schema.fields), relationEditValues.value, {
       clearOptionalLoreDates: true,
     })
-    await updateRelation(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), payload)
+    if (auth.isAdmin.value) {
+      await updateRelation(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), payload)
+    } else {
+      await proposeRelationEdit(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), payload)
+    }
     editingRelationKey.value = null
     await loadDetail({ silent: true })
   } catch (error) {
@@ -688,49 +683,12 @@ async function saveEditRelation(relatedRoute: string, record: DomainEntity) {
   }
 }
 
-function canProposeRelation(relatedRoute: string): boolean {
-  const schema = findRelationSchema(relatedRoute)
-  return !auth.isAdmin.value && !!schema && proposableFields(schema.fields).length > 0
-}
-
-function startProposeRelation(relatedRoute: string, record: DomainEntity, index: number) {
+function canOpenRelationEdit(relatedRoute: string): boolean {
   const schema = findRelationSchema(relatedRoute)
   if (!schema) {
-    return
+    return false
   }
-
-  relationProposeError.value = ''
-  relationProposeValues.value = fieldValuesFromRecord(proposableFields(schema.fields), relationPayload(record))
-  proposingRelationKey.value = `${relatedRoute}::${relatedRecordId(record)}`
-  expandRecord(relatedRoute, record, index)
-}
-
-function cancelProposeRelation() {
-  proposingRelationKey.value = null
-  relationProposeError.value = ''
-}
-
-async function saveProposeRelation(relatedRoute: string, record: DomainEntity) {
-  const schema = findRelationSchema(relatedRoute)
-  if (!schema) {
-    return
-  }
-
-  relationProposeError.value = ''
-  relationProposeSaving.value = true
-
-  try {
-    const payload = buildFieldsPayload(proposableFields(schema.fields), relationProposeValues.value, {
-      clearOptionalLoreDates: true,
-    })
-    await proposeRelationEdit(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), payload)
-    proposingRelationKey.value = null
-    await loadDetail({ silent: true })
-  } catch (error) {
-    relationProposeError.value = error instanceof ApiError || error instanceof Error ? error.message : 'Could not propose changes.'
-  } finally {
-    relationProposeSaving.value = false
-  }
+  return auth.isAdmin.value || proposableFields(schema.fields).length > 0
 }
 
 function startEditHistory(relatedRoute: string, record: DomainEntity, index: number, historyEntry: DomainEntity, historyKey: string) {
@@ -742,7 +700,7 @@ function startEditHistory(relatedRoute: string, record: DomainEntity, index: num
   const originalValue = historyEntry[schema.historyKey]
 
   historyEditError.value = ''
-  historyEditValues.value = fieldValuesFromRecord(editableFields(schema.fields), historyEntry)
+  historyEditValues.value = fieldValuesFromRecord(fieldsForRole(schema.fields), historyEntry)
   historyEditOriginalSelector.value = { key: schema.historyKey, value: String(originalValue ?? '') }
   editingHistoryKey.value = historyKey
   expandRecord(relatedRoute, record, index)
@@ -763,17 +721,28 @@ async function saveEditHistory(relatedRoute: string, record: DomainEntity) {
   historyEditSaving.value = true
 
   try {
-    const payload = buildFieldsPayload(editableFields(schema.fields), historyEditValues.value, {
+    const payload = buildFieldsPayload(fieldsForRole(schema.fields), historyEditValues.value, {
       clearOptionalLoreDates: true,
     })
-    await updateRelation(
-      props.entityRoute,
-      props.id,
-      relatedRoute,
-      relatedRecordId(record),
-      payload,
-      historyEditOriginalSelector.value
-    )
+    if (auth.isAdmin.value) {
+      await updateRelation(
+        props.entityRoute,
+        props.id,
+        relatedRoute,
+        relatedRecordId(record),
+        payload,
+        historyEditOriginalSelector.value
+      )
+    } else {
+      await proposeRelationEdit(
+        props.entityRoute,
+        props.id,
+        relatedRoute,
+        relatedRecordId(record),
+        payload,
+        historyEditOriginalSelector.value
+      )
+    }
     editingHistoryKey.value = null
     await loadDetail({ silent: true })
   } catch (error) {
@@ -784,56 +753,6 @@ async function saveEditHistory(relatedRoute: string, record: DomainEntity) {
     }
   } finally {
     historyEditSaving.value = false
-  }
-}
-
-function startProposeHistory(relatedRoute: string, record: DomainEntity, index: number, historyEntry: DomainEntity, historyKey: string) {
-  const schema = findRelationSchema(relatedRoute)
-  if (!schema || !schema.historyKey) {
-    return
-  }
-
-  const originalValue = historyEntry[schema.historyKey]
-
-  historyProposeError.value = ''
-  historyProposeValues.value = fieldValuesFromRecord(proposableFields(schema.fields), historyEntry)
-  historyProposeOriginalSelector.value = { key: schema.historyKey, value: String(originalValue ?? '') }
-  proposingHistoryKey.value = historyKey
-  expandRecord(relatedRoute, record, index)
-}
-
-function cancelProposeHistory() {
-  proposingHistoryKey.value = null
-  historyProposeError.value = ''
-}
-
-async function saveProposeHistory(relatedRoute: string, record: DomainEntity) {
-  const schema = findRelationSchema(relatedRoute)
-  if (!schema || !historyProposeOriginalSelector.value) {
-    return
-  }
-
-  historyProposeError.value = ''
-  historyProposeSaving.value = true
-
-  try {
-    const payload = buildFieldsPayload(proposableFields(schema.fields), historyProposeValues.value, {
-      clearOptionalLoreDates: true,
-    })
-    await proposeRelationEdit(
-      props.entityRoute,
-      props.id,
-      relatedRoute,
-      relatedRecordId(record),
-      payload,
-      historyProposeOriginalSelector.value
-    )
-    proposingHistoryKey.value = null
-    await loadDetail({ silent: true })
-  } catch (error) {
-    historyProposeError.value = error instanceof ApiError || error instanceof Error ? error.message : 'Could not propose changes.'
-  } finally {
-    historyProposeSaving.value = false
   }
 }
 
@@ -927,7 +846,7 @@ function cancelEdit() {
 }
 
 function buildEditPayload(): Record<string, unknown> {
-  const payload = buildFieldsPayload(editableFields(editFields.value), editValues.value, {
+  const payload = buildFieldsPayload(fieldsForRole(editFields.value), editValues.value, {
     clearOptionalLoreDates: true,
     clearOptionalReferences: true,
   })
@@ -941,9 +860,14 @@ async function saveEdit() {
 
   try {
     const payload = buildEditPayload()
-    const updated = await updateEntity(props.entityRoute, props.id, payload)
-    if (fullData.value) {
-      fullData.value.entity = { ...fullData.value.entity, ...updated }
+    if (auth.isAdmin.value) {
+      const updated = await updateEntity(props.entityRoute, props.id, payload)
+      if (fullData.value) {
+        fullData.value.entity = { ...fullData.value.entity, ...updated }
+      }
+    } else {
+      await proposeEntityEdit(props.entityRoute, props.id, payload)
+      await loadDetail({ silent: true })
     }
     isEditing.value = false
   } catch (error) {
@@ -957,44 +881,9 @@ async function saveEdit() {
   }
 }
 
-const canProposeEntity = computed(
-  () => !auth.isAdmin.value && proposableFields(entitySchema.value?.fields || []).length > 0
+const canOpenEntityEdit = computed(
+  () => auth.isAdmin.value || proposableFields(entitySchema.value?.fields || []).length > 0
 )
-
-function startProposeEntity() {
-  entityProposeError.value = ''
-  const entity = fullData.value?.entity
-  if (!entitySchema.value || !entity) {
-    return
-  }
-
-  entityProposeValues.value = fieldValuesFromRecord(proposableFields(entitySchema.value.fields), entity)
-  proposingEntity.value = true
-}
-
-function cancelProposeEntity() {
-  proposingEntity.value = false
-  entityProposeError.value = ''
-}
-
-async function saveProposeEntity() {
-  entityProposeError.value = ''
-  entityProposeSaving.value = true
-
-  try {
-    const payload = buildFieldsPayload(proposableFields(entitySchema.value?.fields || []), entityProposeValues.value, {
-      clearOptionalLoreDates: true,
-      clearOptionalReferences: true,
-    })
-    await proposeEntityEdit(props.entityRoute, props.id, payload)
-    proposingEntity.value = false
-    await loadDetail({ silent: true })
-  } catch (error) {
-    entityProposeError.value = error instanceof ApiError || error instanceof Error ? error.message : 'Could not propose changes.'
-  } finally {
-    entityProposeSaving.value = false
-  }
-}
 
 function toggleAddAliasForm() {
   showAddAliasForm.value = !showAddAliasForm.value
@@ -1070,7 +959,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               {{ showAddAliasForm ? 'Cancel' : 'Add Alias' }}
             </button>
             <button
-              v-if="auth.isAdmin.value && !isEditing && !entityPendingProposal"
+              v-if="canOpenEntityEdit && !isEditing && !entityPendingProposal"
               type="button"
               class="secondary-button"
               @click="startEdit"
@@ -1085,25 +974,15 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
             >
               Delete
             </button>
-            <button
-              v-if="canProposeEntity && !proposingEntity && !entityPendingProposal"
-              type="button"
-              class="secondary-button"
-              @click="startProposeEntity"
-            >
-              Propose Edit
-            </button>
           </div>
         </div>
 
         <ProposalBanner
           v-if="entityPendingProposal"
           :proposal="entityPendingProposal"
-          :view-mode="getViewMode('entity')"
           :is-admin="auth.isAdmin.value"
           :busy="proposalActionBusy"
           :error-message="proposalActionError"
-          @set-view-mode="(mode) => setViewMode('entity', mode)"
           @accept="acceptPendingProposal(entityPendingProposal)"
           @reject="rejectPendingProposal(entityPendingProposal)"
         />
@@ -1134,74 +1013,8 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
           <p v-if="aliasFormError" class="status-card error">{{ aliasFormError }}</p>
         </form>
 
-        <form v-if="proposingEntity" class="entity-form" @submit.prevent="saveProposeEntity">
-          <div v-for="field in proposableFields(entitySchema?.fields ?? [])" :key="field.name" class="form-row">
-            <label :for="`propose-field-${field.name}`">
-              {{ prettyFieldName(field.name) }}
-            </label>
-
-            <input
-              v-if="field.type === 'boolean'"
-              :id="`propose-field-${field.name}`"
-              v-model="entityProposeValues[field.name]"
-              type="checkbox"
-            />
-            <SearchableSelect
-              v-else-if="field.enum"
-              :id="`propose-field-${field.name}`"
-              v-model="entityProposeValues[field.name]"
-              :options="[
-                ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
-                ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
-              ]"
-              :required="field.required"
-            />
-            <input
-              v-else-if="field.type === 'number'"
-              :id="`propose-field-${field.name}`"
-              v-model="entityProposeValues[field.name]"
-              type="number"
-              step="any"
-              :required="field.required"
-            />
-            <textarea
-              v-else-if="isLongTextField(field)"
-              :id="`propose-field-${field.name}`"
-              v-model="entityProposeValues[field.name]"
-              rows="4"
-              :required="field.required"
-            ></textarea>
-            <LoreDateInput
-              v-else-if="field.type === 'loreDate'"
-              v-model="entityProposeValues[field.name]"
-              :required="field.required"
-            />
-            <RealDateInput
-              v-else-if="field.type === 'realDate'"
-              v-model="entityProposeValues[field.name]"
-              :required="field.required"
-            />
-            <input
-              v-else
-              :id="`propose-field-${field.name}`"
-              v-model="entityProposeValues[field.name]"
-              type="text"
-              :required="field.required"
-            />
-          </div>
-
-          <div class="form-actions">
-            <button class="primary-button" type="submit" :disabled="entityProposeSaving">
-              {{ entityProposeSaving ? 'Submitting...' : 'Submit Proposal' }}
-            </button>
-            <button class="secondary-button" type="button" :disabled="entityProposeSaving" @click="cancelProposeEntity">Cancel</button>
-          </div>
-
-          <p v-if="entityProposeError" class="status-card error">{{ entityProposeError }}</p>
-        </form>
-
         <form v-if="isEditing" class="entity-form" @submit.prevent="saveEdit">
-          <div v-for="field in editableFields(editFields)" :key="field.name" class="form-row">
+          <div v-for="field in fieldsForRole(editFields)" :key="field.name" class="form-row">
             <label :for="`edit-field-${field.name}`">
               {{ prettyFieldName(field.name) }}
               <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
@@ -1272,7 +1085,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
 
           <div class="form-actions">
             <button class="primary-button" type="submit" :disabled="saving">
-              {{ saving ? 'Saving...' : 'Save' }}
+              {{ saving ? (auth.isAdmin.value ? 'Saving...' : 'Submitting...') : (auth.isAdmin.value ? 'Save' : 'Submit Proposal') }}
             </button>
             <button class="secondary-button" type="button" :disabled="saving" @click="cancelEdit">Cancel</button>
           </div>
@@ -1329,6 +1142,11 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
         </div>
 
         <LastEditedStamp :by="(fullData.entity as any).last_edited_by" :at="(fullData.entity as any).last_edited_at" />
+        <ProposalViewToggle
+          v-if="entityPendingProposal"
+          :model-value="getViewMode('entity')"
+          @update:model-value="(mode) => setViewMode('entity', mode)"
+        />
 
       </section>
 
@@ -1389,7 +1207,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               </h4>
               <div class="row-actions-end">
                 <button
-                  v-if="auth.isAdmin.value && isRelationshipKind(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}` && !pendingProposalOf(relationPayload(record))"
+                  v-if="isRelationshipKind(relatedRoute) && canOpenRelationEdit(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}` && !pendingProposalOf(relationPayload(record))"
                   type="button"
                   class="secondary-button"
                   @click="startEditRelation(relatedRoute, record, index)"
@@ -1404,25 +1222,15 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 >
                   Delete
                 </button>
-                <button
-                  v-if="isRelationshipKind(relatedRoute) && canProposeRelation(relatedRoute) && proposingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}` && !pendingProposalOf(relationPayload(record))"
-                  type="button"
-                  class="secondary-button"
-                  @click="startProposeRelation(relatedRoute, record, index)"
-                >
-                  Propose Edit
-                </button>
               </div>
             </div>
 
             <ProposalBanner
               v-if="isRelationshipKind(relatedRoute) && pendingProposalOf(relationPayload(record))"
               :proposal="pendingProposalOf(relationPayload(record))!"
-              :view-mode="getViewMode(`${relatedRoute}::${relatedRecordId(record)}`)"
               :is-admin="auth.isAdmin.value"
               :busy="proposalActionBusy"
               :error-message="proposalActionError"
-              @set-view-mode="(mode) => setViewMode(`${relatedRoute}::${relatedRecordId(record)}`, mode)"
               @accept="acceptPendingProposal(pendingProposalOf(relationPayload(record))!)"
               @reject="rejectPendingProposal(pendingProposalOf(relationPayload(record))!)"
             />
@@ -1430,62 +1238,6 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
             <div
               v-if="!hasCollapsibleRecordBody(relatedRoute) || !isRecordCollapsed(relatedRoute, record, index)"
             >
-            <form
-              v-if="proposingRelationKey === `${relatedRoute}::${relatedRecordId(record)}`"
-              class="entity-form"
-              @submit.prevent="saveProposeRelation(relatedRoute, record)"
-            >
-              <div
-                v-for="field in proposableFields(relationSchemaForRoute(relatedRoute)[0]?.fields ?? [])"
-                :key="field.name"
-                class="form-row"
-              >
-                <label :for="`propose-relation-${relatedRoute}-${index}-${field.name}`">
-                  {{ prettyFieldName(field.name) }}
-                </label>
-
-                <input
-                  v-if="field.type === 'boolean'"
-                  :id="`propose-relation-${relatedRoute}-${index}-${field.name}`"
-                  v-model="relationProposeValues[field.name]"
-                  type="checkbox"
-                />
-                <SearchableSelect
-                  v-else-if="field.enum"
-                  :id="`propose-relation-${relatedRoute}-${index}-${field.name}`"
-                  v-model="relationProposeValues[field.name]"
-                  :options="[
-                    ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
-                    ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
-                  ]"
-                  :required="field.required"
-                />
-                <textarea
-                  v-else-if="isLongTextField(field)"
-                  :id="`propose-relation-${relatedRoute}-${index}-${field.name}`"
-                  v-model="relationProposeValues[field.name]"
-                  rows="4"
-                  :required="field.required"
-                ></textarea>
-                <input
-                  v-else
-                  :id="`propose-relation-${relatedRoute}-${index}-${field.name}`"
-                  v-model="relationProposeValues[field.name]"
-                  type="text"
-                  :required="field.required"
-                />
-              </div>
-
-              <div class="form-actions">
-                <button class="primary-button" type="submit" :disabled="relationProposeSaving">
-                  {{ relationProposeSaving ? 'Submitting...' : 'Submit Proposal' }}
-                </button>
-                <button class="secondary-button" type="button" :disabled="relationProposeSaving" @click="cancelProposeRelation">Cancel</button>
-              </div>
-
-              <p v-if="relationProposeError" class="status-card error">{{ relationProposeError }}</p>
-            </form>
-
             <form
               v-if="editingRelationKey === `${relatedRoute}::${relatedRecordId(record)}`"
               class="entity-form"
@@ -1497,7 +1249,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               />
 
               <div
-                v-for="field in editableFields(relationSchemaForRoute(relatedRoute)[0]?.fields ?? [])"
+                v-for="field in fieldsForRole(relationSchemaForRoute(relatedRoute)[0]?.fields ?? [])"
                 :key="field.name"
                 class="form-row"
               >
@@ -1558,7 +1310,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
 
               <div class="form-actions">
                 <button class="primary-button" type="submit" :disabled="relationEditSaving">
-                  {{ relationEditSaving ? 'Saving...' : 'Save' }}
+                  {{ relationEditSaving ? (auth.isAdmin.value ? 'Saving...' : 'Submitting...') : (auth.isAdmin.value ? 'Save' : 'Submit Proposal') }}
                 </button>
                 <button
                   class="secondary-button"
@@ -1598,6 +1350,11 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 :by="(relationPayload(record) as any).last_edited_by"
                 :at="(relationPayload(record) as any).last_edited_at"
               />
+              <ProposalViewToggle
+                v-if="pendingProposalOf(relationPayload(record))"
+                :model-value="getViewMode(`${relatedRoute}::${relatedRecordId(record)}`)"
+                @update:model-value="(mode) => setViewMode(`${relatedRoute}::${relatedRecordId(record)}`, mode)"
+              />
             </template>
 
             <template v-if="historyDisplayPayload(record).length > 0">
@@ -1618,7 +1375,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                   />
 
                   <div
-                    v-for="field in editableFields(relationSchemaForRoute(relatedRoute)[0]?.fields ?? [])"
+                    v-for="field in fieldsForRole(relationSchemaForRoute(relatedRoute)[0]?.fields ?? [])"
                     :key="field.name"
                     class="form-row"
                   >
@@ -1679,7 +1436,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
 
                   <div class="form-actions">
                     <button class="primary-button" type="submit" :disabled="historyEditSaving">
-                      {{ historyEditSaving ? 'Saving...' : 'Save' }}
+                      {{ historyEditSaving ? (auth.isAdmin.value ? 'Saving...' : 'Submitting...') : (auth.isAdmin.value ? 'Save' : 'Submit Proposal') }}
                     </button>
                     <button
                       class="secondary-button"
@@ -1694,83 +1451,18 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                   <p v-if="historyEditError" class="status-card error">{{ historyEditError }}</p>
                 </form>
 
-                <form
-                  v-else-if="proposingHistoryKey === `${relatedRoute}-${index}-history-${historyIndex}`"
-                  class="entity-form"
-                  @submit.prevent="saveProposeHistory(relatedRoute, record)"
-                >
-                  <FieldList
-                    v-if="Object.keys(primaryFieldValues(relatedRoute, historyEntry)).length > 0"
-                    :data="primaryFieldValues(relatedRoute, historyEntry)"
-                  />
-
-                  <div
-                    v-for="field in proposableFields(relationSchemaForRoute(relatedRoute)[0]?.fields ?? [])"
-                    :key="field.name"
-                    class="form-row"
-                  >
-                    <label :for="`propose-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`">
-                      {{ prettyFieldName(field.name) }}
-                    </label>
-
-                    <input
-                      v-if="field.type === 'boolean'"
-                      :id="`propose-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
-                      v-model="historyProposeValues[field.name]"
-                      type="checkbox"
-                    />
-                    <SearchableSelect
-                      v-else-if="field.enum"
-                      :id="`propose-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
-                      v-model="historyProposeValues[field.name]"
-                      :options="[
-                        ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
-                        ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
-                      ]"
-                      :required="field.required"
-                    />
-                    <textarea
-                      v-else-if="isLongTextField(field)"
-                      :id="`propose-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
-                      v-model="historyProposeValues[field.name]"
-                      rows="4"
-                      :required="field.required"
-                    ></textarea>
-                    <input
-                      v-else
-                      :id="`propose-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
-                      v-model="historyProposeValues[field.name]"
-                      type="text"
-                      :required="field.required"
-                    />
-                  </div>
-
-                  <div class="form-actions">
-                    <button class="primary-button" type="submit" :disabled="historyProposeSaving">
-                      {{ historyProposeSaving ? 'Submitting...' : 'Submit Proposal' }}
-                    </button>
-                    <button class="secondary-button" type="button" :disabled="historyProposeSaving" @click="cancelProposeHistory">
-                      Cancel
-                    </button>
-                  </div>
-
-                  <p v-if="historyProposeError" class="status-card error">{{ historyProposeError }}</p>
-                </form>
-
                 <div v-else class="entity-overview">
                   <ProposalBanner
                     v-if="pendingProposalOf(historyEntry)"
                     :proposal="pendingProposalOf(historyEntry)!"
-                    :view-mode="getViewMode(`${relatedRoute}-${index}-history-${historyIndex}`)"
                     :is-admin="auth.isAdmin.value"
                     :busy="proposalActionBusy"
                     :error-message="proposalActionError"
-                    @set-view-mode="(mode) => setViewMode(`${relatedRoute}-${index}-history-${historyIndex}`, mode)"
                     @accept="acceptPendingProposal(pendingProposalOf(historyEntry)!)"
                     @reject="rejectPendingProposal(pendingProposalOf(historyEntry)!)"
                   />
                   <div
-                    v-if="auth.isAdmin.value && !pendingProposalOf(historyEntry)"
+                    v-if="canOpenRelationEdit(relatedRoute) && !pendingProposalOf(historyEntry)"
                     class="history-record-actions"
                   >
                     <button
@@ -1783,25 +1475,12 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                       Edit
                     </button>
                     <button
+                      v-if="auth.isAdmin.value"
                       type="button"
                       class="danger-button"
                       @click="confirmDeleteHistoryEntry(relatedRoute, record, historyEntry)"
                     >
                       Delete
-                    </button>
-                  </div>
-                  <div
-                    v-if="canProposeRelation(relatedRoute) && !pendingProposalOf(historyEntry)"
-                    class="history-record-actions"
-                  >
-                    <button
-                      type="button"
-                      class="secondary-button"
-                      @click="
-                        startProposeHistory(relatedRoute, record, index, historyEntry, `${relatedRoute}-${index}-history-${historyIndex}`)
-                      "
-                    >
-                      Propose Edit
                     </button>
                   </div>
                   <FieldList
@@ -1823,6 +1502,11 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                     </template>
                   </div>
                   <LastEditedStamp :by="(historyEntry as any).last_edited_by" :at="(historyEntry as any).last_edited_at" />
+                  <ProposalViewToggle
+                    v-if="pendingProposalOf(historyEntry)"
+                    :model-value="getViewMode(`${relatedRoute}-${index}-history-${historyIndex}`)"
+                    @update:model-value="(mode) => setViewMode(`${relatedRoute}-${index}-history-${historyIndex}`, mode)"
+                  />
                 </div>
               </article>
             </template>
