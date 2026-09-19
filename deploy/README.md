@@ -23,9 +23,14 @@ sudo install -d -o campaign-notes -g campaign-notes -m 750 \
 ```
 
 Install `deploy/campaign-notes.service` into `/etc/systemd/system/`. Install
-`deploy/campaign-notes-activate` at `/usr/local/sbin/` with mode `750`, owned by
-`root:root`, and configure a narrow sudo rule allowing `deploy` to run that
-activation script.
+`deploy/campaign-notes-activate` at `/usr/local/sbin/` with mode `750`, owned
+by `root:root`, and configure a narrow sudo rule allowing `deploy` to run that
+activation script. Install `deploy/with-env.sh` at `/usr/local/sbin/` with
+mode `755`, owned by `root:root` — it needs to be executable by the
+`campaign-notes` user (via `sudo -u campaign-notes`), not just `root`, since it
+loads `/etc/campaign-notes/api.env` before exec'ing a given command. It should
+be used for any ad-hoc production command (backup, one-off migrate/seed) run
+outside of systemd, since those otherwise won't see the service's environment.
 
 Install `deploy/Caddyfile` after replacing `campaign.example.com` with the
 real DNS name. Point the domain's A record at the VPS before starting Caddy.
@@ -82,7 +87,7 @@ checks `/health`. A failed activation restores the previous symlink and service.
 Create a database backup before deployment:
 
 ```bash
-sudo -u campaign-notes npm --prefix /opt/campaign-notes/current/api run backup
+sudo -u campaign-notes /usr/local/sbin/with-env.sh npm --prefix /opt/campaign-notes/current/api run backup
 ```
 
 Copy backups to encrypted off-host storage and perform a restore drill before
