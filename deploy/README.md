@@ -79,10 +79,13 @@ npm run release:package
 ```
 
 Production deployment runs manually from GitHub Actions or when a version tag
-such as `v1.0.0` is pushed. The activation script extracts an immutable release,
-installs production dependencies, stops the old API, lets startup apply pending
-migrations, atomically switches the `current` symlink, restarts systemd, and
-checks `/health`. A failed activation restores the previous symlink and service.
+such as `v1.0.0` is pushed. The release archive is packaged with production
+dependencies already installed (including compiled native modules like
+`sqlite3`), so activation never runs `npm install`/`npm ci` on the VPS. The
+activation script extracts an immutable release, stops the old API, lets
+startup apply pending migrations, atomically switches the `current` symlink,
+restarts systemd, and checks `/health`. A failed activation restores the
+previous symlink and service.
 
 Create a database backup before deployment:
 
