@@ -134,8 +134,10 @@ jest.mock('../../../common/domainManifest', () => ({
 const { manifestCrudService } = require('../../data/genericCrudService');
 const { listAnchoredCharacterIdsByUserId, findUserById } = require('../../data/authRepository');
 const {
+    getProposalById,
     getPendingProposalForTarget,
     getPendingProposalsForResource,
+    markRejected,
 } = require('../../data/editProposalRepository');
 const manifestHelpers = require('../../utils/manifestHelpers');
 const router = require('../domainRouter');
@@ -289,6 +291,55 @@ beforeEach(() => {
 });
 
 describe('domainRouter isolated unit tests', () => {
+    it('POST /proposals/:proposalId/revoke lets the proposal author revoke a pending proposal', async () => {
+        const proposal = {
+            id: 7,
+            status: 'pending',
+            proposed_by: 'player-one',
+            proposed_changes: { long_explanation: 'New context' },
+            base_snapshot: { id: 'char-1' },
+            proposed_at: '2026-09-19T12:00:00.000Z',
+        };
+        getProposalById.mockResolvedValueOnce(proposal);
+        markRejected.mockResolvedValueOnce({ ...proposal, status: 'rejected' });
+
+        const response = await request(app)
+            .post('/api/proposals/7/revoke')
+            .set('x-test-role', 'player')
+            .set('x-test-user', 'player-one');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({
+            id: 7,
+            proposedChanges: { long_explanation: 'New context' },
+            baseSnapshot: { id: 'char-1' },
+            proposedById: 'player-one',
+            proposedByUsername: 'player-one',
+            proposedAt: '2026-09-19T12:00:00.000Z',
+        });
+        expect(markRejected).toHaveBeenCalledWith('7', expect.objectContaining({
+            reviewedBy: 'player-one',
+            reviewNote: 'Revoked by author',
+        }));
+    });
+
+    it('POST /proposals/:proposalId/revoke blocks non-authors', async () => {
+        getProposalById.mockResolvedValueOnce({
+            id: 7,
+            status: 'pending',
+            proposed_by: 'player-one',
+        });
+
+        const response = await request(app)
+            .post('/api/proposals/7/revoke')
+            .set('x-test-role', 'player')
+            .set('x-test-user', 'player-two');
+
+        expect(response.status).toBe(403);
+        expect(response.body).toEqual({ error: 'Only the proposal author can revoke it' });
+        expect(markRejected).not.toHaveBeenCalled();
+    });
+
     it('GET /:entityRoute returns collection for mapped entity route', async () => {
         manifestCrudService.getMany.mockResolvedValueOnce([{ id: 'c1', name: 'A' }]);
 

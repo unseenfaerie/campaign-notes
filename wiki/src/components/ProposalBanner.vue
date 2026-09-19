@@ -4,6 +4,7 @@ import type { PendingProposal } from '../services/domainService'
 defineProps<{
   proposal: PendingProposal
   isAdmin: boolean
+  isAuthor: boolean
   busy: boolean
   errorMessage?: string
 }>()
@@ -11,6 +12,7 @@ defineProps<{
 const emit = defineEmits<{
   (event: 'accept'): void
   (event: 'reject'): void
+  (event: 'revoke'): void
 }>()
 </script>
 
@@ -20,6 +22,9 @@ const emit = defineEmits<{
     <div v-if="isAdmin" class="button-group">
       <button type="button" class="primary-button" :disabled="busy" @click="emit('accept')">Accept</button>
       <button type="button" class="danger-button" :disabled="busy" @click="emit('reject')">Reject</button>
+    </div>
+    <div v-if="isAuthor" class="button-group">
+      <button type="button" class="danger-button" :disabled="busy" @click="emit('revoke')">Revoke</button>
     </div>
     <p v-if="errorMessage" class="status-card error">{{ errorMessage }}</p>
   </div>

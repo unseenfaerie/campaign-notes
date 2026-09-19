@@ -6,6 +6,7 @@ export type PendingProposal = {
     id: number
     proposedChanges: Record<string, unknown>
     baseSnapshot: DomainEntity
+    proposedById: string
     proposedByUsername: string
     proposedAt: string
 }
@@ -125,6 +126,10 @@ export async function rejectProposal(proposalId: number, note?: string): Promise
         method: 'POST',
         body: note ? { note } : undefined,
     })
+}
+
+export async function revokeProposal(proposalId: number): Promise<PendingProposal> {
+    return requestJson<PendingProposal>(`/proposals/${proposalId}/revoke`, { method: 'POST' })
 }
 
 export async function getAliases(entityType: string, entityId: string): Promise<DomainEntity[]> {

@@ -20,6 +20,7 @@ import {
   proposeRelationEdit,
   acceptProposal,
   rejectProposal,
+  revokeProposal,
   getAliases,
   createAlias,
   routeToEntityType,
@@ -533,6 +534,10 @@ function pendingProposalOf(record: DomainEntity): PendingProposal | null {
   return candidate && typeof candidate === 'object' ? (candidate as PendingProposal) : null
 }
 
+function isProposalAuthor(proposal: PendingProposal): boolean {
+  return proposal.proposedById === auth.user.value?.id
+}
+
 async function acceptPendingProposal(proposal: PendingProposal) {
   proposalActionError.value = ''
   proposalActionBusy.value = true
@@ -554,6 +559,19 @@ async function rejectPendingProposal(proposal: PendingProposal) {
     await loadDetail({ silent: true })
   } catch (error) {
     proposalActionError.value = error instanceof Error ? error.message : 'Could not reject this proposal.'
+  } finally {
+    proposalActionBusy.value = false
+  }
+}
+
+async function revokePendingProposal(proposal: PendingProposal) {
+  proposalActionError.value = ''
+  proposalActionBusy.value = true
+  try {
+    await revokeProposal(proposal.id)
+    await loadDetail({ silent: true })
+  } catch (error) {
+    proposalActionError.value = error instanceof Error ? error.message : 'Could not revoke this proposal.'
   } finally {
     proposalActionBusy.value = false
   }
@@ -981,10 +999,12 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
           v-if="entityPendingProposal"
           :proposal="entityPendingProposal"
           :is-admin="auth.isAdmin.value"
+          :is-author="isProposalAuthor(entityPendingProposal)"
           :busy="proposalActionBusy"
           :error-message="proposalActionError"
           @accept="acceptPendingProposal(entityPendingProposal)"
           @reject="rejectPendingProposal(entityPendingProposal)"
+          @revoke="revokePendingProposal(entityPendingProposal)"
         />
 
         <div v-if="aliases.length > 0" class="aliases-section">
@@ -1229,10 +1249,12 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               v-if="isRelationshipKind(relatedRoute) && pendingProposalOf(relationPayload(record))"
               :proposal="pendingProposalOf(relationPayload(record))!"
               :is-admin="auth.isAdmin.value"
+              :is-author="isProposalAuthor(pendingProposalOf(relationPayload(record))!)"
               :busy="proposalActionBusy"
               :error-message="proposalActionError"
               @accept="acceptPendingProposal(pendingProposalOf(relationPayload(record))!)"
               @reject="rejectPendingProposal(pendingProposalOf(relationPayload(record))!)"
+              @revoke="revokePendingProposal(pendingProposalOf(relationPayload(record))!)"
             />
 
             <div
@@ -1456,10 +1478,12 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                     v-if="pendingProposalOf(historyEntry)"
                     :proposal="pendingProposalOf(historyEntry)!"
                     :is-admin="auth.isAdmin.value"
+                    :is-author="isProposalAuthor(pendingProposalOf(historyEntry)!)"
                     :busy="proposalActionBusy"
                     :error-message="proposalActionError"
                     @accept="acceptPendingProposal(pendingProposalOf(historyEntry)!)"
                     @reject="rejectPendingProposal(pendingProposalOf(historyEntry)!)"
+                    @revoke="revokePendingProposal(pendingProposalOf(historyEntry)!)"
                   />
                   <div
                     v-if="canOpenRelationEdit(relatedRoute) && !pendingProposalOf(historyEntry)"
