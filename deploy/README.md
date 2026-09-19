@@ -23,11 +23,13 @@ sudo install -d -o campaign-notes -g campaign-notes -m 750 \
 ```
 
 Install `deploy/campaign-notes.service` into `/etc/systemd/system/`. Install
-`deploy/campaign-notes-activate` and `deploy/with-env.sh` at `/usr/local/sbin/`
-with mode `750`, owned by `root:root`, and configure a narrow sudo rule
-allowing `deploy` to run the activation script. `with-env.sh` loads
-`/etc/campaign-notes/api.env` before exec'ing a given command, so it should be
-used for any ad-hoc production command (backup, one-off migrate/seed) run
+`deploy/campaign-notes-activate` at `/usr/local/sbin/` with mode `750`, owned
+by `root:root`, and configure a narrow sudo rule allowing `deploy` to run that
+activation script. Install `deploy/with-env.sh` at `/usr/local/sbin/` with
+mode `755`, owned by `root:root` — it needs to be executable by the
+`campaign-notes` user (via `sudo -u campaign-notes`), not just `root`, since it
+loads `/etc/campaign-notes/api.env` before exec'ing a given command. It should
+be used for any ad-hoc production command (backup, one-off migrate/seed) run
 outside of systemd, since those otherwise won't see the service's environment.
 
 Install `deploy/Caddyfile` after replacing `campaign.example.com` with the
