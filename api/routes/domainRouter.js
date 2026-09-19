@@ -5,6 +5,7 @@ const { listAnchoredCharacterIdsByUserId, findUserById } = require('../data/auth
 const {
     createProposal,
     getPendingProposalForTarget,
+    getPendingProposals,
     getPendingProposalsForResource,
     getProposalById,
     markAccepted,
@@ -476,6 +477,60 @@ async function toProposalView(proposal) {
     };
 }
 
+async function buildProposalTargetView(proposal) {
+    if (!proposal) {
+        return null;
+    }
+
+    if (proposal.target_kind === 'entity') {
+        const entityDef = domainManifest.entities[proposal.resource_name];
+        const targetKey = proposal.target_key || {};
+        const targetId = targetKey[entityDef.idField] ?? targetKey.id;
+
+        const entity = entityDef ? await manifestCrudService.getOne(proposal.resource_name, {
+            [entityDef.idField]: targetId,
+        }) : null;
+
+        return {
+            kind: 'entity',
+            entities: [{
+                entityRoute: entityDef ? entityDef.route : proposal.resource_name.toLowerCase() + 's',
+                id: targetId,
+                label: entity && entity.name ? entity.name : targetId,
+            }],
+        };
+    }
+
+    const relationDef = domainManifest.relations[proposal.resource_name];
+    const relationMembers = relationDef ? relationDef.members : [];
+    const entities = [];
+
+    for (const member of relationMembers) {
+        const memberEntityDef = domainManifest.entities[member.entity];
+        const key = member.key;
+        const targetId = proposal.target_key && proposal.target_key[key];
+
+        if (targetId === undefined || targetId === null) {
+            continue;
+        }
+
+        const memberRecord = await manifestCrudService.getOne(member.entity, {
+            [memberEntityDef.idField]: targetId,
+        });
+
+        entities.push({
+            entityRoute: memberEntityDef.route,
+            id: targetId,
+            label: memberRecord && memberRecord.name ? memberRecord.name : targetId,
+        });
+    }
+
+    return {
+        kind: 'relation',
+        entities,
+    };
+}
+
 /**
  * Get the player visibility hops limit for a user.
  * DMs always see all entities (unlimited/undefined).
@@ -507,6 +562,31 @@ function ensureDmForMutation(req) {
 
     return { status: 403, error: 'Only dm users can modify canonical domain data' };
 }
+
+router.get('/proposals', async (req, res) => {
+    try {
+        const authErr = ensureDmForMutation(req);
+        if (authErr) {
+            return res.status(authErr.status).json({ error: authErr.error });
+        }
+
+        const proposals = await getPendingProposals();
+        const result = [];
+
+        for (const proposal of proposals) {
+            const proposalView = await toProposalView(proposal);
+            result.push({
+                ...proposalView,
+                target: await buildProposalTargetView(proposal),
+            });
+        }
+
+        return res.json(result);
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
 
 /* BASIC ENTITY ROUTES */
 // accept a pending proposal (DM-only): applies the proposed changes and credits the proposer.
