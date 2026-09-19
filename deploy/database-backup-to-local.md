@@ -11,10 +11,14 @@ backup command writes timestamped backups to
 ## 1. Create a backup on the VPS
 
 Connect to the VPS as `root` or as an account with the required sudo access.
-Run the backup as the `campaign-notes` service user:
+Run the backup as the `campaign-notes` service user, via `with-env.sh` so it
+picks up the same `DB_PATH`/`DB_BACKUP_DIR` the systemd service uses (running
+`npm` directly does not load `/etc/campaign-notes/api.env`, and the backup
+will silently target the wrong database path and fail with
+`SQLITE_READONLY`):
 
 ```bash
-sudo -u campaign-notes npm --prefix /opt/campaign-notes/current/api run backup
+sudo -u campaign-notes /usr/local/sbin/with-env.sh npm --prefix /opt/campaign-notes/current/api run backup
 ```
 
 The command prints the exact path of the new backup. It will look like:
