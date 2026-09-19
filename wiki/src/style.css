@@ -785,6 +785,12 @@ a:hover {
     gap: 0.5rem;
 }
 
+.proposal-banner .button-group .primary-button {
+    margin-top: 0;
+    width: auto;
+    padding: 0.6rem 1.1rem;
+}
+
 .proposal-view-toggle {
     display: flex;
     justify-content: flex-end;
