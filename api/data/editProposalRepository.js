@@ -62,6 +62,13 @@ async function getPendingProposalsForResource(resourceName) {
     return rows.map(deserializeProposal);
 }
 
+async function getPendingProposals() {
+    const rows = await all(
+        `SELECT * FROM edit_proposals WHERE status = 'pending' ORDER BY proposed_at ASC`
+    );
+    return rows.map(deserializeProposal);
+}
+
 async function markAccepted(id, { reviewedBy, reviewedAt }) {
     await run(
         `UPDATE edit_proposals SET status = 'accepted', reviewed_by = ?, reviewed_at = ? WHERE id = ?`,
@@ -83,6 +90,7 @@ module.exports = {
     getProposalById,
     getPendingProposalForTarget,
     getPendingProposalsForResource,
+    getPendingProposals,
     markAccepted,
     markRejected,
 };

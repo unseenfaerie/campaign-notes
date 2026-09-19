@@ -21,6 +21,7 @@ jest.mock('../../data/editProposalRepository', () => ({
     getProposalById: jest.fn(),
     getPendingProposalForTarget: jest.fn().mockResolvedValue(null),
     getPendingProposalsForResource: jest.fn().mockResolvedValue([]),
+    getPendingProposals: jest.fn().mockResolvedValue([]),
     markAccepted: jest.fn(),
     markRejected: jest.fn(),
 }));
@@ -137,6 +138,7 @@ const {
     getProposalById,
     getPendingProposalForTarget,
     getPendingProposalsForResource,
+    getPendingProposals,
     markRejected,
 } = require('../../data/editProposalRepository');
 const manifestHelpers = require('../../utils/manifestHelpers');
@@ -178,6 +180,7 @@ beforeEach(() => {
     findUserById.mockResolvedValue(null);
     getPendingProposalForTarget.mockResolvedValue(null);
     getPendingProposalsForResource.mockResolvedValue([]);
+    getPendingProposals.mockResolvedValue([]);
 
     manifestHelpers.coerceValueByType.mockImplementation((type, value) => {
         if (type === 'number') {
@@ -291,6 +294,73 @@ beforeEach(() => {
 });
 
 describe('domainRouter isolated unit tests', () => {
+    it('GET /proposals returns pending proposals with linkable entity targets for DMs', async () => {
+        getPendingProposals.mockResolvedValueOnce([{
+            id: 7,
+            target_kind: 'entity',
+            resource_name: 'Character',
+            target_key: { id: 'char-1' },
+            proposed_changes: { long_explanation: 'New context' },
+            base_snapshot: { id: 'char-1' },
+            proposed_by: 'player-one',
+            proposed_at: '2026-09-19T12:00:00.000Z',
+        }]);
+        findUserById.mockResolvedValueOnce({ username: 'Player One' });
+        manifestCrudService.getOne.mockResolvedValueOnce({ id: 'char-1', name: 'Hero' });
+
+        const response = await request(app).get('/api/proposals');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([{
+            id: 7,
+            proposedChanges: { long_explanation: 'New context' },
+            baseSnapshot: { id: 'char-1' },
+            proposedById: 'player-one',
+            proposedByUsername: 'Player One',
+            proposedAt: '2026-09-19T12:00:00.000Z',
+            target: {
+                kind: 'entity',
+                entities: [{ entityRoute: 'characters', id: 'char-1', label: 'Hero' }],
+            },
+        }]);
+    });
+
+    it('GET /proposals rejects non-DM users', async () => {
+        const response = await request(app)
+            .get('/api/proposals')
+            .set('x-test-role', 'player');
+
+        expect(response.status).toBe(403);
+        expect(response.body).toEqual({ error: 'Only dm users can modify canonical domain data' });
+    });
+
+    it('GET /proposals returns both relation members as linkable targets', async () => {
+        getPendingProposals.mockResolvedValueOnce([{
+            id: 8,
+            target_kind: 'relation',
+            resource_name: 'EventCharacter',
+            target_key: { deity_id: 'deity-1', character_id: 'char-1' },
+            proposed_changes: { long_explanation: 'New context' },
+            base_snapshot: { deity_id: 'deity-1', character_id: 'char-1' },
+            proposed_by: 'player-one',
+            proposed_at: '2026-09-19T12:00:00.000Z',
+        }]);
+        manifestCrudService.getOne
+            .mockResolvedValueOnce({ id: 'deity-1', name: 'Aster' })
+            .mockResolvedValueOnce({ id: 'char-1', name: 'Hero' });
+
+        const response = await request(app).get('/api/proposals');
+
+        expect(response.status).toBe(200);
+        expect(response.body[0].target).toEqual({
+            kind: 'relation',
+            entities: [
+                { entityRoute: 'deities', id: 'deity-1', label: 'Aster' },
+                { entityRoute: 'characters', id: 'char-1', label: 'Hero' },
+            ],
+        });
+    });
+
     it('POST /proposals/:proposalId/revoke lets the proposal author revoke a pending proposal', async () => {
         const proposal = {
             id: 7,

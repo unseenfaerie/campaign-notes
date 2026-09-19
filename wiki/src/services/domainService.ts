@@ -11,6 +11,19 @@ export type PendingProposal = {
     proposedAt: string
 }
 
+export type ProposalTargetEntity = {
+    entityRoute: string
+    id: string
+    label: string
+}
+
+export type PendingProposalInboxItem = PendingProposal & {
+    target: {
+        kind: 'entity' | 'relation'
+        entities: ProposalTargetEntity[]
+    }
+}
+
 export type EntityFullResponse = {
     entity: DomainEntity & { pendingProposal?: PendingProposal | null }
     related: Record<string, DomainEntity[]>
@@ -19,6 +32,10 @@ export type EntityFullResponse = {
 
 export async function listEntities(entityRoute: string): Promise<DomainEntity[]> {
     return requestJson<DomainEntity[]>(`/${entityRoute}`)
+}
+
+export async function listPendingProposals(): Promise<PendingProposalInboxItem[]> {
+    return requestJson<PendingProposalInboxItem[]>('/proposals')
 }
 
 export async function getEntityFull(entityRoute: string, id: string): Promise<EntityFullResponse> {
