@@ -35,6 +35,11 @@ fs.cpSync(path.join(root, 'wiki', 'dist'), path.join(stagingDirectory, 'wiki', '
     recursive: true,
 });
 
+// Install production deps (incl. compiling native modules like sqlite3) here, on the
+// packaging machine, so the release archive is self-contained and the target VPS never
+// needs network access or build tools to activate a release.
+execFileSync('npm', ['ci', '--omit=dev'], { cwd: stagingDirectory, stdio: 'inherit' });
+
 execFileSync('tar', ['-czf', archivePath, '-C', stagingDirectory, '.'], {
     cwd: root,
     stdio: 'inherit',

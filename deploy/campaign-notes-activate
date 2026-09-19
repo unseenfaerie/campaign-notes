@@ -29,7 +29,6 @@ trap cleanup ERR
 
 chown -R campaign-notes:campaign-notes "$release"
 cd "$release"
-npm ci --omit=dev
 systemctl stop campaign-notes.service || true
 /usr/local/sbin/with-env.sh npm run --workspace api migrate -- latest
 ln -sfn "$release" "$current"
