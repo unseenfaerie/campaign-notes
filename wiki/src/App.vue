@@ -74,6 +74,7 @@ onBeforeUnmount(() => {
             </nav>
 
             <nav v-if="auth.isAdmin.value" aria-label="Admin navigation" class="nav-links admin-nav">
+              <RouterLink :to="{ name: 'proposal-inbox' }" class="nav-link">Proposal Inbox</RouterLink>
               <RouterLink :to="{ name: 'admin-users' }" class="nav-link">Manage Users</RouterLink>
             </nav>
           </div>

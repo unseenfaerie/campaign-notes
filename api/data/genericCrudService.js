@@ -2,6 +2,13 @@ const { db } = require('./db');
 const { domainManifest } = require('../../common/domainManifest');
 const { getEnumValues } = require('../../common/enums');
 
+// Present on every entity/relation table (added by schemaBuilder.js) but not declared per-entity
+// in domainManifest.js, so they're injected here rather than repeated as manifest boilerplate.
+const AUDIT_FIELDS = {
+  last_edited_by: { type: 'string' },
+  last_edited_at: { type: 'string' },
+};
+
 function getRelationMembers(relationDef) {
   if (Array.isArray(relationDef.members) && relationDef.members.length === 2) {
     return relationDef.members;
@@ -26,6 +33,7 @@ function toResourceDefinition(resourceName, manifest = domainManifest) {
         field.enum ? { ...field, enum: getEnumValues(field.enum) } : field,
       ])
     );
+    Object.assign(fields, AUDIT_FIELDS);
     const primaryKeys = Object.entries(fields)
       .filter(([, meta]) => meta.primary)
       .map(([field]) => field);
@@ -59,6 +67,8 @@ function toResourceDefinition(resourceName, manifest = domainManifest) {
         primary: true,
       };
     }
+
+    Object.assign(fields, AUDIT_FIELDS);
 
     return {
       kind: 'relation',
@@ -206,9 +216,14 @@ function all(sql, params = [], sqliteDb = db) {
 function createManifestCrudService(manifest = domainManifest, sqliteDb = db) {
   sqliteDb.run('PRAGMA foreign_keys = ON');
 
-  async function insert(resourceName, data) {
+  async function insert(resourceName, data, { actorUsername } = {}) {
     const def = toResourceDefinition(resourceName, manifest);
     const validated = validateData(def, data, { partial: false });
+
+    if (actorUsername) {
+      validated.last_edited_by = actorUsername;
+      validated.last_edited_at = new Date().toISOString();
+    }
 
     const fields = Object.keys(validated);
     if (fields.length === 0) {
@@ -253,10 +268,15 @@ function createManifestCrudService(manifest = domainManifest, sqliteDb = db) {
     return fromSqliteRow(def, row);
   }
 
-  async function update(resourceName, where, updates) {
+  async function update(resourceName, where, updates, { actorUsername } = {}) {
     const def = toResourceDefinition(resourceName, manifest);
     validateWhere(def, where);
     const validatedUpdates = validateData(def, updates, { partial: true });
+
+    if (actorUsername) {
+      validatedUpdates.last_edited_by = actorUsername;
+      validatedUpdates.last_edited_at = new Date().toISOString();
+    }
 
     for (const key of def.primaryKeys) {
       if (Object.prototype.hasOwnProperty.call(validatedUpdates, key)) {

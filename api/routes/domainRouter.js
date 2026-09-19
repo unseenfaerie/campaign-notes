@@ -1,7 +1,16 @@
 const express = require('express');
 const { domainManifest } = require('../../common/domainManifest');
 const { manifestCrudService } = require('../data/genericCrudService');
-const { listAnchoredCharacterIdsByUserId } = require('../data/authRepository');
+const { listAnchoredCharacterIdsByUserId, findUserById } = require('../data/authRepository');
+const {
+    createProposal,
+    getPendingProposalForTarget,
+    getPendingProposals,
+    getPendingProposalsForResource,
+    getProposalById,
+    markAccepted,
+    markRejected,
+} = require('../data/editProposalRepository');
 const {
     coerceValueByType,
     getEntityByRoute,
@@ -23,6 +32,12 @@ const {
     buildRelationWhere,
     validateHistoryChronology,
 } = require('../utils/relationWriteHelpers');
+const {
+    stableStringify,
+    buildEntityTargetKey,
+    filterProposableChanges,
+    diffAgainstCurrent,
+} = require('../utils/proposalHelpers');
 const {
     PLAYER_VISIBILITY_HOPS,
     isEntityVisibleToUser,
@@ -90,15 +105,19 @@ async function loadAssociatedRecords(relationName, relationDef, sourceId, anchor
         );
     }
 
+    // Simple relations have no payload fields, so nothing to propose/lock there.
+    const pendingProposals = await getPendingProposalsForResource(relationName);
+    const proposalByKey = new Map(pendingProposals.map((proposal) => [stableStringify(proposal.target_key), proposal]));
+
     if (relationDef.kind === 'relationship') {
-        return buildRelationshipResults(visibleRows, targetById, members, memberKeys, sourceId, anchorMemberIndex);
+        return buildRelationshipResults(visibleRows, targetById, members, memberKeys, sourceId, anchorMemberIndex, relationDef, proposalByKey);
     }
 
     if (relationDef.kind === 'history') {
         const visibleTargetIds = visibleRows
             .map(row => getRelatedIdForRow(row, members, sourceId, anchorMemberIndex))
             .filter((id, index, arr) => arr.indexOf(id) === index);
-        return buildHistoryResults(visibleTargetIds, visibleRows, targetById, members, memberKeys, sourceId, anchorMemberIndex);
+        return buildHistoryResults(visibleTargetIds, visibleRows, targetById, members, memberKeys, sourceId, anchorMemberIndex, relationDef, proposalByKey);
     }
 
     return visibleRows;
@@ -169,9 +188,9 @@ async function getAllRelationRecordsByWhereCandidates(relationName, whereCandida
     return dedupeRows(rows.flat());
 }
 
-async function updateFirstRelationRecordByWhereCandidates(relationName, whereCandidates, updates) {
+async function updateFirstRelationRecordByWhereCandidates(relationName, whereCandidates, updates, options) {
     for (const where of whereCandidates) {
-        const result = await manifestCrudService.update(relationName, where, updates);
+        const result = await manifestCrudService.update(relationName, where, updates, options);
         if (result.updated > 0 || result.record) {
             return result;
         }
@@ -266,7 +285,7 @@ function buildSimpleResults(targetIds, targetById) {
     return results;
 }
 
-function buildRelationshipResults(relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex) {
+async function buildRelationshipResults(relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex, relationDef, proposalByKey) {
     const results = [];
 
     for (const row of relationRows) {
@@ -276,16 +295,19 @@ function buildRelationshipResults(relationRows, targetById, members, memberKeys,
             continue;
         }
 
+        const targetKey = buildRelationWhere({ members, anchorMemberIndex, sourceId, relatedId: targetId, relationDef });
+        const pendingProposal = await toProposalView(proposalByKey.get(stableStringify(targetKey)) || null);
+
         results.push({
             ...target,
-            relationship: omitKeys(row, memberKeys),
+            relationship: { ...omitKeys(row, memberKeys), pendingProposal },
         });
     }
 
     return results;
 }
 
-function buildHistoryResults(targetIds, relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex) {
+async function buildHistoryResults(targetIds, relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex, relationDef, proposalByKey) {
     const results = [];
 
     for (const targetId of targetIds) {
@@ -298,7 +320,16 @@ function buildHistoryResults(targetIds, relationRows, targetById, members, membe
         for (const row of relationRows) {
             const relatedId = getRelatedIdForRow(row, members, sourceId, anchorMemberIndex);
             if (relatedId === targetId) {
-                history.push(omitKeys(row, memberKeys));
+                const targetKey = buildRelationWhere({
+                    members,
+                    anchorMemberIndex,
+                    sourceId,
+                    relatedId,
+                    relationDef,
+                    historyValue: relationDef.historyKey ? row[relationDef.historyKey] : undefined,
+                });
+                const pendingProposal = await toProposalView(proposalByKey.get(stableStringify(targetKey)) || null);
+                history.push({ ...omitKeys(row, memberKeys), pendingProposal });
             }
         }
 
@@ -319,11 +350,19 @@ function toHttpError(err) {
     }
 
     if (
-        /Invalid number value|Invalid boolean value|Unknown field for route|Unknown field for relation|Unknown query field for relation|Missing required query field|Cannot update primary key field|Primary key updates are not allowed|Data must be an object|Invalid slug id format for field|Missing history start date value for chronology validation|Invalid history date format for field|History end date must be after history start date|Parent place does not exist|A place cannot be its own parent|Parent assignment would create a cycle/i.test(
+        /Invalid number value|Invalid boolean value|Unknown field for route|Unknown field for relation|Unknown query field for relation|Missing required query field|Cannot update primary key field|Primary key updates are not allowed|Data must be an object|Invalid slug id format for field|Missing history start date value for chronology validation|Invalid history date format for field|History end date must be after history start date|Parent place does not exist|A place cannot be its own parent|Parent assignment would create a cycle|Unknown field for proposal|Cannot propose changes to primary key field|Field is not player-proposable|No proposed changes differ from the current record|This relation type has no editable fields/i.test(
             message
         )
     ) {
         return { status: 400, message };
+    }
+
+    if (/A pending edit proposal exists for this record|Proposal is not pending/i.test(message)) {
+        return { status: 409, message };
+    }
+
+    if (/^Proposal not found$/i.test(message)) {
+        return { status: 404, message };
     }
 
     if (err && err.code === 'SQLITE_CONSTRAINT') {
@@ -394,6 +433,104 @@ function isDm(auth) {
     return auth && auth.role === 'dm';
 }
 
+function ensurePlayerForProposal(req) {
+    if (!req.auth) {
+        return { status: 401, error: 'Unauthorized' };
+    }
+
+    if (req.auth.role !== 'player') {
+        return { status: 403, error: 'Only player users can propose edits' };
+    }
+
+    return null;
+}
+
+// Players may propose edits to anything they can see except other players' character
+// records (and, transitively, relations that directly involve one of those characters).
+function isForeignPlayerCharacter(entityName, record, anchoredCharacterIds) {
+    return Boolean(
+        entityName === 'Character' && record && record.player_character && !anchoredCharacterIds.includes(record.id)
+    );
+}
+
+async function assertNoPendingProposal(resourceName, targetKey) {
+    const pending = await getPendingProposalForTarget(resourceName, targetKey);
+    if (pending) {
+        throw new Error('A pending edit proposal exists for this record');
+    }
+}
+
+async function toProposalView(proposal) {
+    if (!proposal) {
+        return null;
+    }
+
+    const proposer = await findUserById(proposal.proposed_by);
+
+    return {
+        id: proposal.id,
+        proposedChanges: proposal.proposed_changes,
+        baseSnapshot: proposal.base_snapshot,
+        proposedById: proposal.proposed_by,
+        proposedByUsername: proposer ? proposer.username : proposal.proposed_by,
+        proposedAt: proposal.proposed_at,
+    };
+}
+
+async function buildProposalTargetView(proposal) {
+    if (!proposal) {
+        return null;
+    }
+
+    if (proposal.target_kind === 'entity') {
+        const entityDef = domainManifest.entities[proposal.resource_name];
+        const targetKey = proposal.target_key || {};
+        const targetId = targetKey[entityDef.idField] ?? targetKey.id;
+
+        const entity = entityDef ? await manifestCrudService.getOne(proposal.resource_name, {
+            [entityDef.idField]: targetId,
+        }) : null;
+
+        return {
+            kind: 'entity',
+            entities: [{
+                entityRoute: entityDef ? entityDef.route : proposal.resource_name.toLowerCase() + 's',
+                id: targetId,
+                label: entity && entity.name ? entity.name : targetId,
+            }],
+        };
+    }
+
+    const relationDef = domainManifest.relations[proposal.resource_name];
+    const relationMembers = relationDef ? relationDef.members : [];
+    const entities = [];
+
+    for (const member of relationMembers) {
+        const memberEntityDef = domainManifest.entities[member.entity];
+        const key = member.key;
+        const targetId = proposal.target_key && proposal.target_key[key];
+
+        if (targetId === undefined || targetId === null) {
+            continue;
+        }
+
+        const memberRecord = await manifestCrudService.getOne(member.entity, {
+            [memberEntityDef.idField]: targetId,
+        });
+
+        entities.push({
+            entityRoute: memberEntityDef.route,
+            id: targetId,
+            label: memberRecord && memberRecord.name ? memberRecord.name : targetId,
+        });
+    }
+
+    return {
+        kind: 'relation',
+        entities,
+    };
+}
+
 /**
  * Get the player visibility hops limit for a user.
  * DMs always see all entities (unlimited/undefined).
@@ -426,7 +563,127 @@ function ensureDmForMutation(req) {
     return { status: 403, error: 'Only dm users can modify canonical domain data' };
 }
 
+router.get('/proposals', async (req, res) => {
+    try {
+        const authErr = ensureDmForMutation(req);
+        if (authErr) {
+            return res.status(authErr.status).json({ error: authErr.error });
+        }
+
+        const proposals = await getPendingProposals();
+        const result = [];
+
+        for (const proposal of proposals) {
+            const proposalView = await toProposalView(proposal);
+            result.push({
+                ...proposalView,
+                target: await buildProposalTargetView(proposal),
+            });
+        }
+
+        return res.json(result);
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
 /* BASIC ENTITY ROUTES */
+// accept a pending proposal (DM-only): applies the proposed changes and credits the proposer.
+// Registered before the wildcard /:entityRoute/:id/... routes below so '/proposals/:id/accept'
+// (3 path segments) can't be misrouted to the generic 3-segment relation-create route.
+router.post('/proposals/:proposalId/accept', async (req, res) => {
+    try {
+        const authErr = ensureDmForMutation(req);
+        if (authErr) {
+            return res.status(authErr.status).json({ error: authErr.error });
+        }
+
+        const proposal = await getProposalById(req.params.proposalId);
+        if (!proposal) {
+            return res.status(404).json({ error: 'Proposal not found' });
+        }
+        if (proposal.status !== 'pending') {
+            return res.status(409).json({ error: 'Proposal is not pending' });
+        }
+
+        const proposer = await findUserById(proposal.proposed_by);
+        await manifestCrudService.update(proposal.resource_name, proposal.target_key, proposal.proposed_changes, {
+            actorUsername: proposer ? proposer.username : undefined,
+        });
+
+        const updated = await markAccepted(req.params.proposalId, {
+            reviewedBy: req.auth.userId,
+            reviewedAt: new Date().toISOString(),
+        });
+
+        return res.json(await toProposalView(updated));
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
+// reject a pending proposal (DM-only): discards it and releases the record's lock
+router.post('/proposals/:proposalId/reject', async (req, res) => {
+    try {
+        const authErr = ensureDmForMutation(req);
+        if (authErr) {
+            return res.status(authErr.status).json({ error: authErr.error });
+        }
+
+        const proposal = await getProposalById(req.params.proposalId);
+        if (!proposal) {
+            return res.status(404).json({ error: 'Proposal not found' });
+        }
+        if (proposal.status !== 'pending') {
+            return res.status(409).json({ error: 'Proposal is not pending' });
+        }
+
+        const updated = await markRejected(req.params.proposalId, {
+            reviewedBy: req.auth.userId,
+            reviewedAt: new Date().toISOString(),
+            reviewNote: req.body && req.body.note,
+        });
+
+        return res.json(await toProposalView(updated));
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
+// revoke a pending proposal (author-only): discards it and releases the record's lock
+router.post('/proposals/:proposalId/revoke', async (req, res) => {
+    try {
+        if (!req.auth) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const proposal = await getProposalById(req.params.proposalId);
+        if (!proposal) {
+            return res.status(404).json({ error: 'Proposal not found' });
+        }
+        if (proposal.status !== 'pending') {
+            return res.status(409).json({ error: 'Proposal is not pending' });
+        }
+        if (proposal.proposed_by !== req.auth.userId) {
+            return res.status(403).json({ error: 'Only the proposal author can revoke it' });
+        }
+
+        const updated = await markRejected(req.params.proposalId, {
+            reviewedBy: req.auth.userId,
+            reviewedAt: new Date().toISOString(),
+            reviewNote: 'Revoked by author',
+        });
+
+        return res.json(await toProposalView(updated));
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
 // create entity
 router.post('/:entityRoute', async (req, res) => {
     try {
@@ -442,7 +699,7 @@ router.post('/:entityRoute', async (req, res) => {
         if (entityName === 'Place') {
             await validatePlaceParent(validated.parent_id, validated.id);
         }
-        const created = await manifestCrudService.insert(entityName, validated);
+        const created = await manifestCrudService.insert(entityName, validated, { actorUsername: req.auth.username });
         res.status(201).json(created);
     } catch (err) {
         const httpErr = toHttpError(err);
@@ -579,9 +836,11 @@ router.patch('/:entityRoute/:id', async (req, res) => {
             await validatePlaceParent(updates.parent_id, idValue);
         }
 
+        await assertNoPendingProposal(entityName, buildEntityTargetKey(idField, idValue));
+
         const result = await manifestCrudService.update(entityName, {
             [idField]: idValue,
-        }, updates);
+        }, updates, { actorUsername: req.auth.username });
 
         if (result.updated === 0 && !result.record) {
             return res.status(404).json({ error: 'Record not found' });
@@ -602,6 +861,7 @@ router.delete('/:entityRoute/:id', async (req, res) => {
         }
 
         const { entityName, idField, idValue } = getEntityLookup(req.params);
+        await assertNoPendingProposal(entityName, buildEntityTargetKey(idField, idValue));
         const result = await manifestCrudService.remove(entityName, {
             [idField]: idValue,
         });
@@ -611,6 +871,64 @@ router.delete('/:entityRoute/:id', async (req, res) => {
         }
 
         return res.json(result);
+    } catch (err) {
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
+
+// propose a change to this entity (player-only; locks the record until a DM accepts/rejects)
+router.post('/:entityRoute/:id/propose', async (req, res) => {
+    try {
+        const authErr = ensurePlayerForProposal(req);
+        if (authErr) {
+            return res.status(authErr.status).json({ error: authErr.error });
+        }
+
+        const { entityName, entityDef, idField, idValue } = getEntityLookup(req.params);
+        const record = await manifestCrudService.getOne(entityName, { [idField]: idValue });
+        if (!record) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        const anchoredCharacterIds = await getAnchoredCharacterIds(req);
+        let isVisible = isEntityVisibleToUser(record, req.params.entityRoute, req.auth, anchoredCharacterIds);
+        if (!isVisible) {
+            const visibleEntityIds = await getVisibleEntityIdsForUser(
+                manifestCrudService,
+                anchoredCharacterIds,
+                getPlayerVisibilityHops(req.auth)
+            );
+            isVisible = visibleEntityIds.has(idValue);
+        }
+        if (!isVisible) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        if (isForeignPlayerCharacter(entityName, record, anchoredCharacterIds)) {
+            return res.status(403).json({ error: "Cannot propose edits to another player's character" });
+        }
+
+        const targetKey = buildEntityTargetKey(idField, idValue);
+        await assertNoPendingProposal(entityName, targetKey);
+
+        const changes = filterProposableChanges(req.body, entityDef.fields);
+        const diff = diffAgainstCurrent(changes, record);
+        if (Object.keys(diff).length === 0) {
+            return res.status(400).json({ error: 'No proposed changes differ from the current record' });
+        }
+
+        const proposal = await createProposal({
+            targetKind: 'entity',
+            resourceName: entityName,
+            targetKey,
+            baseSnapshot: record,
+            proposedChanges: diff,
+            proposedBy: req.auth.userId,
+            proposedAt: new Date().toISOString(),
+        });
+
+        return res.status(201).json(await toProposalView(proposal));
     } catch (err) {
         const httpErr = toHttpError(err);
         return res.status(httpErr.status).json({ error: httpErr.message });
@@ -669,7 +987,7 @@ router.post('/:entityRoute/:id/:relatedRoute', async (req, res) => {
             payload,
         });
 
-        const created = await manifestCrudService.insert(relationName, relationData);
+        const created = await manifestCrudService.insert(relationName, relationData, { actorUsername: req.auth.username });
         return res.status(201).json(created);
     } catch (err) {
         if (err && err.message === 'Record not found') {
@@ -715,6 +1033,8 @@ router.get('/:entityRoute/:id/full', async (req, res) => {
             return res.status(404).json({ error: 'Record not found' });
         }
 
+        const pendingProposal = await getPendingProposalForTarget(entityName, buildEntityTargetKey(idField, idValue));
+
         const related = {};
         const children = entityName === 'Place'
             ? await manifestCrudService.getMany('Place', { parent_id: idValue })
@@ -734,7 +1054,7 @@ router.get('/:entityRoute/:id/full', async (req, res) => {
         }
 
         const response = {
-            entity: record,
+            entity: { ...record, pendingProposal: await toProposalView(pendingProposal) },
             related,
         };
 
@@ -976,10 +1296,16 @@ router.patch('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
             historyValue,
         });
 
+        await assertNoPendingProposal(
+            relationName,
+            buildRelationWhere({ members, anchorMemberIndex, sourceId, relatedId, relationDef, historyValue })
+        );
+
         const result = await updateFirstRelationRecordByWhereCandidates(
             relationName,
             whereCandidates,
-            updates
+            updates,
+            { actorUsername: req.auth.username }
         );
 
         if (result.updated === 0 && !result.record) {
@@ -1042,6 +1368,11 @@ router.delete('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => 
             historyValue,
         });
 
+        await assertNoPendingProposal(
+            relationName,
+            buildRelationWhere({ members, anchorMemberIndex, sourceId, relatedId, relationDef, historyValue })
+        );
+
         const result = await removeFirstRelationRecordByWhereCandidates(relationName, whereCandidates);
 
         if (result.deleted === 0) {
@@ -1059,5 +1390,95 @@ router.delete('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => 
     }
 });
 
+// propose a change to this relation (player-only; locks the record until a DM accepts/rejects)
+router.post('/:entityRoute/:id/:relatedRoute/:relatedId/propose', async (req, res) => {
+    try {
+        const authErr = ensurePlayerForProposal(req);
+        if (authErr) {
+            return res.status(authErr.status).json({ error: authErr.error });
+        }
+
+        const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
+        const { relationName, relationDef, anchorMemberIndex } = getRelationByRoutes(
+            req.params.entityRoute,
+            req.params.relatedRoute
+        );
+
+        if (relationDef.kind === 'simple') {
+            return res.status(400).json({ error: 'This relation type has no editable fields' });
+        }
+
+        const members = getRelationMembers(relationDef);
+        const { relatedMember, relatedEntityDef } = getRelatedMemberInfo(relationDef, anchorMemberIndex);
+
+        const sourceIdField = entityDef.idField;
+        const sourceId = coerceValueByType(entityDef.fields[sourceIdField].type, req.params.id);
+        const relatedIdField = relatedEntityDef.idField;
+        const relatedId = coerceValueByType(relatedEntityDef.fields[relatedIdField].type, req.params.relatedId);
+
+        let historyValue;
+        if (relationDef.kind === 'history' && relationDef.historyKey) {
+            historyValue = getValidatedHistorySelector(req.query, relationDef, { required: true });
+        }
+
+        const whereCandidates = buildRelationWhereCandidates({
+            members,
+            anchorMemberIndex,
+            sourceId,
+            relatedId,
+            relationDef,
+            historyValue,
+        });
+
+        const row = await getFirstRelationRecordByWhereCandidates(relationName, whereCandidates);
+        if (!row) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        const anchoredCharacterIds = await getAnchoredCharacterIds(req);
+        const sourceEntity = await manifestCrudService.getOne(entityName, { [sourceIdField]: sourceId });
+        const relatedEntity = await manifestCrudService.getOne(relatedMember.entity, { [relatedIdField]: relatedId });
+        const memberEntities = anchorMemberIndex === 0 ? [sourceEntity, relatedEntity] : [relatedEntity, sourceEntity];
+
+        if (!sourceEntity || !relatedEntity || !isRelationVisibleToUser(relationName, memberEntities, req.auth, anchoredCharacterIds)) {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        if (
+            isForeignPlayerCharacter(entityName, sourceEntity, anchoredCharacterIds) ||
+            isForeignPlayerCharacter(relatedMember.entity, relatedEntity, anchoredCharacterIds)
+        ) {
+            return res.status(403).json({ error: "Cannot propose edits to another player's character" });
+        }
+
+        const targetKey = buildRelationWhere({ members, anchorMemberIndex, sourceId, relatedId, relationDef, historyValue });
+        await assertNoPendingProposal(relationName, targetKey);
+
+        const changes = filterProposableChanges(req.body, relationDef.payload);
+        const diff = diffAgainstCurrent(changes, row);
+        if (Object.keys(diff).length === 0) {
+            return res.status(400).json({ error: 'No proposed changes differ from the current record' });
+        }
+
+        const proposal = await createProposal({
+            targetKind: 'relation',
+            resourceName: relationName,
+            targetKey,
+            baseSnapshot: row,
+            proposedChanges: diff,
+            proposedBy: req.auth.userId,
+            proposedAt: new Date().toISOString(),
+        });
+
+        return res.status(201).json(await toProposalView(proposal));
+    } catch (err) {
+        if (err && err.message === 'Record not found') {
+            return res.status(404).json({ error: 'Record not found' });
+        }
+
+        const httpErr = toHttpError(err);
+        return res.status(httpErr.status).json({ error: httpErr.message });
+    }
+});
 
 module.exports = router;

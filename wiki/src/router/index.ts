@@ -9,6 +9,7 @@ import EntityDetailView from '../views/EntityDetailView.vue'
 import EntityListView from '../views/EntityListView.vue'
 import LoginView from '../views/LoginView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
+import ProposalInboxView from '../views/ProposalInboxView.vue'
 
 const router = createRouter({
     history: createWebHistory(),
@@ -61,6 +62,12 @@ const router = createRouter({
             props: (route) => ({
                 userId: String(route.params.userId),
             }),
+            meta: { requiresAdmin: true },
+        },
+        {
+            path: '/admin/proposals',
+            name: 'proposal-inbox',
+            component: ProposalInboxView,
             meta: { requiresAdmin: true },
         },
         {

@@ -759,6 +759,56 @@ a:hover {
     margin-top: 0;
 }
 
+.last-edited-stamp {
+    margin: 0.5rem 0 0;
+    text-align: right;
+    font-size: 0.78rem;
+    color: var(--ink-500, #6b6b6b);
+}
+
+.proposal-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    margin: 0.5rem 0;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid var(--accent, #a8763e);
+    border-radius: var(--radius-sm);
+    background: var(--paper-soft);
+    font-size: 0.9rem;
+}
+
+.proposal-banner .button-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.proposal-banner .button-group .primary-button {
+    margin-top: 0;
+    width: auto;
+    padding: 0.6rem 1.1rem;
+}
+
+.proposal-view-toggle {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--ink-500, #6b6b6b);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.proposal-view-toggle input {
+    margin: 0;
+}
+
+
 @media (max-width: 980px) {
     .app-shell {
         grid-template-columns: 1fr;

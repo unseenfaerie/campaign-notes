@@ -2,14 +2,40 @@ import { requestJson } from './apiClient'
 
 export type DomainEntity = Record<string, unknown>
 
+export type PendingProposal = {
+    id: number
+    proposedChanges: Record<string, unknown>
+    baseSnapshot: DomainEntity
+    proposedById: string
+    proposedByUsername: string
+    proposedAt: string
+}
+
+export type ProposalTargetEntity = {
+    entityRoute: string
+    id: string
+    label: string
+}
+
+export type PendingProposalInboxItem = PendingProposal & {
+    target: {
+        kind: 'entity' | 'relation'
+        entities: ProposalTargetEntity[]
+    }
+}
+
 export type EntityFullResponse = {
-    entity: DomainEntity
+    entity: DomainEntity & { pendingProposal?: PendingProposal | null }
     related: Record<string, DomainEntity[]>
     children?: DomainEntity[]
 }
 
 export async function listEntities(entityRoute: string): Promise<DomainEntity[]> {
     return requestJson<DomainEntity[]>(`/${entityRoute}`)
+}
+
+export async function listPendingProposals(): Promise<PendingProposalInboxItem[]> {
+    return requestJson<PendingProposalInboxItem[]>('/proposals')
 }
 
 export async function getEntityFull(entityRoute: string, id: string): Promise<EntityFullResponse> {
@@ -77,6 +103,50 @@ export async function deleteRelation(
         `/${entityRoute}/${encodeURIComponent(id)}/${relatedRoute}/${encodeURIComponent(relatedId)}${query}`,
         { method: 'DELETE' }
     )
+}
+
+export async function proposeEntityEdit(
+    entityRoute: string,
+    id: string,
+    data: DomainEntity
+): Promise<PendingProposal> {
+    return requestJson<PendingProposal>(
+        `/${entityRoute}/${encodeURIComponent(id)}/propose`,
+        { method: 'POST', body: data }
+    )
+}
+
+export async function proposeRelationEdit(
+    entityRoute: string,
+    id: string,
+    relatedRoute: string,
+    relatedId: string,
+    data: DomainEntity,
+    historySelector?: { key: string; value: string }
+): Promise<PendingProposal> {
+    const query = historySelector
+        ? `?${encodeURIComponent(historySelector.key)}=${encodeURIComponent(historySelector.value)}`
+        : ''
+
+    return requestJson<PendingProposal>(
+        `/${entityRoute}/${encodeURIComponent(id)}/${relatedRoute}/${encodeURIComponent(relatedId)}/propose${query}`,
+        { method: 'POST', body: data }
+    )
+}
+
+export async function acceptProposal(proposalId: number): Promise<PendingProposal> {
+    return requestJson<PendingProposal>(`/proposals/${proposalId}/accept`, { method: 'POST' })
+}
+
+export async function rejectProposal(proposalId: number, note?: string): Promise<PendingProposal> {
+    return requestJson<PendingProposal>(`/proposals/${proposalId}/reject`, {
+        method: 'POST',
+        body: note ? { note } : undefined,
+    })
+}
+
+export async function revokeProposal(proposalId: number): Promise<PendingProposal> {
+    return requestJson<PendingProposal>(`/proposals/${proposalId}/revoke`, { method: 'POST' })
 }
 
 export async function getAliases(entityType: string, entityId: string): Promise<DomainEntity[]> {

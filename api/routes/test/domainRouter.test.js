@@ -13,6 +13,17 @@ jest.mock('../../data/genericCrudService', () => ({
 
 jest.mock('../../data/authRepository', () => ({
     listAnchoredCharacterIdsByUserId: jest.fn(),
+    findUserById: jest.fn(),
+}));
+
+jest.mock('../../data/editProposalRepository', () => ({
+    createProposal: jest.fn(),
+    getProposalById: jest.fn(),
+    getPendingProposalForTarget: jest.fn().mockResolvedValue(null),
+    getPendingProposalsForResource: jest.fn().mockResolvedValue([]),
+    getPendingProposals: jest.fn().mockResolvedValue([]),
+    markAccepted: jest.fn(),
+    markRejected: jest.fn(),
 }));
 
 jest.mock('../../utils/manifestHelpers', () => ({
@@ -122,7 +133,14 @@ jest.mock('../../../common/domainManifest', () => ({
 }));
 
 const { manifestCrudService } = require('../../data/genericCrudService');
-const { listAnchoredCharacterIdsByUserId } = require('../../data/authRepository');
+const { listAnchoredCharacterIdsByUserId, findUserById } = require('../../data/authRepository');
+const {
+    getProposalById,
+    getPendingProposalForTarget,
+    getPendingProposalsForResource,
+    getPendingProposals,
+    markRejected,
+} = require('../../data/editProposalRepository');
 const manifestHelpers = require('../../utils/manifestHelpers');
 const router = require('../domainRouter');
 
@@ -132,6 +150,7 @@ function createTestApp() {
     app.use((req, _res, next) => {
         req.auth = {
             userId: req.headers['x-test-user'] || 'dm-admin',
+            username: req.headers['x-test-username'] || 'dm-admin',
             role: req.headers['x-test-role'] || 'dm',
         };
         next();
@@ -158,6 +177,10 @@ function buildEntity(entityName, route, idType = 'string') {
 beforeEach(() => {
     jest.resetAllMocks();
     listAnchoredCharacterIdsByUserId.mockResolvedValue([]);
+    findUserById.mockResolvedValue(null);
+    getPendingProposalForTarget.mockResolvedValue(null);
+    getPendingProposalsForResource.mockResolvedValue([]);
+    getPendingProposals.mockResolvedValue([]);
 
     manifestHelpers.coerceValueByType.mockImplementation((type, value) => {
         if (type === 'number') {
@@ -271,6 +294,122 @@ beforeEach(() => {
 });
 
 describe('domainRouter isolated unit tests', () => {
+    it('GET /proposals returns pending proposals with linkable entity targets for DMs', async () => {
+        getPendingProposals.mockResolvedValueOnce([{
+            id: 7,
+            target_kind: 'entity',
+            resource_name: 'Character',
+            target_key: { id: 'char-1' },
+            proposed_changes: { long_explanation: 'New context' },
+            base_snapshot: { id: 'char-1' },
+            proposed_by: 'player-one',
+            proposed_at: '2026-09-19T12:00:00.000Z',
+        }]);
+        findUserById.mockResolvedValueOnce({ username: 'Player One' });
+        manifestCrudService.getOne.mockResolvedValueOnce({ id: 'char-1', name: 'Hero' });
+
+        const response = await request(app).get('/api/proposals');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([{
+            id: 7,
+            proposedChanges: { long_explanation: 'New context' },
+            baseSnapshot: { id: 'char-1' },
+            proposedById: 'player-one',
+            proposedByUsername: 'Player One',
+            proposedAt: '2026-09-19T12:00:00.000Z',
+            target: {
+                kind: 'entity',
+                entities: [{ entityRoute: 'characters', id: 'char-1', label: 'Hero' }],
+            },
+        }]);
+    });
+
+    it('GET /proposals rejects non-DM users', async () => {
+        const response = await request(app)
+            .get('/api/proposals')
+            .set('x-test-role', 'player');
+
+        expect(response.status).toBe(403);
+        expect(response.body).toEqual({ error: 'Only dm users can modify canonical domain data' });
+    });
+
+    it('GET /proposals returns both relation members as linkable targets', async () => {
+        getPendingProposals.mockResolvedValueOnce([{
+            id: 8,
+            target_kind: 'relation',
+            resource_name: 'EventCharacter',
+            target_key: { deity_id: 'deity-1', character_id: 'char-1' },
+            proposed_changes: { long_explanation: 'New context' },
+            base_snapshot: { deity_id: 'deity-1', character_id: 'char-1' },
+            proposed_by: 'player-one',
+            proposed_at: '2026-09-19T12:00:00.000Z',
+        }]);
+        manifestCrudService.getOne
+            .mockResolvedValueOnce({ id: 'deity-1', name: 'Aster' })
+            .mockResolvedValueOnce({ id: 'char-1', name: 'Hero' });
+
+        const response = await request(app).get('/api/proposals');
+
+        expect(response.status).toBe(200);
+        expect(response.body[0].target).toEqual({
+            kind: 'relation',
+            entities: [
+                { entityRoute: 'deities', id: 'deity-1', label: 'Aster' },
+                { entityRoute: 'characters', id: 'char-1', label: 'Hero' },
+            ],
+        });
+    });
+
+    it('POST /proposals/:proposalId/revoke lets the proposal author revoke a pending proposal', async () => {
+        const proposal = {
+            id: 7,
+            status: 'pending',
+            proposed_by: 'player-one',
+            proposed_changes: { long_explanation: 'New context' },
+            base_snapshot: { id: 'char-1' },
+            proposed_at: '2026-09-19T12:00:00.000Z',
+        };
+        getProposalById.mockResolvedValueOnce(proposal);
+        markRejected.mockResolvedValueOnce({ ...proposal, status: 'rejected' });
+
+        const response = await request(app)
+            .post('/api/proposals/7/revoke')
+            .set('x-test-role', 'player')
+            .set('x-test-user', 'player-one');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({
+            id: 7,
+            proposedChanges: { long_explanation: 'New context' },
+            baseSnapshot: { id: 'char-1' },
+            proposedById: 'player-one',
+            proposedByUsername: 'player-one',
+            proposedAt: '2026-09-19T12:00:00.000Z',
+        });
+        expect(markRejected).toHaveBeenCalledWith('7', expect.objectContaining({
+            reviewedBy: 'player-one',
+            reviewNote: 'Revoked by author',
+        }));
+    });
+
+    it('POST /proposals/:proposalId/revoke blocks non-authors', async () => {
+        getProposalById.mockResolvedValueOnce({
+            id: 7,
+            status: 'pending',
+            proposed_by: 'player-one',
+        });
+
+        const response = await request(app)
+            .post('/api/proposals/7/revoke')
+            .set('x-test-role', 'player')
+            .set('x-test-user', 'player-two');
+
+        expect(response.status).toBe(403);
+        expect(response.body).toEqual({ error: 'Only the proposal author can revoke it' });
+        expect(markRejected).not.toHaveBeenCalled();
+    });
+
     it('GET /:entityRoute returns collection for mapped entity route', async () => {
         manifestCrudService.getMany.mockResolvedValueOnce([{ id: 'c1', name: 'A' }]);
 
@@ -397,7 +536,7 @@ describe('domainRouter isolated unit tests', () => {
 
         expect(response.status).toBe(200);
         expect(response.body).toEqual({
-            entity: { id: 'char-1', name: 'Hero' },
+            entity: { id: 'char-1', name: 'Hero', pendingProposal: null },
             related: {
                 items: [
                     {
@@ -408,6 +547,7 @@ describe('domainRouter isolated unit tests', () => {
                                 acquired_date: 'jan-01-200',
                                 relinquished_date: null,
                                 short_description: 'Current possession',
+                                pendingProposal: null,
                             },
                         ],
                     },
@@ -418,6 +558,7 @@ describe('domainRouter isolated unit tests', () => {
                         name: 'Sun God',
                         relationship: {
                             short_description: 'Favored by the dawn',
+                            pendingProposal: null,
                         },
                     },
                 ],
@@ -438,7 +579,7 @@ describe('domainRouter isolated unit tests', () => {
 
         expect(response.status).toBe(200);
         expect(response.body).toEqual({
-            entity: { id: 'place-1', name: 'Othlorin' },
+            entity: { id: 'place-1', name: 'Othlorin', pendingProposal: null },
             related: {},
             children: [
                 { id: 'place-2', name: 'Wavethorn', parent_id: 'place-1' },
@@ -509,11 +650,13 @@ describe('domainRouter isolated unit tests', () => {
                         acquired_date: 'jan-01-200',
                         relinquished_date: 'jan-05-200',
                         short_description: 'First possession',
+                        pendingProposal: null,
                     },
                     {
                         acquired_date: 'jan-10-200',
                         relinquished_date: null,
                         short_description: 'Second possession',
+                        pendingProposal: null,
                     },
                 ],
             },
@@ -786,7 +929,8 @@ describe('domainRouter isolated unit tests', () => {
         expect(manifestCrudService.update).toHaveBeenCalledWith(
             'Character',
             { id: 'char-1' },
-            { name: 'Updated Name' }
+            { name: 'Updated Name' },
+            { actorUsername: 'dm-admin' }
         );
     });
 
@@ -900,7 +1044,8 @@ describe('domainRouter isolated unit tests', () => {
         expect(manifestCrudService.update).toHaveBeenCalledWith(
             'EventItem',
             { character_id: 'char-1', item_id: 'item-1' },
-            { short_description: 'updated context' }
+            { short_description: 'updated context' },
+            { actorUsername: 'dm-admin' }
         );
     });
 
@@ -963,7 +1108,8 @@ describe('domainRouter isolated unit tests', () => {
                 item_id: 'item-1',
                 acquired_date: '0200100001_age-of-descent-default',
             },
-            { relinquished_date: '0200100002_age-of-descent-default' }
+            { relinquished_date: '0200100002_age-of-descent-default' },
+            { actorUsername: 'dm-admin' }
         );
     });
 
@@ -1120,14 +1266,14 @@ describe('domainRouter isolated unit tests', () => {
             established_date: '100-01-01',
         }, {
             short_description: 'Mutual trust',
-        });
+        }, { actorUsername: 'dm-admin' });
         expect(manifestCrudService.update).toHaveBeenNthCalledWith(2, 'CharacterRelationship', {
             related_id: 'char-1',
             character_id: 'char-2',
             established_date: '100-01-01',
         }, {
             short_description: 'Mutual trust',
-        });
+        }, { actorUsername: 'dm-admin' });
     });
 
     it('DELETE /:entityRoute/:id/:relatedRoute/:relatedId deletes non-history relation', async () => {
@@ -1308,7 +1454,7 @@ describe('domainRouter isolated unit tests', () => {
         expect(manifestCrudService.insert).toHaveBeenCalledWith('CharacterItem', {
             character_id: 'char-1',
             item_id: 'item-1',
-        });
+        }, { actorUsername: 'dm-admin' });
     });
 
     it('POST /:entityRoute/:id/:relatedRoute creates relation with payload metadata', async () => {
@@ -1364,7 +1510,7 @@ describe('domainRouter isolated unit tests', () => {
             deity_id: 'deity-1',
             adopted_date: '100-01-01',
             short_description: 'Chosen by prophecy',
-        });
+        }, { actorUsername: 'dm-admin' });
     });
 
     it('POST /:entityRoute/:id/:relatedRoute returns 400 when history end date is not after start date', async () => {

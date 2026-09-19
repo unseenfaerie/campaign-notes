@@ -132,12 +132,16 @@ describe('genericCrudService with isolated manifest and in-memory db', () => {
             id: 'char-1',
             name: 'Aster',
             level: 3,
+            last_edited_by: null,
+            last_edited_at: null,
         });
 
         await expect(service.getOne('Character', { id: 'char-1' })).resolves.toEqual({
             id: 'char-1',
             name: 'Aster',
             level: 3,
+            last_edited_by: null,
+            last_edited_at: null,
         });
     });
 
@@ -146,12 +150,12 @@ describe('genericCrudService with isolated manifest and in-memory db', () => {
         await service.insert('Character', { id: 'char-2', name: 'Bryn', level: 5 });
 
         await expect(service.getMany('Character')).resolves.toEqual([
-            { id: 'char-1', name: 'Aster', level: 3 },
-            { id: 'char-2', name: 'Bryn', level: 5 },
+            { id: 'char-1', name: 'Aster', level: 3, last_edited_by: null, last_edited_at: null },
+            { id: 'char-2', name: 'Bryn', level: 5, last_edited_by: null, last_edited_at: null },
         ]);
 
         await expect(service.getMany('Character', { level: 5 })).resolves.toEqual([
-            { id: 'char-2', name: 'Bryn', level: 5 },
+            { id: 'char-2', name: 'Bryn', level: 5, last_edited_by: null, last_edited_at: null },
         ]);
     });
 
@@ -174,7 +178,7 @@ describe('genericCrudService with isolated manifest and in-memory db', () => {
     it('resolves named enums when persisting records', async () => {
         await expect(
             service.insert('Place', { id: 'the-site', name: 'The Site', type: 'site' })
-        ).resolves.toEqual({ id: 'the-site', name: 'The Site', type: 'site' });
+        ).resolves.toEqual({ id: 'the-site', name: 'The Site', type: 'site', last_edited_by: null, last_edited_at: null });
 
         await expect(
             service.insert('Place', { id: 'the-village', name: 'The Village', type: 'village' })
@@ -192,7 +196,7 @@ describe('genericCrudService with isolated manifest and in-memory db', () => {
             service.update('Character', { id: 'char-1' }, { level: 4 })
         ).resolves.toEqual({
             updated: 1,
-            record: { id: 'char-1', name: 'Aster', level: 4 },
+            record: { id: 'char-1', name: 'Aster', level: 4, last_edited_by: null, last_edited_at: null },
         });
     });
 
@@ -225,12 +229,16 @@ describe('genericCrudService with isolated manifest and in-memory db', () => {
                 item_id: 'item-1',
                 acquired_date: '200-01-01',
                 short_description: 'Found in the ruins',
+                last_edited_by: null,
+                last_edited_at: null,
             },
             {
                 character_id: 'char-1',
                 item_id: 'item-1',
                 acquired_date: '200-02-01',
                 short_description: 'Recovered after it was lost',
+                last_edited_by: null,
+                last_edited_at: null,
             },
         ]);
 
@@ -245,6 +253,8 @@ describe('genericCrudService with isolated manifest and in-memory db', () => {
             item_id: 'item-1',
             acquired_date: '200-02-01',
             short_description: 'Recovered after it was lost',
+            last_edited_by: null,
+            last_edited_at: null,
         });
     });
 
@@ -264,6 +274,8 @@ describe('genericCrudService with isolated manifest and in-memory db', () => {
                 id: 1,
                 entity_id: 'char-1',
                 alias: 'The Lantern',
+                last_edited_by: null,
+                last_edited_at: null,
             },
         ]);
     });
