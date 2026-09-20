@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getDefaultEntityRoute, getEntitySchemas } from '../services/metaService'
+import { getEntitySchemas } from '../services/metaService'
 import { useAuthStore } from '../stores/auth'
 import AdminUserCreateView from '../views/AdminUserCreateView.vue'
 import AdminUserDetailView from '../views/AdminUserDetailView.vue'
@@ -7,6 +7,7 @@ import AdminUsersView from '../views/AdminUsersView.vue'
 import EntityCreateView from '../views/EntityCreateView.vue'
 import EntityDetailView from '../views/EntityDetailView.vue'
 import EntityListView from '../views/EntityListView.vue'
+import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 import ProposalInboxView from '../views/ProposalInboxView.vue'
@@ -23,8 +24,7 @@ const router = createRouter({
         {
             path: '/',
             name: 'home',
-            component: EntityListView,
-            props: { entityRoute: '' },
+            component: HomeView,
         },
         {
             path: '/:entityRoute/new',
@@ -94,20 +94,15 @@ router.beforeEach(async (to) => {
         await auth.bootstrap()
     }
 
-    if (to.name === 'home') {
-        if (!auth.isAuthenticated.value) {
-            return {
-                name: 'login',
-                query: { redirect: to.fullPath },
-            }
+    if (to.name === 'home' && !auth.isAuthenticated.value) {
+        return {
+            name: 'login',
+            query: { redirect: to.fullPath },
         }
-
-        return { path: `/${await getDefaultEntityRoute()}` }
     }
 
     if (to.name === 'login' && auth.isAuthenticated.value) {
-        const defaultEntityRoute = await getDefaultEntityRoute()
-        const redirect = typeof to.query.redirect === 'string' ? to.query.redirect : `/${defaultEntityRoute}`
+        const redirect = typeof to.query.redirect === 'string' ? to.query.redirect : '/'
         return redirect
     }
 
@@ -136,7 +131,7 @@ router.beforeEach(async (to) => {
     }
 
     if (to.meta.requiresAdmin && !auth.isAdmin.value) {
-        return { path: `/${await getDefaultEntityRoute()}` }
+        return { path: '/' }
     }
 
     return true

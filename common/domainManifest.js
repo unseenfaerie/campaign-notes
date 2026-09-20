@@ -6,7 +6,7 @@
 const { getEnumValues } = require('./enums');
 
 const domainManifest = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     entities: {
         Character: {
             table: 'characters',

@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ApiError } from '../services/apiClient'
-import { getDefaultEntityRoute } from '../services/metaService'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
@@ -20,9 +19,7 @@ async function submitLogin() {
 
   try {
     await auth.login(username.value, password.value)
-    const redirect = typeof route.query.redirect === 'string'
-      ? route.query.redirect
-      : `/${await getDefaultEntityRoute()}`
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
     await router.push(redirect)
   } catch (error) {
     if (error instanceof ApiError) {
