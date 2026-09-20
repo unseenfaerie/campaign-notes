@@ -245,6 +245,18 @@ a:hover {
     gap: 0.5rem;
 }
 
+.post-meta {
+    margin: 0.2rem 0 0.6rem;
+    color: var(--ink-700);
+    font-size: 0.88rem;
+}
+
+.post-body {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+
 .status-card {
     border: 1px solid var(--line-soft);
     border-radius: var(--radius);

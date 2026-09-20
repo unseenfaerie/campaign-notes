@@ -10,6 +10,7 @@ const authRouter = require('./routes/authRouter');
 const adminRouter = require('./routes/adminRouter');
 const metaRouter = require('./routes/metaRouter');
 const mentionsRouter = require('./routes/mentionsRouter');
+const postsRouter = require('./routes/postsRouter');
 const { requireAuth, requireRole } = require('./middleware/authMiddleware');
 const { db, initializeDatabase } = require('./data/db');
 const config = require('./config');
@@ -65,6 +66,7 @@ app.use('/api/admin', requireAuth, adminRouter);
 app.use('/api/data', requireAuth, requireRole(['dm']), dataRouter);
 app.use('/api/meta', requireAuth, metaRouter);
 app.use('/api/mentions', requireAuth, mentionsRouter);
+app.use('/api/posts', requireAuth, postsRouter);
 app.use('/api', requireAuth, domainRouter);
 
 app.use((err, req, res, next) => {

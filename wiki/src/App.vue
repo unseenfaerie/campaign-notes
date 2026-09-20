@@ -63,6 +63,7 @@ onBeforeUnmount(() => {
           <summary>Navigation</summary>
           <div class="nav-panel-body">
             <nav aria-label="Entity navigation" class="nav-links">
+              <RouterLink to="/" class="nav-link">Home</RouterLink>
               <RouterLink
                 v-for="entity in navigationEntities"
                 :key="entity.route"
