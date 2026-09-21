@@ -6,11 +6,13 @@ export const API_BASE_URL = rawBaseUrl?.trim() || DEFAULT_API_BASE_URL
 type AccessTokenGetter = () => string | null
 type UnauthorizedHandler = () => void
 type RefreshHandler = () => Promise<boolean>
+type ViewingCharacterGetter = () => string | null
 
 let accessTokenGetter: AccessTokenGetter = () => null
 let unauthorizedHandler: UnauthorizedHandler = () => undefined
 let refreshHandler: RefreshHandler | null = null
 let refreshInFlight: Promise<boolean> | null = null
+let viewingCharacterGetter: ViewingCharacterGetter = () => null
 
 export class ApiError extends Error {
     status: number
@@ -36,10 +38,12 @@ export function configureApiClient(options: {
     getAccessToken: AccessTokenGetter
     onUnauthorized: UnauthorizedHandler
     refreshAccessToken?: RefreshHandler
+    getViewingCharacterId?: ViewingCharacterGetter
 }) {
     accessTokenGetter = options.getAccessToken
     unauthorizedHandler = options.onUnauthorized
     refreshHandler = options.refreshAccessToken ?? null
+    viewingCharacterGetter = options.getViewingCharacterId ?? (() => null)
 }
 
 async function refreshAccessTokenOnce(): Promise<boolean> {
@@ -73,6 +77,11 @@ function buildHeaders(inputHeaders: HeadersInit | undefined, body: unknown, auth
         const token = accessTokenGetter()
         if (token) {
             headers.set('Authorization', `Bearer ${token}`)
+        }
+
+        const viewingCharacterId = viewingCharacterGetter()
+        if (viewingCharacterId) {
+            headers.set('X-Viewing-Character', viewingCharacterId)
         }
     }
 

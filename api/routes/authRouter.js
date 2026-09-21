@@ -11,6 +11,7 @@ const {
   revokeRefreshSession,
   listAnchoredCharacterIdsByUserId,
 } = require('../data/authRepository');
+const { manifestCrudService } = require('../data/genericCrudService');
 const { requireAuth } = require('../middleware/authMiddleware');
 const {
   jwtAccessSecret: ACCESS_SECRET,
@@ -241,6 +242,34 @@ router.get('/me', requireAuth, async (req, res) => {
     });
   } catch (_err) {
     return res.status(500).json({ error: 'Failed to load current user' });
+  }
+});
+
+// Characters this user is allowed to browse the wiki as: a player's own anchors, or (for
+// DMs) every player character. Deliberately bypasses hop-based visibility filtering, since
+// picking a perspective must not depend on what's already reachable from another perspective.
+router.get('/me/characters', requireAuth, async (req, res) => {
+  try {
+    if (req.auth.role === 'player') {
+      const anchoredCharacterIds = await listAnchoredCharacterIdsByUserId(req.auth.userId);
+      const characters = [];
+      for (const characterId of anchoredCharacterIds) {
+        const character = await manifestCrudService.getOne('Character', { id: characterId });
+        if (character) {
+          characters.push(character);
+        }
+      }
+      return res.json(characters);
+    }
+
+    if (req.auth.role === 'dm') {
+      const allCharacters = await manifestCrudService.getMany('Character');
+      return res.json(allCharacters.filter((character) => character.player_character === true));
+    }
+
+    return res.json([]);
+  } catch (_err) {
+    return res.status(500).json({ error: 'Failed to load selectable characters' });
   }
 });
 

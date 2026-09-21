@@ -3,7 +3,7 @@
  *
  * Rules:
  * - DM (role='dm'): Sees all entities and relations (bypass all checks)
- * - Player (role='player'): Sees anchored characters + their relations + related entity pages + public entities/relations
+ * - Player (role='player'): Sees their active viewing character + its relations + related entity pages + public entities/relations
  *
  * Visibility is controlled by the is_public boolean field on each entity instance.
  */
@@ -342,9 +342,10 @@ async function isEntityRelatedToAnchoredCharacter(manifestCrudService, entityRou
 /**
  * Get the full transitive closure of visible entity IDs for a user
  *
- * Performs BFS traversal from all anchored character IDs through all relations,
- * collecting every entity reachable from the player's characters. This implements
- * clustered visibility: players see everything their characters connect to, recursively.
+ * Performs BFS traversal from the single active viewing character (the character the
+ * request is currently browsing as) through all relations, collecting every entity
+ * reachable from it. This implements clustered visibility: a player sees everything
+ * their active character connects to, recursively.
  *
  * Algorithm:
  * 1. Start with all anchored character IDs in a queue

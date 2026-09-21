@@ -13,6 +13,13 @@ jest.mock('../../data/authRepository', () => ({
     listAnchoredCharacterIdsByUserId: jest.fn(),
 }));
 
+jest.mock('../../data/genericCrudService', () => ({
+    manifestCrudService: {
+        getOne: jest.fn(),
+        getMany: jest.fn(),
+    },
+}));
+
 jest.mock('bcryptjs', () => ({
     compare: jest.fn(),
 }));
@@ -32,6 +39,7 @@ const {
     revokeRefreshSession,
     listAnchoredCharacterIdsByUserId,
 } = require('../../data/authRepository');
+const { manifestCrudService } = require('../../data/genericCrudService');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const authRouter = require('../authRouter');
@@ -378,5 +386,61 @@ describe('authRouter', () => {
 
         expect(response.status).toBe(401);
         expect(response.body).toEqual({ error: 'Invalid user session' });
+    });
+
+    it('GET /api/auth/me/characters returns a player\'s own anchored characters', async () => {
+        const app = createApp();
+
+        jwt.verify.mockImplementationOnce(() => ({
+            sub: 'player-1',
+            username: 'rogue',
+            role: 'player',
+            sid: 'session-1',
+        }));
+
+        listAnchoredCharacterIdsByUserId.mockResolvedValueOnce(['char-1', 'char-2']);
+        manifestCrudService.getOne.mockImplementation((_entityName, where) => {
+            if (where.id === 'char-1') {
+                return Promise.resolve({ id: 'char-1', name: 'Anchor One', player_character: true });
+            }
+            if (where.id === 'char-2') {
+                return Promise.resolve({ id: 'char-2', name: 'Anchor Two', player_character: true });
+            }
+            return Promise.resolve(null);
+        });
+
+        const response = await request(app)
+            .get('/api/auth/me/characters')
+            .set('Authorization', 'Bearer access-token-good');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([
+            { id: 'char-1', name: 'Anchor One', player_character: true },
+            { id: 'char-2', name: 'Anchor Two', player_character: true },
+        ]);
+    });
+
+    it('GET /api/auth/me/characters returns every player character for a DM', async () => {
+        const app = createApp();
+
+        jwt.verify.mockImplementationOnce(() => ({
+            sub: 'dm-admin',
+            username: 'faerie',
+            role: 'dm',
+            sid: 'session-1',
+        }));
+
+        manifestCrudService.getMany.mockResolvedValueOnce([
+            { id: 'char-1', name: 'PC One', player_character: true },
+            { id: 'npc-1', name: 'An NPC', player_character: false },
+        ]);
+
+        const response = await request(app)
+            .get('/api/auth/me/characters')
+            .set('Authorization', 'Bearer access-token-good');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([{ id: 'char-1', name: 'PC One', player_character: true }]);
+        expect(manifestCrudService.getMany).toHaveBeenCalledWith('Character');
     });
 });
