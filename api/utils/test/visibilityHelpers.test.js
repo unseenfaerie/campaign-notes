@@ -11,9 +11,68 @@ const {
     filterEntitiesByVisibility,
     isEntityRelatedToAnchoredCharacter,
     getVisibleEntityIdsForUser,
+    getHopsForIntelligence,
+    getVisibilityHopsForCharacter,
 } = require('../../utils/visibilityHelpers');
 
 describe('visibilityHelpers', () => {
+    describe('getHopsForIntelligence', () => {
+        it('returns 0 hops for intelligence 0 or 1', () => {
+            expect(getHopsForIntelligence(0)).toBe(0);
+            expect(getHopsForIntelligence(1)).toBe(0);
+        });
+
+        it('returns 1 hop for intelligence 2 through 5', () => {
+            expect(getHopsForIntelligence(2)).toBe(1);
+            expect(getHopsForIntelligence(5)).toBe(1);
+        });
+
+        it('returns 2 hops for intelligence 6 through 12', () => {
+            expect(getHopsForIntelligence(6)).toBe(2);
+            expect(getHopsForIntelligence(12)).toBe(2);
+        });
+
+        it('returns 3 hops for intelligence 13 through 17', () => {
+            expect(getHopsForIntelligence(13)).toBe(3);
+            expect(getHopsForIntelligence(17)).toBe(3);
+        });
+
+        it('returns 4 hops for intelligence 18 and above', () => {
+            expect(getHopsForIntelligence(18)).toBe(4);
+            expect(getHopsForIntelligence(25)).toBe(4);
+        });
+
+        it('treats missing or non-numeric intelligence as 0', () => {
+            expect(getHopsForIntelligence(undefined)).toBe(0);
+            expect(getHopsForIntelligence(null)).toBe(0);
+            expect(getHopsForIntelligence(NaN)).toBe(0);
+        });
+    });
+
+    describe('getVisibilityHopsForCharacter', () => {
+        it('returns undefined when there is no character id', async () => {
+            const manifestCrudService = { getOne: jest.fn() };
+            const result = await getVisibilityHopsForCharacter(manifestCrudService, null);
+            expect(result).toBeUndefined();
+            expect(manifestCrudService.getOne).not.toHaveBeenCalled();
+        });
+
+        it('looks up the character and derives hops from its intelligence', async () => {
+            const manifestCrudService = {
+                getOne: jest.fn().mockResolvedValue({ id: 'char-1', intelligence: 14 }),
+            };
+            const result = await getVisibilityHopsForCharacter(manifestCrudService, 'char-1');
+            expect(result).toBe(3);
+            expect(manifestCrudService.getOne).toHaveBeenCalledWith('Character', { id: 'char-1' });
+        });
+
+        it('treats a missing character record as intelligence 0', async () => {
+            const manifestCrudService = { getOne: jest.fn().mockResolvedValue(null) };
+            const result = await getVisibilityHopsForCharacter(manifestCrudService, 'ghost');
+            expect(result).toBe(0);
+        });
+    });
+
     describe('isDm', () => {
         it('should return true for user with dm role', () => {
             const user = { role: 'dm', userId: '1' };

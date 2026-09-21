@@ -11,11 +11,45 @@
 const { domainManifest } = require('../../common/domainManifest');
 
 /**
- * Player visibility hop limit: how many relationship hops a player can traverse from their
- * anchored characters to see related entities (0 = anchored characters + public only).
- * Tune here directly; DMs are unaffected (handled separately).
+ * Visibility hop brackets: how many relationship hops a player can traverse from their
+ * active viewing character, based on that character's intelligence score (0 = that
+ * character's own page + public only). Tune here directly; DMs are unaffected.
  */
-const PLAYER_VISIBILITY_HOPS = 3;
+const VISIBILITY_HOP_BRACKETS = [
+    { maxIntelligence: 1, hops: 0 },
+    { maxIntelligence: 5, hops: 1 },
+    { maxIntelligence: 12, hops: 2 },
+    { maxIntelligence: 17, hops: 3 },
+    { maxIntelligence: Infinity, hops: 4 },
+];
+
+/**
+ * Resolve the visibility hop count for a given intelligence score.
+ *
+ * @param {number|null|undefined} intelligence - the viewing character's intelligence score
+ * @returns {number} the number of relationship hops that character can see through
+ */
+function getHopsForIntelligence(intelligence) {
+    const score = typeof intelligence === 'number' && !Number.isNaN(intelligence) ? intelligence : 0;
+    const bracket = VISIBILITY_HOP_BRACKETS.find((candidate) => score <= candidate.maxIntelligence);
+    return bracket.hops;
+}
+
+/**
+ * Resolve the visibility hop count for the character currently being viewed as.
+ *
+ * @param {object} manifestCrudService - the CRUD service for database access
+ * @param {string|null|undefined} characterId - the active viewing character id, if any
+ * @returns {Promise<number|undefined>} hop count, or undefined when there is no viewing character
+ */
+async function getVisibilityHopsForCharacter(manifestCrudService, characterId) {
+    if (!characterId) {
+        return undefined;
+    }
+
+    const character = await manifestCrudService.getOne('Character', { id: characterId });
+    return getHopsForIntelligence(character ? character.intelligence : undefined);
+}
 
 /**
  * Check if a user has the DM role
@@ -585,7 +619,8 @@ async function getRelatedEntityIds(manifestCrudService, entityRoute, anchoredCha
 }
 
 module.exports = {
-    PLAYER_VISIBILITY_HOPS,
+    getHopsForIntelligence,
+    getVisibilityHopsForCharacter,
     isDm,
     isAnchoredCharacter,
     getEntityDefByRoute,

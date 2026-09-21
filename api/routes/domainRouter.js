@@ -40,7 +40,7 @@ const {
     diffAgainstCurrent,
 } = require('../utils/proposalHelpers');
 const {
-    PLAYER_VISIBILITY_HOPS,
+    getVisibilityHopsForCharacter,
     isEntityVisibleToUser,
     isRelationVisibleToUser,
     filterEntitiesByVisibility,
@@ -532,25 +532,14 @@ async function buildProposalTargetView(proposal) {
     };
 }
 
-/**
- * Get the player visibility hops limit for a user.
- * DMs always see all entities (unlimited/undefined).
- * Players get the configured limit (see PLAYER_VISIBILITY_HOPS in visibilityHelpers.js).
- * Unauthenticated requests have no player visibility-hop limit.
- */
-function getPlayerVisibilityHops(auth) {
-    if (!auth || auth.role !== 'player') {
-        return undefined;
-    }
-    return PLAYER_VISIBILITY_HOPS;
-}
-
 // Resolves the single character (if any) this request is browsing as, for read-visibility only.
+// Hop count is derived from that character's intelligence (see visibilityHelpers.js).
 async function resolveVisibilityContext(req) {
     const viewingCharacterId = await resolveViewingCharacterId(req, manifestCrudService);
     const visibilityAuth = getVisibilityAuth(req.auth, viewingCharacterId);
     const viewingCharacterIds = viewingCharacterId ? [viewingCharacterId] : [];
-    return { visibilityAuth, viewingCharacterIds };
+    const viewingCharacterHops = await getVisibilityHopsForCharacter(manifestCrudService, viewingCharacterId);
+    return { visibilityAuth, viewingCharacterIds, viewingCharacterHops };
 }
 
 function ensureDmForMutation(req) {
@@ -752,7 +741,7 @@ router.get('/:entityRoute', async (req, res) => {
         const records = await manifestCrudService.getMany(entityName);
 
         // Get visibility scope for this request (single viewing character, if any)
-        const { visibilityAuth, viewingCharacterIds } = await resolveVisibilityContext(req);
+        const { visibilityAuth, viewingCharacterIds, viewingCharacterHops } = await resolveVisibilityContext(req);
         let visibleEntityIds = new Set();
 
         // For players (or DM previewing as a character), compute full transitive visibility graph
@@ -760,7 +749,7 @@ router.get('/:entityRoute', async (req, res) => {
             visibleEntityIds = await getVisibleEntityIdsForUser(
                 manifestCrudService,
                 viewingCharacterIds,
-                getPlayerVisibilityHops(visibilityAuth)
+                viewingCharacterHops
             );
         }
 
@@ -801,7 +790,7 @@ router.get('/:entityRoute/:id', async (req, res) => {
         }
 
         // Check visibility
-        const { visibilityAuth, viewingCharacterIds } = await resolveVisibilityContext(req);
+        const { visibilityAuth, viewingCharacterIds, viewingCharacterHops } = await resolveVisibilityContext(req);
         let isVisible = isEntityVisibleToUser(record, req.params.entityRoute, visibilityAuth, viewingCharacterIds);
 
         // For players (or DM previewing as a character), also check transitive visibility graph
@@ -809,7 +798,7 @@ router.get('/:entityRoute/:id', async (req, res) => {
             const visibleEntityIds = await getVisibleEntityIdsForUser(
                 manifestCrudService,
                 viewingCharacterIds,
-                getPlayerVisibilityHops(visibilityAuth)
+                viewingCharacterHops
             );
             isVisible = visibleEntityIds.has(idValue);
         }
@@ -893,13 +882,13 @@ router.post('/:entityRoute/:id/propose', async (req, res) => {
             return res.status(404).json({ error: 'Record not found' });
         }
 
-        const { visibilityAuth, viewingCharacterIds } = await resolveVisibilityContext(req);
+        const { visibilityAuth, viewingCharacterIds, viewingCharacterHops } = await resolveVisibilityContext(req);
         let isVisible = isEntityVisibleToUser(record, req.params.entityRoute, visibilityAuth, viewingCharacterIds);
         if (!isVisible) {
             const visibleEntityIds = await getVisibleEntityIdsForUser(
                 manifestCrudService,
                 viewingCharacterIds,
-                getPlayerVisibilityHops(visibilityAuth)
+                viewingCharacterHops
             );
             isVisible = visibleEntityIds.has(idValue);
         }
@@ -1014,7 +1003,7 @@ router.get('/:entityRoute/:id/full', async (req, res) => {
         }
 
         // Check visibility of the main entity
-        const { visibilityAuth, viewingCharacterIds } = await resolveVisibilityContext(req);
+        const { visibilityAuth, viewingCharacterIds, viewingCharacterHops } = await resolveVisibilityContext(req);
         let isVisible = isEntityVisibleToUser(record, req.params.entityRoute, visibilityAuth, viewingCharacterIds);
 
         // For players (or DM previewing as a character), compute the full transitive visibility
@@ -1025,7 +1014,7 @@ router.get('/:entityRoute/:id/full', async (req, res) => {
             visibleEntityIds = await getVisibleEntityIdsForUser(
                 manifestCrudService,
                 viewingCharacterIds,
-                getPlayerVisibilityHops(visibilityAuth)
+                viewingCharacterHops
             );
             if (!isVisible) {
                 isVisible = visibleEntityIds.has(idValue);
@@ -1093,7 +1082,7 @@ router.get('/:entityRoute/:id/:relatedRoute', async (req, res) => {
         }
 
         // Check visibility of source entity
-        const { visibilityAuth, viewingCharacterIds } = await resolveVisibilityContext(req);
+        const { visibilityAuth, viewingCharacterIds, viewingCharacterHops } = await resolveVisibilityContext(req);
         let sourceVisible = isEntityVisibleToUser(sourceRecord, req.params.entityRoute, visibilityAuth, viewingCharacterIds);
 
         let visibleEntityIds;
@@ -1101,7 +1090,7 @@ router.get('/:entityRoute/:id/:relatedRoute', async (req, res) => {
             visibleEntityIds = await getVisibleEntityIdsForUser(
                 manifestCrudService,
                 viewingCharacterIds,
-                getPlayerVisibilityHops(visibilityAuth)
+                viewingCharacterHops
             );
             if (!sourceVisible) {
                 sourceVisible = visibleEntityIds.has(sourceId);
