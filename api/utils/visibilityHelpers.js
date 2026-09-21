@@ -414,9 +414,10 @@ async function getVisibleEntityIdsForUser(manifestCrudService, anchoredCharacter
     while (queue.length > 0) {
         const { id: currentEntityId, hopDepth: currentHopDepth } = queue.shift();
 
-        // Check if we should continue expanding from this entity (respects maxHops limit)
-        // Skip relation queries entirely if we've reached or exceeded the hop limit
-        const shouldExpandFurther = maxHops === undefined || currentHopDepth < maxHops;
+        // Check if we should continue expanding from this entity (respects maxHops limit).
+        // Expansion is allowed one hop past maxHops so the outer "locked" edge is discovered
+        // (entities at maxHops+1 are added to the map but never themselves expanded).
+        const shouldExpandFurther = maxHops === undefined || currentHopDepth < maxHops + 1;
         if (!shouldExpandFurther) {
             continue;
         }
@@ -532,7 +533,8 @@ function resolveEntityAccess(entity, entityRoute, user, anchoredCharacterIds = [
         return 'hidden';
     }
 
-    return maxHops === undefined || hopDepth < maxHops ? 'full' : 'locked';
+    // hopDepth 1..maxHops is fully visible; the map's outer edge (maxHops + 1) is locked.
+    return maxHops === undefined || hopDepth <= maxHops ? 'full' : 'locked';
 }
 
 /**

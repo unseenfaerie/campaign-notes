@@ -421,7 +421,7 @@ describe('domainRouter isolated unit tests', () => {
         expect(manifestCrudService.getMany).toHaveBeenCalledWith('Character');
     });
 
-    it('GET /:entityRoute renders hop-boundary entities as locked stubs for a player', async () => {
+    it('GET /:entityRoute renders immediate relations as full and hides unrelated private entities for a player', async () => {
         listAnchoredCharacterIdsByUserId.mockResolvedValue(['char-1']);
         manifestCrudService.getOne.mockImplementation(async (resourceName, where) => {
             if (resourceName === 'Character' && where.id === 'char-1') {
@@ -447,8 +447,10 @@ describe('domainRouter isolated unit tests', () => {
             .set('x-viewing-character', 'char-1');
 
         expect(response.status).toBe(200);
+        // item-1 is an immediate (hop 1) relation of char-1, so with maxHops=1 it renders in full;
+        // item-3 has no relation to char-1 at all and is hidden entirely.
         expect(response.body).toEqual([
-            { id: 'item-1', name: 'Sword', locked: true },
+            { id: 'item-1', name: 'Sword' },
             { id: 'item-2', name: 'Shield', is_public: true },
         ]);
     });
@@ -604,7 +606,7 @@ describe('domainRouter isolated unit tests', () => {
         listAnchoredCharacterIdsByUserId.mockResolvedValue(['char-1']);
         manifestCrudService.getOne.mockImplementation(async (resourceName, where) => {
             if (resourceName === 'Character' && where.id === 'char-1') {
-                return { id: 'char-1', intelligence: 3 }; // maxHops = 1
+                return { id: 'char-1', intelligence: 1 }; // maxHops = 0, so item-1 (hop 1) is the locked edge
             }
             if (resourceName === 'Item' && where.id === 'item-1') {
                 return { id: 'item-1', name: 'Sword' };
@@ -644,13 +646,15 @@ describe('domainRouter isolated unit tests', () => {
             }
             return null;
         });
-        manifestCrudService.getMany
-            .mockResolvedValueOnce([
-                { character_id: 'char-1', item_id: 'item-1', short_description: 'Current possession' },
-            ])
-            .mockResolvedValueOnce([
-                { deity_id: 'deity-1', character_id: 'char-1', short_description: 'Favored by the dawn' },
-            ]);
+        manifestCrudService.getMany.mockImplementation(async (relationName, where) => {
+            if (relationName === 'CharacterItem' && where.character_id === 'char-1') {
+                return [{ character_id: 'char-1', item_id: 'item-1', short_description: 'Current possession' }];
+            }
+            if (relationName === 'EventCharacter' && where.character_id === 'char-1') {
+                return [{ deity_id: 'deity-1', character_id: 'char-1', short_description: 'Favored by the dawn' }];
+            }
+            return [];
+        });
 
         const response = await request(app)
             .get('/api/characters/char-1/full')
@@ -1050,7 +1054,7 @@ describe('domainRouter isolated unit tests', () => {
         listAnchoredCharacterIdsByUserId.mockResolvedValue(['char-1']);
         manifestCrudService.getOne.mockImplementation(async (resourceName, where) => {
             if (resourceName === 'Character' && where.id === 'char-1') {
-                return { id: 'char-1', intelligence: 3 }; // maxHops = 1
+                return { id: 'char-1', intelligence: 1 }; // maxHops = 0, so item-1 (hop 1) is the locked edge
             }
             if (resourceName === 'Item' && where.id === 'item-1') {
                 return { id: 'item-1', name: 'Sword' };
