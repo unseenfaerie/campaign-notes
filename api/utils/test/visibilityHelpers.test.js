@@ -369,7 +369,7 @@ describe('visibilityHelpers', () => {
         it('should return empty set for user with no anchored characters', async () => {
             const mockCrudService = {};
             const result = await getVisibleEntityIdsForUser(mockCrudService, []);
-            expect(result).toEqual(new Set());
+            expect(result).toEqual(new Map());
         });
 
         it('should return anchored characters at hop depth 0 with no expansion', async () => {
@@ -378,7 +378,7 @@ describe('visibilityHelpers', () => {
             };
             const anchoredIds = ['char-1', 'char-2'];
             const result = await getVisibleEntityIdsForUser(mockCrudService, anchoredIds, 0);
-            expect(result).toEqual(new Set(['char-1', 'char-2']));
+            expect(result).toEqual(new Map([['char-1', 0], ['char-2', 0]]));
         });
 
         it('should expand to direct relations at hop depth 1', async () => {
@@ -396,8 +396,8 @@ describe('visibilityHelpers', () => {
                 }),
             };
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 1);
-            expect(result).toContain('char-1');
-            expect(result).toContain('deity-1');
+            expect(result.has('char-1')).toBe(true);
+            expect(result.has('deity-1')).toBe(true);
         });
 
         it('should not expand beyond hop limit', async () => {
@@ -419,9 +419,9 @@ describe('visibilityHelpers', () => {
             };
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 1);
             // Should have char-1 and deity-1, but NOT sphere-1 (that would be 2 hops away)
-            expect(result).toContain('char-1');
-            expect(result).toContain('deity-1');
-            expect(result).not.toContain('sphere-1');
+            expect(result.has('char-1')).toBe(true);
+            expect(result.has('deity-1')).toBe(true);
+            expect(result.has('sphere-1')).toBe(false);
         });
 
         it('should expand to 2 hops when maxHops=2', async () => {
@@ -441,9 +441,9 @@ describe('visibilityHelpers', () => {
             };
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 2);
             // Should have all three entities
-            expect(result).toContain('char-1');
-            expect(result).toContain('deity-1');
-            expect(result).toContain('sphere-1');
+            expect(result.has('char-1')).toBe(true);
+            expect(result.has('deity-1')).toBe(true);
+            expect(result.has('sphere-1')).toBe(true);
         });
 
         it('should handle unlimited hops (maxHops=undefined)', async () => {
@@ -468,9 +468,9 @@ describe('visibilityHelpers', () => {
             };
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], undefined);
             // All entities should be visible with unlimited hops
-            expect(result).toContain('char-1');
-            expect(result).toContain('deity-1');
-            expect(result).toContain('sphere-1');
+            expect(result.has('char-1')).toBe(true);
+            expect(result.has('deity-1')).toBe(true);
+            expect(result.has('sphere-1')).toBe(true);
         });
 
         it('should handle self-relations (Character <-> Character) within hop limit', async () => {
@@ -491,9 +491,9 @@ describe('visibilityHelpers', () => {
                 }),
             };
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 1);
-            expect(result).toContain('char-1');
-            expect(result).toContain('char-2');
-            expect(result).not.toContain('char-3'); // 2 hops, beyond maxHops=1
+            expect(result.has('char-1')).toBe(true);
+            expect(result.has('char-2')).toBe(true);
+            expect(result.has('char-3')).toBe(false); // 2 hops, beyond maxHops=1
         });
 
         it('should deduplicate entities seen via multiple paths', async () => {
@@ -512,19 +512,19 @@ describe('visibilityHelpers', () => {
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1', 'char-2'], 1);
             // deity-1 should appear only once in the Set
             expect(result.size).toBe(3); // char-1, char-2, deity-1
-            expect(result).toContain('deity-1');
+            expect(result.has('deity-1')).toBe(true);
         });
 
         it('should handle empty anchored character list', async () => {
             const mockCrudService = {};
             const result = await getVisibleEntityIdsForUser(mockCrudService, [], 1);
-            expect(result).toEqual(new Set());
+            expect(result).toEqual(new Map());
         });
 
         it('should handle null anchored character list', async () => {
             const mockCrudService = {};
             const result = await getVisibleEntityIdsForUser(mockCrudService, null, 1);
-            expect(result).toEqual(new Set());
+            expect(result).toEqual(new Map());
         });
 
         it('should continue expanding from anchored characters even at hop 0 (they are the starting point)', async () => {
@@ -534,7 +534,7 @@ describe('visibilityHelpers', () => {
             };
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 0);
             // With 0 hops, we should only see the anchored character, not deities
-            expect(result).toEqual(new Set(['char-1']));
+            expect(result).toEqual(new Map([['char-1', 0]]));
             // getMany should not have been called at all since we don't expand at hop 0
             expect(mockCrudService.getMany).not.toHaveBeenCalled();
         });

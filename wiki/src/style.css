@@ -316,6 +316,14 @@ a:hover {
     font-weight: 600;
 }
 
+.entity-card.is-locked a {
+    color: #7d9fc7;
+}
+
+.entity-card.is-locked a:hover {
+    color: #6385ad;
+}
+
 .field-list {
     margin: 0;
     display: grid;

@@ -119,6 +119,7 @@ const entityPageTitle = computed(() => {
 })
 
 const entityPendingProposal = computed(() => (fullData.value ? pendingProposalOf(fullData.value.entity) : null))
+const isEntityLocked = computed(() => Boolean(fullData.value?.entity.locked))
 const effectiveEntity = computed(() =>
   fullData.value ? withProposalView(fullData.value.entity, entityPendingProposal.value, 'entity') : {}
 )
@@ -964,6 +965,11 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
     <p v-else-if="errorMessage" class="status-card error">{{ errorMessage }}</p>
 
     <article v-else-if="fullData" class="wiki-article">
+      <section v-if="isEntityLocked" class="core-data-section">
+        <h3>Core data</h3>
+        <p class="status-card">Locked</p>
+      </section>
+      <template v-else>
       <section class="core-data-section">
         <div class="section-heading-row">
           <h3>Core data</h3>
@@ -1204,7 +1210,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
             <div class="section-heading-row">
               <h4>
                 <button
-                  v-if="hasCollapsibleRecordBody(relatedRoute)"
+                  v-if="hasCollapsibleRecordBody(relatedRoute) && !record.locked"
                   type="button"
                   class="record-collapse-toggle"
                   :class="{ 'is-expanded': !isRecordCollapsed(relatedRoute, record, index) }"
@@ -1225,7 +1231,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 </RouterLink>
                 <template v-else>{{ relatedRecordLabel(record) }}</template>
               </h4>
-              <div class="row-actions-end">
+              <div v-if="!record.locked" class="row-actions-end">
                 <button
                   v-if="isRelationshipKind(relatedRoute) && canOpenRelationEdit(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}` && !pendingProposalOf(relationPayload(record))"
                   type="button"
@@ -1246,7 +1252,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
             </div>
 
             <ProposalBanner
-              v-if="isRelationshipKind(relatedRoute) && pendingProposalOf(relationPayload(record))"
+              v-if="!record.locked && isRelationshipKind(relatedRoute) && pendingProposalOf(relationPayload(record))"
               :proposal="pendingProposalOf(relationPayload(record))!"
               :is-admin="auth.isAdmin.value"
               :is-author="isProposalAuthor(pendingProposalOf(relationPayload(record))!)"
@@ -1257,8 +1263,9 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               @revoke="revokePendingProposal(pendingProposalOf(relationPayload(record))!)"
             />
 
+            <p v-if="record.locked" class="status-card">Locked</p>
             <div
-              v-if="!hasCollapsibleRecordBody(relatedRoute) || !isRecordCollapsed(relatedRoute, record, index)"
+              v-else-if="!hasCollapsibleRecordBody(relatedRoute) || !isRecordCollapsed(relatedRoute, record, index)"
             >
             <form
               v-if="editingRelationKey === `${relatedRoute}::${relatedRecordId(record)}`"
@@ -1570,6 +1577,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
           @cancel="showingNewRelatedPicker = false"
         />
       </section>
+      </template>
     </article>
 
     <ConfirmModal

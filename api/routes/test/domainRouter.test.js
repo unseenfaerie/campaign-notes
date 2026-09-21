@@ -421,6 +421,38 @@ describe('domainRouter isolated unit tests', () => {
         expect(manifestCrudService.getMany).toHaveBeenCalledWith('Character');
     });
 
+    it('GET /:entityRoute renders hop-boundary entities as locked stubs for a player', async () => {
+        listAnchoredCharacterIdsByUserId.mockResolvedValue(['char-1']);
+        manifestCrudService.getOne.mockImplementation(async (resourceName, where) => {
+            if (resourceName === 'Character' && where.id === 'char-1') {
+                return { id: 'char-1', intelligence: 3 }; // maxHops = 1
+            }
+            return null;
+        });
+        manifestCrudService.getMany
+            .mockResolvedValueOnce([
+                { id: 'item-1', name: 'Sword' },
+                { id: 'item-2', name: 'Shield', is_public: true },
+                { id: 'item-3', name: 'Hidden' },
+            ])
+            .mockResolvedValueOnce([{ character_id: 'char-1', item_id: 'item-1' }])
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([]);
+
+        const response = await request(app)
+            .get('/api/items')
+            .set('x-test-role', 'player')
+            .set('x-test-user', 'player-one')
+            .set('x-viewing-character', 'char-1');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([
+            { id: 'item-1', name: 'Sword', locked: true },
+            { id: 'item-2', name: 'Shield', is_public: true },
+        ]);
+    });
+
     it('POST /:entityRoute returns 400 when primary id slug format is invalid', async () => {
         manifestHelpers.conformObjectToEntity.mockImplementationOnce(() => {
             throw new Error('Invalid slug id format for field id: Bad ID');
@@ -566,6 +598,74 @@ describe('domainRouter isolated unit tests', () => {
         });
         expect(manifestCrudService.getMany).toHaveBeenNthCalledWith(1, 'CharacterItem', { character_id: 'char-1' });
         expect(manifestCrudService.getMany).toHaveBeenNthCalledWith(2, 'EventCharacter', { character_id: 'char-1' });
+    });
+
+    it('GET /:entityRoute/:id/full returns a locked stub when the entity is at the outer hop boundary', async () => {
+        listAnchoredCharacterIdsByUserId.mockResolvedValue(['char-1']);
+        manifestCrudService.getOne.mockImplementation(async (resourceName, where) => {
+            if (resourceName === 'Character' && where.id === 'char-1') {
+                return { id: 'char-1', intelligence: 3 }; // maxHops = 1
+            }
+            if (resourceName === 'Item' && where.id === 'item-1') {
+                return { id: 'item-1', name: 'Sword' };
+            }
+            return null;
+        });
+        manifestCrudService.getMany
+            .mockResolvedValueOnce([{ character_id: 'char-1', item_id: 'item-1' }])
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([]);
+
+        const response = await request(app)
+            .get('/api/items/item-1/full')
+            .set('x-test-role', 'player')
+            .set('x-test-user', 'player-one')
+            .set('x-viewing-character', 'char-1');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({
+            entity: { id: 'item-1', name: 'Sword', locked: true },
+            related: {},
+        });
+    });
+
+    it('GET /:entityRoute/:id/full renders locked-related entities as name-only stubs with no relation metadata', async () => {
+        listAnchoredCharacterIdsByUserId.mockResolvedValue(['char-1']);
+        manifestCrudService.getOne.mockImplementation(async (resourceName, where) => {
+            if (resourceName === 'Character' && where.id === 'char-1') {
+                return { id: 'char-1', intelligence: 1 }; // maxHops = 0
+            }
+            if (resourceName === 'Item' && where.id === 'item-1') {
+                return { id: 'item-1', name: 'Sword' };
+            }
+            if (resourceName === 'Deity' && where.id === 'deity-1') {
+                return { id: 'deity-1', name: 'Sun God' };
+            }
+            return null;
+        });
+        manifestCrudService.getMany
+            .mockResolvedValueOnce([
+                { character_id: 'char-1', item_id: 'item-1', short_description: 'Current possession' },
+            ])
+            .mockResolvedValueOnce([
+                { deity_id: 'deity-1', character_id: 'char-1', short_description: 'Favored by the dawn' },
+            ]);
+
+        const response = await request(app)
+            .get('/api/characters/char-1/full')
+            .set('x-test-role', 'player')
+            .set('x-test-user', 'player-one')
+            .set('x-viewing-character', 'char-1');
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({
+            entity: { id: 'char-1', intelligence: 1, pendingProposal: null },
+            related: {
+                items: [{ id: 'item-1', name: 'Sword', locked: true }],
+                deities: [{ id: 'deity-1', name: 'Sun God', locked: true }],
+            },
+        });
     });
 
     it('GET /:entityRoute/:id/full returns direct Place children from parent_id', async () => {
@@ -944,6 +1044,35 @@ describe('domainRouter isolated unit tests', () => {
         expect(response.status).toBe(403);
         expect(response.body).toEqual({ error: 'Only dm users can modify canonical domain data' });
         expect(manifestCrudService.update).not.toHaveBeenCalled();
+    });
+
+    it('POST /:entityRoute/:id/propose rejects proposals against a locked entity', async () => {
+        listAnchoredCharacterIdsByUserId.mockResolvedValue(['char-1']);
+        manifestCrudService.getOne.mockImplementation(async (resourceName, where) => {
+            if (resourceName === 'Character' && where.id === 'char-1') {
+                return { id: 'char-1', intelligence: 3 }; // maxHops = 1
+            }
+            if (resourceName === 'Item' && where.id === 'item-1') {
+                return { id: 'item-1', name: 'Sword' };
+            }
+            return null;
+        });
+        manifestCrudService.getMany
+            .mockResolvedValueOnce([{ character_id: 'char-1', item_id: 'item-1' }])
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([]);
+
+        const response = await request(app)
+            .post('/api/items/item-1/propose')
+            .set('x-test-role', 'player')
+            .set('x-test-user', 'player-one')
+            .set('x-viewing-character', 'char-1')
+            .send({ name: 'Renamed Sword' });
+
+        expect(response.status).toBe(403);
+        expect(response.body).toEqual({ error: 'Cannot propose edits to a locked record' });
+        expect(getPendingProposalForTarget).not.toHaveBeenCalled();
     });
 
     it('PATCH /:entityRoute/:id returns 404 when update affects no record', async () => {

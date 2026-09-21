@@ -47,11 +47,14 @@ const {
     filterRelationsByVisibility,
     getRelatedEntityIds,
     getVisibleEntityIdsForUser,
+    resolveEntityAccess,
+    isTargetEntityLocked,
+    buildLockedEntityStub,
 } = require('../utils/visibilityHelpers');
 
 const router = express.Router();
 
-async function loadAssociatedRecords(relationName, relationDef, sourceId, anchorMemberIndex, user, anchoredCharacterIds, visibleEntityIds) {
+async function loadAssociatedRecords(relationName, relationDef, sourceId, anchorMemberIndex, user, anchoredCharacterIds, visibleEntityHops, maxHops, relatedRoute) {
     const members = getRelationMembers(relationDef);
     const relationContext = getRelationContext(members, anchorMemberIndex);
     const relationRows = await loadRelationRows(relationName, relationContext, sourceId);
@@ -64,6 +67,14 @@ async function loadAssociatedRecords(relationName, relationDef, sourceId, anchor
     const targetIds = collectTargetIds(relationRows, members, sourceId, anchorMemberIndex);
     const targetById = await loadTargetMap(targetInfo, targetIds);
     const memberKeys = members.map((member) => member.key);
+
+    // Targets at the outer edge of the viewer's visibility graph render as name-only stubs.
+    const lockedTargetIds = new Set();
+    for (const [targetId, target] of targetById.entries()) {
+        if (isTargetEntityLocked(target, relatedRoute, user, anchoredCharacterIds, visibleEntityHops, maxHops)) {
+            lockedTargetIds.add(targetId);
+        }
+    }
 
     // Filter relations by visibility - check both member entities
     let visibleRows = relationRows;
@@ -89,9 +100,9 @@ async function loadAssociatedRecords(relationName, relationDef, sourceId, anchor
                     : [targetEntity, sourceEntity];
                 // Fall back to the transitive graph: both members reachable there means the
                 // relation connecting them should show too, even if neither is directly anchored.
-                const transitivelyVisible = !!visibleEntityIds
-                    && visibleEntityIds.has(sourceEntity.id)
-                    && visibleEntityIds.has(targetEntity.id);
+                const transitivelyVisible = !!visibleEntityHops
+                    && visibleEntityHops.has(sourceEntity.id)
+                    && visibleEntityHops.has(targetEntity.id);
                 if (isRelationVisibleToUser(relationName, memberEntities, user, anchoredCharacterIds) || transitivelyVisible) {
                     visibleRows.push(row);
                 }
@@ -102,7 +113,9 @@ async function loadAssociatedRecords(relationName, relationDef, sourceId, anchor
     if (relationDef.kind === 'simple') {
         return buildSimpleResults(
             visibleRows.map(row => getRelatedIdForRow(row, members, sourceId, anchorMemberIndex)),
-            targetById
+            targetById,
+            relatedRoute,
+            lockedTargetIds
         );
     }
 
@@ -111,14 +124,14 @@ async function loadAssociatedRecords(relationName, relationDef, sourceId, anchor
     const proposalByKey = new Map(pendingProposals.map((proposal) => [stableStringify(proposal.target_key), proposal]));
 
     if (relationDef.kind === 'relationship') {
-        return buildRelationshipResults(visibleRows, targetById, members, memberKeys, sourceId, anchorMemberIndex, relationDef, proposalByKey);
+        return buildRelationshipResults(visibleRows, targetById, members, memberKeys, sourceId, anchorMemberIndex, relationDef, proposalByKey, relatedRoute, lockedTargetIds);
     }
 
     if (relationDef.kind === 'history') {
         const visibleTargetIds = visibleRows
             .map(row => getRelatedIdForRow(row, members, sourceId, anchorMemberIndex))
             .filter((id, index, arr) => arr.indexOf(id) === index);
-        return buildHistoryResults(visibleTargetIds, visibleRows, targetById, members, memberKeys, sourceId, anchorMemberIndex, relationDef, proposalByKey);
+        return buildHistoryResults(visibleTargetIds, visibleRows, targetById, members, memberKeys, sourceId, anchorMemberIndex, relationDef, proposalByKey, relatedRoute, lockedTargetIds);
     }
 
     return visibleRows;
@@ -273,26 +286,31 @@ async function loadTargetMap(targetInfo, targetIds) {
     return targetById;
 }
 
-function buildSimpleResults(targetIds, targetById) {
+function buildSimpleResults(targetIds, targetById, relatedRoute, lockedTargetIds) {
     const results = [];
 
     for (const targetId of targetIds) {
         const target = targetById.get(targetId);
         if (target) {
-            results.push(target);
+            results.push(lockedTargetIds.has(targetId) ? buildLockedEntityStub(target, relatedRoute) : target);
         }
     }
 
     return results;
 }
 
-async function buildRelationshipResults(relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex, relationDef, proposalByKey) {
+async function buildRelationshipResults(relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex, relationDef, proposalByKey, relatedRoute, lockedTargetIds) {
     const results = [];
 
     for (const row of relationRows) {
         const targetId = getRelatedIdForRow(row, members, sourceId, anchorMemberIndex);
         const target = targetById.get(targetId);
         if (!target) {
+            continue;
+        }
+
+        if (lockedTargetIds.has(targetId)) {
+            results.push(buildLockedEntityStub(target, relatedRoute));
             continue;
         }
 
@@ -308,12 +326,17 @@ async function buildRelationshipResults(relationRows, targetById, members, membe
     return results;
 }
 
-async function buildHistoryResults(targetIds, relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex, relationDef, proposalByKey) {
+async function buildHistoryResults(targetIds, relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex, relationDef, proposalByKey, relatedRoute, lockedTargetIds) {
     const results = [];
 
     for (const targetId of targetIds) {
         const target = targetById.get(targetId);
         if (!target) {
+            continue;
+        }
+
+        if (lockedTargetIds.has(targetId)) {
+            results.push(buildLockedEntityStub(target, relatedRoute));
             continue;
         }
 
@@ -742,24 +765,26 @@ router.get('/:entityRoute', async (req, res) => {
 
         // Get visibility scope for this request (single viewing character, if any)
         const { visibilityAuth, viewingCharacterIds, viewingCharacterHops } = await resolveVisibilityContext(req);
-        let visibleEntityIds = new Set();
-
-        // For players (or DM previewing as a character), compute full transitive visibility graph
-        if (visibilityAuth && visibilityAuth.role === 'player' && viewingCharacterIds.length > 0) {
-            visibleEntityIds = await getVisibleEntityIdsForUser(
-                manifestCrudService,
-                viewingCharacterIds,
-                viewingCharacterHops
-            );
-        }
 
         // Filter records: for players use transitive graph, for others use standard visibility
         let resultRecords;
         if (visibilityAuth && visibilityAuth.role === 'player' && viewingCharacterIds.length > 0) {
-            // Filter to entities in transitive graph or public entities
-            resultRecords = records.filter(r => {
-                return visibleEntityIds.has(r.id) || isEntityVisibleToUser(r, req.params.entityRoute, visibilityAuth, viewingCharacterIds);
-            });
+            // Compute full transitive visibility graph, then resolve each record to full/locked/hidden
+            const visibleEntityHops = await getVisibleEntityIdsForUser(
+                manifestCrudService,
+                viewingCharacterIds,
+                viewingCharacterHops
+            );
+
+            resultRecords = [];
+            for (const record of records) {
+                const access = resolveEntityAccess(record, req.params.entityRoute, visibilityAuth, viewingCharacterIds, visibleEntityHops, viewingCharacterHops);
+                if (access === 'full') {
+                    resultRecords.push(record);
+                } else if (access === 'locked') {
+                    resultRecords.push(buildLockedEntityStub(record, req.params.entityRoute));
+                }
+            }
         } else {
             // Use standard visibility filtering (DM sees all; unauthenticated users see public data).
             resultRecords = filterEntitiesByVisibility(
@@ -791,20 +816,24 @@ router.get('/:entityRoute/:id', async (req, res) => {
 
         // Check visibility
         const { visibilityAuth, viewingCharacterIds, viewingCharacterHops } = await resolveVisibilityContext(req);
-        let isVisible = isEntityVisibleToUser(record, req.params.entityRoute, visibilityAuth, viewingCharacterIds);
+        let access = isEntityVisibleToUser(record, req.params.entityRoute, visibilityAuth, viewingCharacterIds) ? 'full' : 'hidden';
 
         // For players (or DM previewing as a character), also check transitive visibility graph
-        if (!isVisible && visibilityAuth && visibilityAuth.role === 'player' && viewingCharacterIds.length > 0) {
-            const visibleEntityIds = await getVisibleEntityIdsForUser(
+        if (access === 'hidden' && visibilityAuth && visibilityAuth.role === 'player' && viewingCharacterIds.length > 0) {
+            const visibleEntityHops = await getVisibleEntityIdsForUser(
                 manifestCrudService,
                 viewingCharacterIds,
                 viewingCharacterHops
             );
-            isVisible = visibleEntityIds.has(idValue);
+            access = resolveEntityAccess(record, req.params.entityRoute, visibilityAuth, viewingCharacterIds, visibleEntityHops, viewingCharacterHops);
         }
 
-        if (!isVisible) {
+        if (access === 'hidden') {
             return res.status(404).json({ error: 'Record not found' });
+        }
+
+        if (access === 'locked') {
+            return res.json(buildLockedEntityStub(record, req.params.entityRoute));
         }
 
         return res.json(record);
@@ -883,17 +912,20 @@ router.post('/:entityRoute/:id/propose', async (req, res) => {
         }
 
         const { visibilityAuth, viewingCharacterIds, viewingCharacterHops } = await resolveVisibilityContext(req);
-        let isVisible = isEntityVisibleToUser(record, req.params.entityRoute, visibilityAuth, viewingCharacterIds);
-        if (!isVisible) {
-            const visibleEntityIds = await getVisibleEntityIdsForUser(
+        let access = isEntityVisibleToUser(record, req.params.entityRoute, visibilityAuth, viewingCharacterIds) ? 'full' : 'hidden';
+        if (access === 'hidden') {
+            const visibleEntityHops = await getVisibleEntityIdsForUser(
                 manifestCrudService,
                 viewingCharacterIds,
                 viewingCharacterHops
             );
-            isVisible = visibleEntityIds.has(idValue);
+            access = resolveEntityAccess(record, req.params.entityRoute, visibilityAuth, viewingCharacterIds, visibleEntityHops, viewingCharacterHops);
         }
-        if (!isVisible) {
+        if (access === 'hidden') {
             return res.status(404).json({ error: 'Record not found' });
+        }
+        if (access === 'locked') {
+            return res.status(403).json({ error: 'Cannot propose edits to a locked record' });
         }
 
         if (isForeignPlayerCharacter(entityName, record, viewingCharacterIds)) {
@@ -1004,25 +1036,30 @@ router.get('/:entityRoute/:id/full', async (req, res) => {
 
         // Check visibility of the main entity
         const { visibilityAuth, viewingCharacterIds, viewingCharacterHops } = await resolveVisibilityContext(req);
-        let isVisible = isEntityVisibleToUser(record, req.params.entityRoute, visibilityAuth, viewingCharacterIds);
+        let access = isEntityVisibleToUser(record, req.params.entityRoute, visibilityAuth, viewingCharacterIds) ? 'full' : 'hidden';
 
         // For players (or DM previewing as a character), compute the full transitive visibility
         // graph (not just direct relations) once, so it can be reused both for the main entity
         // check and for filtering relations below.
-        let visibleEntityIds;
+        let visibleEntityHops;
         if (visibilityAuth && visibilityAuth.role === 'player' && viewingCharacterIds.length > 0) {
-            visibleEntityIds = await getVisibleEntityIdsForUser(
+            visibleEntityHops = await getVisibleEntityIdsForUser(
                 manifestCrudService,
                 viewingCharacterIds,
                 viewingCharacterHops
             );
-            if (!isVisible) {
-                isVisible = visibleEntityIds.has(idValue);
+            if (access === 'hidden') {
+                access = resolveEntityAccess(record, req.params.entityRoute, visibilityAuth, viewingCharacterIds, visibleEntityHops, viewingCharacterHops);
             }
         }
 
-        if (!isVisible) {
+        if (access === 'hidden') {
             return res.status(404).json({ error: 'Record not found' });
+        }
+
+        // A locked entity's own facts, exposition, and relations stay hidden entirely.
+        if (access === 'locked') {
+            return res.json({ entity: buildLockedEntityStub(record, req.params.entityRoute), related: {} });
         }
 
         const pendingProposal = await getPendingProposalForTarget(entityName, buildEntityTargetKey(idField, idValue));
@@ -1041,7 +1078,9 @@ router.get('/:entityRoute/:id/full', async (req, res) => {
                 relation.anchorMemberIndex,
                 visibilityAuth,
                 viewingCharacterIds,
-                visibleEntityIds
+                visibleEntityHops,
+                viewingCharacterHops,
+                relation.relatedRoute
             );
         }
 
@@ -1108,7 +1147,9 @@ router.get('/:entityRoute/:id/:relatedRoute', async (req, res) => {
             anchorMemberIndex,
             visibilityAuth,
             viewingCharacterIds,
-            visibleEntityIds
+            visibleEntityIds,
+            viewingCharacterHops,
+            req.params.relatedRoute
         );
         return res.json(records);
     } catch (err) {
@@ -1427,7 +1468,7 @@ router.post('/:entityRoute/:id/:relatedRoute/:relatedId/propose', async (req, re
             return res.status(404).json({ error: 'Record not found' });
         }
 
-        const { visibilityAuth, viewingCharacterIds } = await resolveVisibilityContext(req);
+        const { visibilityAuth, viewingCharacterIds, viewingCharacterHops } = await resolveVisibilityContext(req);
         const sourceEntity = await manifestCrudService.getOne(entityName, { [sourceIdField]: sourceId });
         const relatedEntity = await manifestCrudService.getOne(relatedMember.entity, { [relatedIdField]: relatedId });
         const memberEntities = anchorMemberIndex === 0 ? [sourceEntity, relatedEntity] : [relatedEntity, sourceEntity];
@@ -1441,6 +1482,19 @@ router.post('/:entityRoute/:id/:relatedRoute/:relatedId/propose', async (req, re
             isForeignPlayerCharacter(relatedMember.entity, relatedEntity, viewingCharacterIds)
         ) {
             return res.status(403).json({ error: "Cannot propose edits to another player's character" });
+        }
+
+        if (visibilityAuth && visibilityAuth.role === 'player' && viewingCharacterIds.length > 0) {
+            const visibleEntityHops = await getVisibleEntityIdsForUser(
+                manifestCrudService,
+                viewingCharacterIds,
+                viewingCharacterHops
+            );
+            const sourceLocked = isTargetEntityLocked(sourceEntity, req.params.entityRoute, visibilityAuth, viewingCharacterIds, visibleEntityHops, viewingCharacterHops);
+            const relatedLocked = isTargetEntityLocked(relatedEntity, req.params.relatedRoute, visibilityAuth, viewingCharacterIds, visibleEntityHops, viewingCharacterHops);
+            if (sourceLocked || relatedLocked) {
+                return res.status(403).json({ error: 'Cannot propose edits to a locked record' });
+            }
         }
 
         const targetKey = buildRelationWhere({ members, anchorMemberIndex, sourceId, relatedId, relationDef, historyValue });
