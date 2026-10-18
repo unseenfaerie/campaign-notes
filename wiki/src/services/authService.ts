@@ -44,3 +44,13 @@ export async function logoutSession(): Promise<void> {
 export async function getCurrentUser(): Promise<AuthUser> {
     return requestJson<AuthUser>('/auth/me')
 }
+
+export type SelectableCharacter = {
+    id: string
+    name?: string
+    player_character?: boolean
+}
+
+export async function listSelectableCharacters(): Promise<SelectableCharacter[]> {
+    return requestJson<SelectableCharacter[]>('/auth/me/characters')
+}

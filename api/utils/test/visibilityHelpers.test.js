@@ -11,9 +11,68 @@ const {
     filterEntitiesByVisibility,
     isEntityRelatedToAnchoredCharacter,
     getVisibleEntityIdsForUser,
+    getHopsForIntelligence,
+    getVisibilityHopsForCharacter,
 } = require('../../utils/visibilityHelpers');
 
 describe('visibilityHelpers', () => {
+    describe('getHopsForIntelligence', () => {
+        it('returns 0 hops for intelligence 0 or 1', () => {
+            expect(getHopsForIntelligence(0)).toBe(0);
+            expect(getHopsForIntelligence(1)).toBe(0);
+        });
+
+        it('returns 1 hop for intelligence 2 through 5', () => {
+            expect(getHopsForIntelligence(2)).toBe(1);
+            expect(getHopsForIntelligence(5)).toBe(1);
+        });
+
+        it('returns 2 hops for intelligence 6 through 12', () => {
+            expect(getHopsForIntelligence(6)).toBe(2);
+            expect(getHopsForIntelligence(12)).toBe(2);
+        });
+
+        it('returns 3 hops for intelligence 13 through 17', () => {
+            expect(getHopsForIntelligence(13)).toBe(3);
+            expect(getHopsForIntelligence(17)).toBe(3);
+        });
+
+        it('returns 4 hops for intelligence 18 and above', () => {
+            expect(getHopsForIntelligence(18)).toBe(4);
+            expect(getHopsForIntelligence(25)).toBe(4);
+        });
+
+        it('treats missing or non-numeric intelligence as 0', () => {
+            expect(getHopsForIntelligence(undefined)).toBe(0);
+            expect(getHopsForIntelligence(null)).toBe(0);
+            expect(getHopsForIntelligence(NaN)).toBe(0);
+        });
+    });
+
+    describe('getVisibilityHopsForCharacter', () => {
+        it('returns undefined when there is no character id', async () => {
+            const manifestCrudService = { getOne: jest.fn() };
+            const result = await getVisibilityHopsForCharacter(manifestCrudService, null);
+            expect(result).toBeUndefined();
+            expect(manifestCrudService.getOne).not.toHaveBeenCalled();
+        });
+
+        it('looks up the character and derives hops from its intelligence', async () => {
+            const manifestCrudService = {
+                getOne: jest.fn().mockResolvedValue({ id: 'char-1', intelligence: 14 }),
+            };
+            const result = await getVisibilityHopsForCharacter(manifestCrudService, 'char-1');
+            expect(result).toBe(3);
+            expect(manifestCrudService.getOne).toHaveBeenCalledWith('Character', { id: 'char-1' });
+        });
+
+        it('treats a missing character record as intelligence 0', async () => {
+            const manifestCrudService = { getOne: jest.fn().mockResolvedValue(null) };
+            const result = await getVisibilityHopsForCharacter(manifestCrudService, 'ghost');
+            expect(result).toBe(0);
+        });
+    });
+
     describe('isDm', () => {
         it('should return true for user with dm role', () => {
             const user = { role: 'dm', userId: '1' };
@@ -310,7 +369,7 @@ describe('visibilityHelpers', () => {
         it('should return empty set for user with no anchored characters', async () => {
             const mockCrudService = {};
             const result = await getVisibleEntityIdsForUser(mockCrudService, []);
-            expect(result).toEqual(new Set());
+            expect(result).toEqual(new Map());
         });
 
         it('should return anchored characters at hop depth 0 with no expansion', async () => {
@@ -319,7 +378,7 @@ describe('visibilityHelpers', () => {
             };
             const anchoredIds = ['char-1', 'char-2'];
             const result = await getVisibleEntityIdsForUser(mockCrudService, anchoredIds, 0);
-            expect(result).toEqual(new Set(['char-1', 'char-2']));
+            expect(result).toEqual(new Map([['char-1', 0], ['char-2', 0]]));
         });
 
         it('should expand to direct relations at hop depth 1', async () => {
@@ -337,21 +396,21 @@ describe('visibilityHelpers', () => {
                 }),
             };
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 1);
-            expect(result).toContain('char-1');
-            expect(result).toContain('deity-1');
+            expect(result.has('char-1')).toBe(true);
+            expect(result.has('deity-1')).toBe(true);
         });
 
-        it('should not expand beyond hop limit', async () => {
+        it('should include the outer locked edge one hop beyond the limit', async () => {
             const mockCrudService = {
                 getMany: jest.fn((relationName, where) => {
-                    // Simulate: char-1 -> deity-1 -> place-1
+                    // Simulate: char-1 -> deity-1 -> sphere-1
                     if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
                         return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
                     }
                     if (relationName === 'CharacterDeity' && where.deity_id === 'char-1') {
                         return Promise.resolve([]);
                     }
-                    // deity-1 should not be expanded at all with maxHops=1, so no place-1
+                    // deity-1 (hop 1, still expanded once to surface the locked edge) -> sphere-1 (hop 2)
                     if (relationName === 'DeitySphere' && where.deity_id === 'deity-1') {
                         return Promise.resolve([{ deity_id: 'deity-1', sphere_id: 'sphere-1' }]);
                     }
@@ -359,10 +418,11 @@ describe('visibilityHelpers', () => {
                 }),
             };
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 1);
-            // Should have char-1 and deity-1, but NOT sphere-1 (that would be 2 hops away)
-            expect(result).toContain('char-1');
-            expect(result).toContain('deity-1');
-            expect(result).not.toContain('sphere-1');
+            // char-1 (0) and deity-1 (1) are fully visible; sphere-1 (2) is the locked outer edge,
+            // present in the map but not expanded further.
+            expect(result.get('char-1')).toBe(0);
+            expect(result.get('deity-1')).toBe(1);
+            expect(result.get('sphere-1')).toBe(2);
         });
 
         it('should expand to 2 hops when maxHops=2', async () => {
@@ -382,9 +442,9 @@ describe('visibilityHelpers', () => {
             };
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 2);
             // Should have all three entities
-            expect(result).toContain('char-1');
-            expect(result).toContain('deity-1');
-            expect(result).toContain('sphere-1');
+            expect(result.has('char-1')).toBe(true);
+            expect(result.has('deity-1')).toBe(true);
+            expect(result.has('sphere-1')).toBe(true);
         });
 
         it('should handle unlimited hops (maxHops=undefined)', async () => {
@@ -409,12 +469,12 @@ describe('visibilityHelpers', () => {
             };
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], undefined);
             // All entities should be visible with unlimited hops
-            expect(result).toContain('char-1');
-            expect(result).toContain('deity-1');
-            expect(result).toContain('sphere-1');
+            expect(result.has('char-1')).toBe(true);
+            expect(result.has('deity-1')).toBe(true);
+            expect(result.has('sphere-1')).toBe(true);
         });
 
-        it('should handle self-relations (Character <-> Character) within hop limit', async () => {
+        it('should handle self-relations (Character <-> Character) including the locked outer edge', async () => {
             const mockCrudService = {
                 getMany: jest.fn((relationName, where) => {
                     // CharacterRelationship: char-1 related to char-2
@@ -424,7 +484,7 @@ describe('visibilityHelpers', () => {
                     if (relationName === 'CharacterRelationship' && where.related_id === 'char-1') {
                         return Promise.resolve([]);
                     }
-                    // char-2 related to char-3, but this is 2 hops, so should not expand at maxHops=1
+                    // char-2 related to char-3: 2 hops out, surfaced as the locked outer edge
                     if (relationName === 'CharacterRelationship' && where.character_id === 'char-2') {
                         return Promise.resolve([{ character_id: 'char-2', related_id: 'char-3' }]);
                     }
@@ -432,9 +492,9 @@ describe('visibilityHelpers', () => {
                 }),
             };
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 1);
-            expect(result).toContain('char-1');
-            expect(result).toContain('char-2');
-            expect(result).not.toContain('char-3'); // 2 hops, beyond maxHops=1
+            expect(result.get('char-1')).toBe(0);
+            expect(result.get('char-2')).toBe(1);
+            expect(result.get('char-3')).toBe(2); // locked outer edge, one hop beyond maxHops=1
         });
 
         it('should deduplicate entities seen via multiple paths', async () => {
@@ -453,31 +513,35 @@ describe('visibilityHelpers', () => {
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1', 'char-2'], 1);
             // deity-1 should appear only once in the Set
             expect(result.size).toBe(3); // char-1, char-2, deity-1
-            expect(result).toContain('deity-1');
+            expect(result.has('deity-1')).toBe(true);
         });
 
         it('should handle empty anchored character list', async () => {
             const mockCrudService = {};
             const result = await getVisibleEntityIdsForUser(mockCrudService, [], 1);
-            expect(result).toEqual(new Set());
+            expect(result).toEqual(new Map());
         });
 
         it('should handle null anchored character list', async () => {
             const mockCrudService = {};
             const result = await getVisibleEntityIdsForUser(mockCrudService, null, 1);
-            expect(result).toEqual(new Set());
+            expect(result).toEqual(new Map());
         });
 
-        it('should continue expanding from anchored characters even at hop 0 (they are the starting point)', async () => {
-            // Hop 0 means we see the anchored character but don't expand from it to relations
+        it('should discover the locked outer edge one hop beyond maxHops=0', async () => {
+            // Hop 0 means the anchored character itself is fully visible, but its direct relations
+            // still need to be queried once to surface them as the locked outer edge.
             const mockCrudService = {
-                getMany: jest.fn().mockResolvedValue([{ deity_id: 'deity-1' }]),
+                getMany: jest.fn((relationName, where) => {
+                    if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
+                        return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
+                    }
+                    return Promise.resolve([]);
+                }),
             };
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 0);
-            // With 0 hops, we should only see the anchored character, not deities
-            expect(result).toEqual(new Set(['char-1']));
-            // getMany should not have been called at all since we don't expand at hop 0
-            expect(mockCrudService.getMany).not.toHaveBeenCalled();
+            expect(result).toEqual(new Map([['char-1', 0], ['deity-1', 1]]));
+            expect(mockCrudService.getMany).toHaveBeenCalled();
         });
     });
 });

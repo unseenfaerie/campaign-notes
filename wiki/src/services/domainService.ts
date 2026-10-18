@@ -1,6 +1,6 @@
 import { requestJson } from './apiClient'
 
-export type DomainEntity = Record<string, unknown>
+export type DomainEntity = Record<string, unknown> & { locked?: boolean }
 
 export type PendingProposal = {
     id: number

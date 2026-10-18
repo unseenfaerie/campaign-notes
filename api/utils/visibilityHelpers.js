@@ -3,7 +3,7 @@
  *
  * Rules:
  * - DM (role='dm'): Sees all entities and relations (bypass all checks)
- * - Player (role='player'): Sees anchored characters + their relations + related entity pages + public entities/relations
+ * - Player (role='player'): Sees their active viewing character + its relations + related entity pages + public entities/relations
  *
  * Visibility is controlled by the is_public boolean field on each entity instance.
  */
@@ -11,11 +11,45 @@
 const { domainManifest } = require('../../common/domainManifest');
 
 /**
- * Player visibility hop limit: how many relationship hops a player can traverse from their
- * anchored characters to see related entities (0 = anchored characters + public only).
- * Tune here directly; DMs are unaffected (handled separately).
+ * Visibility hop brackets: how many relationship hops a player can traverse from their
+ * active viewing character, based on that character's intelligence score (0 = that
+ * character's own page + public only). Tune here directly; DMs are unaffected.
  */
-const PLAYER_VISIBILITY_HOPS = 3;
+const VISIBILITY_HOP_BRACKETS = [
+    { maxIntelligence: 1, hops: 0 },
+    { maxIntelligence: 5, hops: 1 },
+    { maxIntelligence: 12, hops: 2 },
+    { maxIntelligence: 17, hops: 3 },
+    { maxIntelligence: Infinity, hops: 4 },
+];
+
+/**
+ * Resolve the visibility hop count for a given intelligence score.
+ *
+ * @param {number|null|undefined} intelligence - the viewing character's intelligence score
+ * @returns {number} the number of relationship hops that character can see through
+ */
+function getHopsForIntelligence(intelligence) {
+    const score = typeof intelligence === 'number' && !Number.isNaN(intelligence) ? intelligence : 0;
+    const bracket = VISIBILITY_HOP_BRACKETS.find((candidate) => score <= candidate.maxIntelligence);
+    return bracket.hops;
+}
+
+/**
+ * Resolve the visibility hop count for the character currently being viewed as.
+ *
+ * @param {object} manifestCrudService - the CRUD service for database access
+ * @param {string|null|undefined} characterId - the active viewing character id, if any
+ * @returns {Promise<number|undefined>} hop count, or undefined when there is no viewing character
+ */
+async function getVisibilityHopsForCharacter(manifestCrudService, characterId) {
+    if (!characterId) {
+        return undefined;
+    }
+
+    const character = await manifestCrudService.getOne('Character', { id: characterId });
+    return getHopsForIntelligence(character ? character.intelligence : undefined);
+}
 
 /**
  * Check if a user has the DM role
@@ -342,9 +376,10 @@ async function isEntityRelatedToAnchoredCharacter(manifestCrudService, entityRou
 /**
  * Get the full transitive closure of visible entity IDs for a user
  *
- * Performs BFS traversal from all anchored character IDs through all relations,
- * collecting every entity reachable from the player's characters. This implements
- * clustered visibility: players see everything their characters connect to, recursively.
+ * Performs BFS traversal from the single active viewing character (the character the
+ * request is currently browsing as) through all relations, collecting every entity
+ * reachable from it. This implements clustered visibility: a player sees everything
+ * their active character connects to, recursively.
  *
  * Algorithm:
  * 1. Start with all anchored character IDs in a queue
@@ -355,10 +390,10 @@ async function isEntityRelatedToAnchoredCharacter(manifestCrudService, entityRou
  *
  * @param {object} manifestCrudService - the CRUD service for database access
  * @param {string[]} anchoredCharacterIds - list of anchored character IDs for this user
- * @returns {Promise<Set<string>>} Set of all entity IDs visible through transitive relations
+ * @returns {Promise<Map<string, number>>} Map of entity ID to shortest hop depth from an anchored character
  */
 async function getVisibleEntityIdsForUser(manifestCrudService, anchoredCharacterIds = [], maxHops) {
-    const visibleIds = new Set();
+    const visibleIds = new Map();
 
     // If no anchored characters, user sees nothing (public entities handled elsewhere)
     if (!anchoredCharacterIds || anchoredCharacterIds.length === 0) {
@@ -372,16 +407,17 @@ async function getVisibleEntityIdsForUser(manifestCrudService, anchoredCharacter
 
     // Add anchored characters to visible set
     for (const charId of anchoredCharacterIds) {
-        visibleIds.add(charId);
+        visibleIds.set(charId, 0);
     }
 
     // BFS traversal: for each entity, find all related entities up to maxHops distance
     while (queue.length > 0) {
         const { id: currentEntityId, hopDepth: currentHopDepth } = queue.shift();
 
-        // Check if we should continue expanding from this entity (respects maxHops limit)
-        // Skip relation queries entirely if we've reached or exceeded the hop limit
-        const shouldExpandFurther = maxHops === undefined || currentHopDepth < maxHops;
+        // Check if we should continue expanding from this entity (respects maxHops limit).
+        // Expansion is allowed one hop past maxHops so the outer "locked" edge is discovered
+        // (entities at maxHops+1 are added to the map but never themselves expanded).
+        const shouldExpandFurther = maxHops === undefined || currentHopDepth < maxHops + 1;
         if (!shouldExpandFurther) {
             continue;
         }
@@ -407,7 +443,7 @@ async function getVisibleEntityIdsForUser(manifestCrudService, anchoredCharacter
                             const relatedId = record[member1.key];
                             if (relatedId && !visited.has(relatedId)) {
                                 visited.add(relatedId);
-                                visibleIds.add(relatedId);
+                                visibleIds.set(relatedId, currentHopDepth + 1);
                                 queue.push({ id: relatedId, hopDepth: currentHopDepth + 1 });
                             }
                         }
@@ -421,7 +457,7 @@ async function getVisibleEntityIdsForUser(manifestCrudService, anchoredCharacter
                             const relatedId = record[member0.key];
                             if (relatedId && !visited.has(relatedId)) {
                                 visited.add(relatedId);
-                                visibleIds.add(relatedId);
+                                visibleIds.set(relatedId, currentHopDepth + 1);
                                 queue.push({ id: relatedId, hopDepth: currentHopDepth + 1 });
                             }
                         }
@@ -438,7 +474,7 @@ async function getVisibleEntityIdsForUser(manifestCrudService, anchoredCharacter
                             const relatedId = record[member1.key];
                             if (relatedId && !visited.has(relatedId)) {
                                 visited.add(relatedId);
-                                visibleIds.add(relatedId);
+                                visibleIds.set(relatedId, currentHopDepth + 1);
                                 queue.push({ id: relatedId, hopDepth: currentHopDepth + 1 });
                             }
                         }
@@ -453,7 +489,7 @@ async function getVisibleEntityIdsForUser(manifestCrudService, anchoredCharacter
                             const relatedId = record[member0.key];
                             if (relatedId && !visited.has(relatedId)) {
                                 visited.add(relatedId);
-                                visibleIds.add(relatedId);
+                                visibleIds.set(relatedId, currentHopDepth + 1);
                                 queue.push({ id: relatedId, hopDepth: currentHopDepth + 1 });
                             }
                         }
@@ -467,6 +503,64 @@ async function getVisibleEntityIdsForUser(manifestCrudService, anchoredCharacter
     }
 
     return visibleIds;
+}
+
+/**
+ * Resolve how much of an entity a user can see: 'full' (its own facts/relations), 'locked'
+ * (name/existence only, at the outer edge of the transitive visibility graph), or 'hidden'
+ * (not visible at all).
+ *
+ * @param {object} entity - the entity object with id and is_public fields
+ * @param {string} entityRoute - the entity route (e.g., 'characters', 'places')
+ * @param {object} user - the auth user object
+ * @param {string[]} anchoredCharacterIds - list of anchored character IDs for this user
+ * @param {Map<string, number>|undefined} hopDepthMap - entity ID to hop depth, from getVisibleEntityIdsForUser
+ * @param {number|undefined} maxHops - the viewer's hop limit
+ * @returns {'full'|'locked'|'hidden'}
+ */
+function resolveEntityAccess(entity, entityRoute, user, anchoredCharacterIds = [], hopDepthMap, maxHops) {
+    if (!entity) {
+        return 'hidden';
+    }
+
+    // Independent visibility (DM, public, anchored) always wins over hop position.
+    if (isEntityVisibleToUser(entity, entityRoute, user, anchoredCharacterIds)) {
+        return 'full';
+    }
+
+    const hopDepth = hopDepthMap ? hopDepthMap.get(entity.id) : undefined;
+    if (hopDepth === undefined) {
+        return 'hidden';
+    }
+
+    // hopDepth 1..maxHops is fully visible; the map's outer edge (maxHops + 1) is locked.
+    return maxHops === undefined || hopDepth <= maxHops ? 'full' : 'locked';
+}
+
+/**
+ * Determine whether an entity reached through an already-visible relation row should be
+ * displayed as locked. Rows only get here once relation-level visibility has already been
+ * established, so anything short of 'full' access (including hop depths outside the map,
+ * e.g. a maxHops=0 direct relation) renders as locked rather than being hidden outright.
+ */
+function isTargetEntityLocked(entity, entityRoute, user, anchoredCharacterIds, hopDepthMap, maxHops) {
+    return resolveEntityAccess(entity, entityRoute, user, anchoredCharacterIds, hopDepthMap, maxHops) !== 'full';
+}
+
+/**
+ * Build the minimal stand-in payload for a locked entity: just enough to render its name as a
+ * link, with no facts, exposition, or relationship data exposed.
+ *
+ * @param {object} entity - the full entity record
+ * @param {string} entityRoute - the entity route (e.g., 'characters', 'places')
+ * @returns {object} { id, name, locked: true }
+ */
+function buildLockedEntityStub(entity, entityRoute) {
+    return {
+        id: entity.id,
+        name: entity.name || entity.alias || `Unknown ${entityRoute}`,
+        locked: true,
+    };
 }
 
 /**
@@ -584,7 +678,8 @@ async function getRelatedEntityIds(manifestCrudService, entityRoute, anchoredCha
 }
 
 module.exports = {
-    PLAYER_VISIBILITY_HOPS,
+    getHopsForIntelligence,
+    getVisibilityHopsForCharacter,
     isDm,
     isAnchoredCharacter,
     getEntityDefByRoute,
@@ -599,4 +694,7 @@ module.exports = {
     isEntityRelatedToAnchoredCharacter,
     getRelatedEntityIds,
     getVisibleEntityIdsForUser,
+    resolveEntityAccess,
+    isTargetEntityLocked,
+    buildLockedEntityStub,
 };

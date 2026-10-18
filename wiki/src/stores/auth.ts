@@ -9,6 +9,7 @@ import {
 } from '../services/authService'
 
 const TOKEN_STORAGE_KEY = 'campaign-notes.wiki.access-token'
+const VIEWING_CHARACTER_STORAGE_PREFIX = 'campaign-notes.wiki.viewing-character.'
 
 function readStoredToken(): string | null {
     return localStorage.getItem(TOKEN_STORAGE_KEY)
@@ -23,16 +24,32 @@ function writeStoredToken(token: string | null) {
     localStorage.setItem(TOKEN_STORAGE_KEY, token)
 }
 
+function readStoredViewingCharacterId(username: string): string | null {
+    return localStorage.getItem(VIEWING_CHARACTER_STORAGE_PREFIX + username)
+}
+
+function writeStoredViewingCharacterId(username: string, characterId: string | null) {
+    const key = VIEWING_CHARACTER_STORAGE_PREFIX + username
+    if (!characterId) {
+        localStorage.removeItem(key)
+        return
+    }
+
+    localStorage.setItem(key, characterId)
+}
+
 const state = reactive({
     accessToken: readStoredToken(),
     user: null as AuthUser | null,
     initialized: false,
     bootstrapping: false,
+    viewingCharacterId: null as string | null,
 })
 
 function clearSession() {
     state.accessToken = null
     state.user = null
+    state.viewingCharacterId = null
     writeStoredToken(null)
 }
 
@@ -49,10 +66,35 @@ async function loadCurrentUser(): Promise<boolean> {
 
     try {
         state.user = await getCurrentUser()
+        restoreViewingCharacterId()
         return true
     } catch (_error) {
         state.user = null
         return false
+    }
+}
+
+// Restores the browse-as character for the current user: a stored selection takes precedence;
+// otherwise players default to their first anchored character and DMs default to omniscient.
+function restoreViewingCharacterId() {
+    if (!state.user) {
+        state.viewingCharacterId = null
+        return
+    }
+
+    const stored = readStoredViewingCharacterId(state.user.username)
+    if (stored) {
+        state.viewingCharacterId = stored
+        return
+    }
+
+    state.viewingCharacterId = state.user.anchoredCharacterIds[0] ?? null
+}
+
+function setViewingCharacterId(characterId: string | null) {
+    state.viewingCharacterId = characterId
+    if (state.user) {
+        writeStoredViewingCharacterId(state.user.username, characterId)
     }
 }
 
@@ -73,6 +115,7 @@ configureApiClient({
         clearSession()
     },
     refreshAccessToken: refreshTokenSilently,
+    getViewingCharacterId: () => state.viewingCharacterId,
 })
 
 async function bootstrap() {
@@ -117,6 +160,8 @@ export function useAuthStore() {
         isAuthenticated: computed(() => Boolean(state.accessToken) && Boolean(state.user)),
         isAdmin: computed(() => state.user?.role === 'dm'),
         anchoredCharacterIds: computed(() => state.user?.anchoredCharacterIds ?? []),
+        viewingCharacterId: computed(() => state.viewingCharacterId),
+        setViewingCharacterId,
         bootstrap,
         login,
         logout,

@@ -162,7 +162,12 @@ watch(() => props.entityRoute, loadList)
     <p v-else-if="sortedRecords.length === 0" class="status-card">No records match the current filters.</p>
 
     <div v-else class="grid-list">
-      <article v-for="record in sortedRecords" :key="getDisplayLabel(record)" class="entity-card">
+      <article
+        v-for="record in sortedRecords"
+        :key="getDisplayLabel(record)"
+        class="entity-card"
+        :class="{ 'is-locked': record.locked }"
+      >
         <h3>
           <RouterLink
             v-if="getRecordId(record)"
