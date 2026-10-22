@@ -5,7 +5,7 @@
     "api"
   ],
   "allowScripts": {
-    "sqlite3@5.1.7": true
+    "sqlite3@6.0.1": true
   },
   "scripts": {
     "api:start": "npm --workspace api run start",
