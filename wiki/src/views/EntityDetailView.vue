@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AddRelatedEntityForm from '../components/AddRelatedEntityForm.vue'
 import CollapseSection from '../components/CollapseSection.vue'
@@ -950,6 +950,18 @@ function cancelAddAlias() {
   newAliasValue.value = ''
   aliasFormError.value = ''
 }
+
+const baseDocumentTitle = document.title
+watch(
+  () => (fullData.value ? entityPageTitle.value : null),
+  (title) => {
+    document.title = title ?? baseDocumentTitle
+  },
+  { immediate: true },
+)
+onBeforeUnmount(() => {
+  document.title = baseDocumentTitle
+})
 
 onMounted(loadDetail)
 watch(() => [props.entityRoute, props.id], () => loadDetail())
