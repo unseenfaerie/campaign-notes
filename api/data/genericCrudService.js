@@ -14,13 +14,6 @@ function getRelationMembers(relationDef) {
     return relationDef.members;
   }
 
-  if (relationDef.source && relationDef.target && relationDef.sourceKey && relationDef.targetKey) {
-    return [
-      { entity: relationDef.source, key: relationDef.sourceKey },
-      { entity: relationDef.target, key: relationDef.targetKey },
-    ];
-  }
-
   throw new Error('Relation must define exactly two members');
 }
 

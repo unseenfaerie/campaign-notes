@@ -47,12 +47,20 @@ const {
     filterRelationsByVisibility,
     getRelatedEntityIds,
     getVisibleEntityIdsForUser,
+    buildGraphKey,
     resolveEntityAccess,
     isTargetEntityLocked,
     buildLockedEntityStub,
 } = require('../utils/visibilityHelpers');
 
 const router = express.Router();
+
+function hasVisibleGraphEntity(graph, entityName, entityId) {
+    return !!graph && (
+        graph.has(buildGraphKey(entityName, entityId)) ||
+        graph.has(entityId)
+    );
+}
 
 async function loadAssociatedRecords(relationName, relationDef, sourceId, anchorMemberIndex, user, anchoredCharacterIds, visibleEntityHops, maxHops, relatedRoute) {
     const members = getRelationMembers(relationDef);
@@ -101,8 +109,8 @@ async function loadAssociatedRecords(relationName, relationDef, sourceId, anchor
                 // Fall back to the transitive graph: both members reachable there means the
                 // relation connecting them should show too, even if neither is directly anchored.
                 const transitivelyVisible = !!visibleEntityHops
-                    && visibleEntityHops.has(sourceEntity.id)
-                    && visibleEntityHops.has(targetEntity.id);
+                    && hasVisibleGraphEntity(visibleEntityHops, members[0].entity, sourceEntity.id)
+                    && hasVisibleGraphEntity(visibleEntityHops, members[1].entity, targetEntity.id);
                 if (isRelationVisibleToUser(relationName, memberEntities, user, anchoredCharacterIds) || transitivelyVisible) {
                     visibleRows.push(row);
                 }
@@ -158,25 +166,7 @@ function buildRelationWhereCandidates({
         historyValue,
     });
 
-    const relatedMemberIndex = anchorMemberIndex === 0 ? 1 : 0;
-    const isSelfRelation = members[anchorMemberIndex].entity === members[relatedMemberIndex].entity;
-
-    // For directional relations (e.g., CharacterRelationship), only query the forward direction
-    // If marked as directional or if not a self-relation, return only the forward WHERE clause
-    if (!isSelfRelation || sourceId === relatedId || relationDef.directional) {
-        return [where];
-    }
-
-    const reverseWhere = buildRelationWhere({
-        members,
-        anchorMemberIndex,
-        sourceId: relatedId,
-        relatedId: sourceId,
-        relationDef,
-        historyValue,
-    });
-
-    return [where, reverseWhere];
+    return [where];
 }
 
 async function getFirstRelationRecordByWhereCandidates(relationName, whereCandidates) {
@@ -232,9 +222,7 @@ async function removeFirstRelationRecordByWhereCandidates(relationName, whereCan
 async function loadRelationRows(relationName, relationContext, sourceId) {
     const { anchorMember, relatedMember } = relationContext;
 
-    // For directional relations (e.g., CharacterRelationship), only query from the anchor member's perspective
-    // If both members are the same entity type and the relation is marked as directional,
-    // only return records where sourceId is in the anchor_key position
+    // Relation member ordering defines the perspective and target columns.
     return manifestCrudService.getMany(relationName, {
         [anchorMember.key]: sourceId,
     });
@@ -1132,7 +1120,7 @@ router.get('/:entityRoute/:id/:relatedRoute', async (req, res) => {
                 viewingCharacterHops
             );
             if (!sourceVisible) {
-                sourceVisible = visibleEntityIds.has(sourceId);
+                sourceVisible = hasVisibleGraphEntity(visibleEntityIds, entityName, sourceId);
             }
         }
 

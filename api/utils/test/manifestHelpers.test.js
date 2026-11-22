@@ -1,4 +1,11 @@
-const { coerceValueByType, getEntityByRoute, getRelationMembers, getRelationByRoutes, conformObjectToEntity } = require('../manifestHelpers');
+const {
+    coerceValueByType,
+    getEntityByRoute,
+    getRelationMembers,
+    getRelationByRoutes,
+    conformObjectToEntity,
+    validateDomainManifest,
+} = require('../manifestHelpers');
 const { domainManifest } = require('../../../common/domainManifest');
 const { getEnumValues } = require('../../../common/enums');
 
@@ -92,7 +99,7 @@ describe('manifestHelpers isolated unit tests', () => {
             expect(getRelationMembers(relationDef)).toBe(relationDef.members);
         });
 
-        it('builds members from source/target metadata when present', () => {
+        it('rejects legacy source/target metadata', () => {
             const relationDef = {
                 source: 'Character',
                 target: 'Item',
@@ -102,10 +109,7 @@ describe('manifestHelpers isolated unit tests', () => {
                 routeFromTarget: 'characters',
             };
 
-            expect(getRelationMembers(relationDef)).toEqual([
-                { entity: 'Character', key: 'character_id', route: 'items' },
-                { entity: 'Item', key: 'item_id', route: 'characters' },
-            ]);
+            expect(() => getRelationMembers(relationDef)).toThrow('Relation must define exactly two members');
         });
 
         it('throws when relation members are invalid', () => {
@@ -127,14 +131,6 @@ describe('manifestHelpers isolated unit tests', () => {
                         { entity: 'Item', key: 'item_id', route: 'characters' },
                     ],
                 },
-                CharacterDeity: {
-                    source: 'Character',
-                    target: 'Deity',
-                    sourceKey: 'character_id',
-                    targetKey: 'deity_id',
-                    routeFromSource: 'deities',
-                    routeFromTarget: 'characters',
-                },
             },
         };
 
@@ -147,19 +143,68 @@ describe('manifestHelpers isolated unit tests', () => {
             });
         });
 
-        it('supports source/target relation definitions', () => {
-            expect(getRelationByRoutes('characters', 'deities', manifest)).toEqual({
-                relationName: 'CharacterDeity',
-                relationDef: manifest.relations.CharacterDeity,
-                anchorMemberIndex: 0,
-                relatedMemberIndex: 1,
-            });
-        });
-
         it('throws when no relation matches the supplied routes', () => {
             expect(() => getRelationByRoutes('characters', 'missing', manifest)).toThrow(
                 'Unknown related route for characters: missing'
             );
+        });
+
+        it('does not infer a reverse route from the target member', () => {
+            expect(() => getRelationByRoutes('items', 'characters', manifest)).toThrow(
+                'Unknown related route for items: characters'
+            );
+        });
+
+        describe('validateDomainManifest', () => {
+            const baseManifest = {
+                entities: {
+                    Character: { route: 'characters' },
+                    Item: { route: 'items' },
+                },
+                relations: {
+                    CharacterItem: {
+                        members: [
+                            { entity: 'Character', key: 'character_id', route: 'items' },
+                            { entity: 'Item', key: 'item_id', route: 'characters' },
+                        ],
+                        keys: ['character_id', 'item_id'],
+                    },
+                },
+            };
+
+            it('accepts a valid directional relation', () => {
+                expect(validateDomainManifest(baseManifest)).toBe(baseManifest);
+            });
+
+            it.each([
+                ['unknown entity', { entity: 'Missing', key: 'item_id', route: 'characters' }, 'unknown entity'],
+                ['missing route', { entity: 'Item', key: 'item_id' }, 'key and route'],
+                ['unknown route', { entity: 'Item', key: 'item_id', route: 'missing' }, 'unknown route'],
+            ])('rejects a relation with %s', (_label, targetMember, message) => {
+                const manifest = {
+                    ...baseManifest,
+                    relations: {
+                        CharacterItem: {
+                            ...baseManifest.relations.CharacterItem,
+                            members: [baseManifest.relations.CharacterItem.members[0], targetMember],
+                        },
+                    },
+                };
+                expect(() => validateDomainManifest(manifest)).toThrow(message);
+            });
+
+            it('rejects non-two-member relations and mismatched perspective names', () => {
+                expect(() => validateDomainManifest({
+                    ...baseManifest,
+                    relations: { CharacterItem: { members: [], keys: [] } },
+                })).toThrow('exactly two members');
+                expect(() => validateDomainManifest({
+                    ...baseManifest,
+                    relations: {
+                        ItemCharacter: baseManifest.relations.CharacterItem,
+                    },
+                })).toThrow('must begin with perspective entity');
+            });
         });
     });
 

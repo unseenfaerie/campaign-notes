@@ -125,7 +125,7 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
         const anchoredIds = ['char-1'];
         const visible = await getVisibleEntityIdsForUser(mockCrudService, anchoredIds);
 
-        expect(visible.has('char-1')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
         expect(visible.size).toBe(1);
     });
 
@@ -149,8 +149,8 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
 
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1']);
 
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('place-1')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Place:place-1')).toBe(true);
         expect(visible.size).toBe(2);
     });
 
@@ -167,9 +167,9 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
 
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1']);
 
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('place-1')).toBe(true);
-        expect(visible.has('org-1')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Place:place-1')).toBe(true);
+        expect(visible.has('Organization:org-1')).toBe(true);
         expect(visible.size).toBe(3);
     });
 
@@ -189,10 +189,10 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
 
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1']);
 
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('place-1')).toBe(true);
-        expect(visible.has('org-1')).toBe(true);
-        expect(visible.has('item-1')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Place:place-1')).toBe(true);
+        expect(visible.has('Organization:org-1')).toBe(true);
+        expect(visible.has('Item:item-1')).toBe(true);
         expect(visible.size).toBe(4);
     });
 
@@ -205,8 +205,8 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
 
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1']);
 
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('char-2')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Character:char-2')).toBe(true);
         expect(visible.size).toBe(2);
     });
 
@@ -219,9 +219,9 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
 
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1']);
 
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('char-2')).toBe(true);
-        expect(visible.size).toBe(2);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Character:char-2')).toBe(false);
+        expect(visible.size).toBe(1);
     });
 
     test('should not infinite loop on circular references', async () => {
@@ -243,9 +243,9 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
         // This should not infinite loop
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1']);
 
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('org-1')).toBe(true);
-        expect(visible.has('place-1')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Organization:org-1')).toBe(true);
+        expect(visible.has('Place:place-1')).toBe(true);
         // Should not grow unboundedly
         expect(visible.size).toBe(3);
     });
@@ -264,10 +264,10 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
 
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1', 'char-2']);
 
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('char-2')).toBe(true);
-        expect(visible.has('place-1')).toBe(true);
-        expect(visible.has('place-2')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Character:char-2')).toBe(true);
+        expect(visible.has('Place:place-1')).toBe(true);
+        expect(visible.has('Place:place-2')).toBe(true);
         expect(visible.size).toBe(4);
     });
 
@@ -289,10 +289,10 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
 
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1']);
 
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('place-1')).toBe(true);
-        expect(visible.has('place-2')).toBe(true);
-        expect(visible.has('org-1')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Place:place-1')).toBe(true);
+        expect(visible.has('Place:place-2')).toBe(true);
+        expect(visible.has('Organization:org-1')).toBe(true);
         expect(visible.size).toBe(4);
     });
 
@@ -323,12 +323,12 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
 
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1']);
 
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('org-1')).toBe(true);
-        expect(visible.has('place-1')).toBe(true);
-        expect(visible.has('item-1')).toBe(true);
-        expect(visible.has('org-2')).toBe(true);
-        expect(visible.has('item-2')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Organization:org-1')).toBe(true);
+        expect(visible.has('Place:place-1')).toBe(true);
+        expect(visible.has('Item:item-1')).toBe(true);
+        expect(visible.has('Organization:org-2')).toBe(true);
+        expect(visible.has('Item:item-2')).toBe(true);
         expect(visible.size).toBe(6);
     });
 
@@ -344,7 +344,7 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
 
         // Should not throw, just return anchored characters
         const visible = await getVisibleEntityIdsForUser(failingService, ['char-1']);
-        expect(visible.has('char-1')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
     });
 
     test('should deduplicate entities when reachable via multiple paths', async () => {
@@ -366,9 +366,9 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1']);
 
         // Should have char-1, place-1, org-1 (not duplicated)
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('place-1')).toBe(true);
-        expect(visible.has('org-1')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Place:place-1')).toBe(true);
+        expect(visible.has('Organization:org-1')).toBe(true);
         expect(visible.size).toBe(3);
     });
 });

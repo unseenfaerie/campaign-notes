@@ -6,7 +6,7 @@
 const { getEnumValues } = require('./enums');
 
 const domainManifest = {
-    schemaVersion: 3,
+    schemaVersion: 5,
     entities: {
         Character: {
             table: 'characters',
@@ -236,7 +236,6 @@ const domainManifest = {
         CharacterRelationship: {
             kind: 'history',
             table: 'character_relationships',
-            directional: true,  // This is a one-way directional relation: character_id is the perspective holder, related_id is the subject.
             members: [
                 { entity: 'Character', key: 'character_id', route: 'characters' },
                 { entity: 'Character', key: 'related_id', route: 'characters' },
@@ -272,27 +271,27 @@ const domainManifest = {
             keys: ['deity_id', 'organization_id'],
             payload: {},
         },
-        EventCharacter: {
+        CharacterEvent: {
             kind: 'relationship',
             table: 'event_characters',
             members: [
-                { entity: 'Event', key: 'event_id', route: 'characters' },
                 { entity: 'Character', key: 'character_id', route: 'events' },
+                { entity: 'Event', key: 'event_id', route: 'characters' },
             ],
-            keys: ['event_id', 'character_id'],
+            keys: ['character_id', 'event_id'],
             payload: {
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
             },
         },
-        EventOrganization: {
+        OrganizationEvent: {
             kind: 'relationship',
             table: 'event_organizations',
             members: [
-                { entity: 'Event', key: 'event_id', route: 'organizations' },
                 { entity: 'Organization', key: 'organization_id', route: 'events' },
+                { entity: 'Event', key: 'event_id', route: 'organizations' },
             ],
-            keys: ['event_id', 'organization_id'],
+            keys: ['organization_id', 'event_id'],
             payload: {
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
@@ -370,15 +369,15 @@ function buildLegacyEntitySchemas(manifest = domainManifest) {
     for (const [relationName, relationDef] of Object.entries(manifest.relations)) {
         const relationSchema = {
             ...normalizeFieldSchema(relationDef.payload),
-            [relationDef.sourceKey]: {
+            [relationDef.members[0].key]: {
                 type: 'string',
                 primary: true,
-                ref: relationDef.source,
+                ref: relationDef.members[0].entity,
             },
-            [relationDef.targetKey]: {
+            [relationDef.members[1].key]: {
                 type: 'string',
                 primary: true,
-                ref: relationDef.target,
+                ref: relationDef.members[1].entity,
             },
         };
 
@@ -399,7 +398,8 @@ function buildLegacyRegistry(manifest = domainManifest) {
     const grouped = {};
 
     for (const relationDef of Object.values(manifest.relations)) {
-        const source = relationDef.source;
+        const [sourceMember, targetMember] = relationDef.members;
+        const source = sourceMember.entity;
         grouped[source] = grouped[source] || [];
 
         const joinFields = Object.keys(relationDef.payload || {}).filter(
@@ -408,10 +408,10 @@ function buildLegacyRegistry(manifest = domainManifest) {
 
         grouped[source].push({
             joinTable: relationDef.table,
-            relatedEntity: relationDef.target,
+            relatedEntity: targetMember.entity,
             type: relationDef.kind,
-            mainIdField: relationDef.sourceKey,
-            relatedIdField: relationDef.targetKey,
+            mainIdField: sourceMember.key,
+            relatedIdField: targetMember.key,
             dateKey: relationDef.historyKey,
             joinFields,
         });
