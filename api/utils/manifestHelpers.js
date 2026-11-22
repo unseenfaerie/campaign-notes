@@ -93,19 +93,10 @@ function getRelationMembers(relationDef) {
     throw new Error('Relation must define exactly two members');
 }
 
-function getPerspectiveMember(relationDef) {
-    const members = getRelationMembers(relationDef);
-    return {
-        perspectiveMemberIndex: 0,
-        perspectiveMember: members[0],
-        targetMember: members[1],
-    };
-}
-
 function validateDomainManifest(manifest = domainManifest) {
     for (const [relationName, relationDef] of Object.entries(manifest.relations || {})) {
         const members = getRelationMembers(relationDef);
-        const [perspectiveMember, targetMember] = members;
+        const [firstMember, secondMember] = members;
 
         for (const [index, member] of members.entries()) {
             if (!manifest.entities[member.entity]) {
@@ -119,10 +110,7 @@ function validateDomainManifest(manifest = domainManifest) {
             }
         }
 
-        if (!relationName.startsWith(perspectiveMember.entity)) {
-            throw new Error(`Relation ${relationName} must begin with perspective entity ${perspectiveMember.entity}`);
-        }
-        if (!Array.isArray(relationDef.keys) || !relationDef.keys.includes(perspectiveMember.key) || !relationDef.keys.includes(targetMember.key)) {
+        if (!Array.isArray(relationDef.keys) || !relationDef.keys.includes(firstMember.key) || !relationDef.keys.includes(secondMember.key)) {
             throw new Error(`Relation ${relationName} keys must include both member keys`);
         }
     }
@@ -135,15 +123,16 @@ function getRelationByRoutes(entityRoute, relatedRoute, manifest = domainManifes
 
     for (const [relationName, relationDef] of Object.entries(manifest.relations)) {
         const members = getRelationMembers(relationDef);
-        const perspectiveMember = members[0];
-        const perspectiveEntityDef = manifest.entities[perspectiveMember.entity];
-        if (perspectiveEntityDef.route === entityRoute && perspectiveMember.route === relatedRoute) {
-            return {
-                relationName,
-                relationDef,
-                anchorMemberIndex: 0,
-                relatedMemberIndex: 1,
-            };
+        for (const anchorMemberIndex of [0, 1]) {
+            const anchor = members[anchorMemberIndex];
+            if (manifest.entities[anchor.entity].route === entityRoute && anchor.route === relatedRoute) {
+                return {
+                    relationName,
+                    relationDef,
+                    anchorMemberIndex,
+                    relatedMemberIndex: 1 - anchorMemberIndex,
+                };
+            }
         }
     }
 
@@ -152,13 +141,13 @@ function getRelationByRoutes(entityRoute, relatedRoute, manifest = domainManifes
 
 function getRelationContext(members, anchorMemberIndex) {
     return {
-        anchorMember: members[0],
-        relatedMember: members[1],
+        anchorMember: members[anchorMemberIndex],
+        relatedMember: members[1 - anchorMemberIndex],
     };
 }
 
 function getRelatedIdForRow(row, members, sourceId, anchorMemberIndex) {
-    return row[members[1].key];
+    return row[members[1 - anchorMemberIndex].key];
 }
 
 function mapFieldDefs(fieldsObj) {
@@ -227,16 +216,18 @@ function getRelationsForEntityRoute(entityRoute, manifest = domainManifest) {
 
     for (const [relationName, relationDef] of Object.entries(manifest.relations || {})) {
         const members = getRelationMembers(relationDef);
-        const [perspectiveMember, targetMember] = members;
-        const perspectiveEntityDef = manifest.entities[perspectiveMember.entity];
-        const relatedEntityDef = manifest.entities[targetMember.entity];
-
-        if (perspectiveEntityDef.route === entityRoute) {
+        for (const anchorMemberIndex of [0, 1]) {
+            const anchorMember = members[anchorMemberIndex];
+            const targetMember = members[1 - anchorMemberIndex];
+            const relatedEntityDef = manifest.entities[targetMember.entity];
+            if (manifest.entities[anchorMember.entity].route !== entityRoute) continue;
+            // Self-relations have one route but query both member columns at read time.
+            if (anchorMemberIndex === 1 && members[0].entity === members[1].entity) continue;
             relations.push({
                 relationName,
                 relationDef,
-                anchorMemberIndex: 0,
-                relatedRoute: perspectiveMember.route,
+                anchorMemberIndex,
+                relatedRoute: anchorMember.route,
                 relatedEntityName: targetMember.entity,
                 relatedEntityRoute: relatedEntityDef.route,
                 relatedIdField: relatedEntityDef.idField,
@@ -258,6 +249,7 @@ function buildRelationFormSchemas(manifest = domainManifest) {
                 return {
                     relatedRoute: relation.relatedRoute,
                     relationName: relation.relationName,
+                    anchorMemberIndex: relation.anchorMemberIndex,
                     kind: relation.relationDef.kind,
                     relatedEntityRoute: relation.relatedEntityRoute,
                     relatedEntityLabel: relatedEntityDef.ui?.label || relation.relatedEntityName,
@@ -308,7 +300,6 @@ module.exports = {
     dedupeRows,
     getEntityByRoute,
     getRelationMembers,
-    getPerspectiveMember,
     validateDomainManifest,
     getRelationByRoutes,
     getRelationContext,

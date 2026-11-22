@@ -15,6 +15,9 @@ Vue 3 + TypeScript frontend for browsing manifest-driven campaign data from the 
 - Generic entity list pages for each route.
 - Generic entity detail page using GET /api/:entityRoute/:id/full.
 - Collapsible relation sections with support for simple, relationship, and history relation payload shapes.
+- DMs can create and manage relations from either member's detail page, including incoming
+  relations, and set visibility direction separately for each record or history entry.
+  New relations default to outward from the current page; migrated records start bidirectional.
 
 ## Environment
 

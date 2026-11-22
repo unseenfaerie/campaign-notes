@@ -181,6 +181,7 @@ function buildEntity(entityName, route, idType = 'string') {
 
 beforeEach(() => {
     jest.resetAllMocks();
+    manifestCrudService.getMany.mockResolvedValue([]);
     listAnchoredCharacterIdsByUserId.mockResolvedValue([]);
     findUserById.mockResolvedValue(null);
     getPendingProposalForTarget.mockResolvedValue(null);
@@ -440,7 +441,7 @@ describe('domainRouter isolated unit tests', () => {
                 { id: 'item-2', name: 'Shield', is_public: true },
                 { id: 'item-3', name: 'Hidden' },
             ])
-            .mockResolvedValueOnce([{ character_id: 'char-1', item_id: 'item-1' }])
+            .mockResolvedValueOnce([{ character_id: 'char-1', item_id: 'item-1', visibility_direction: 'first_to_second' }])
             .mockResolvedValueOnce([])
             .mockResolvedValueOnce([])
             .mockResolvedValueOnce([]);
@@ -586,6 +587,7 @@ describe('domainRouter isolated unit tests', () => {
                                 acquired_date: 'jan-01-200',
                                 relinquished_date: null,
                                 short_description: 'Current possession',
+                                relationAnchorIndex: 0,
                                 pendingProposal: null,
                             },
                         ],
@@ -597,6 +599,7 @@ describe('domainRouter isolated unit tests', () => {
                         name: 'Dawn',
                         relationship: {
                             short_description: 'Favored by the dawn',
+                            relationAnchorIndex: 0,
                             pendingProposal: null,
                         },
                     },
@@ -619,7 +622,7 @@ describe('domainRouter isolated unit tests', () => {
             return null;
         });
         manifestCrudService.getMany
-            .mockResolvedValueOnce([{ character_id: 'char-1', item_id: 'item-1' }])
+            .mockResolvedValueOnce([{ character_id: 'char-1', item_id: 'item-1', visibility_direction: 'first_to_second' }])
             .mockResolvedValueOnce([])
             .mockResolvedValueOnce([])
             .mockResolvedValueOnce([]);
@@ -653,10 +656,10 @@ describe('domainRouter isolated unit tests', () => {
         });
         manifestCrudService.getMany.mockImplementation(async (relationName, where) => {
             if (relationName === 'CharacterItem' && where.character_id === 'char-1') {
-                return [{ character_id: 'char-1', item_id: 'item-1', short_description: 'Current possession' }];
+                return [{ character_id: 'char-1', item_id: 'item-1', short_description: 'Current possession', visibility_direction: 'first_to_second' }];
             }
             if (relationName === 'CharacterEvent' && where.character_id === 'char-1') {
-                return [{ event_id: 'event-1', character_id: 'char-1', short_description: 'Favored by the dawn' }];
+                return [{ event_id: 'event-1', character_id: 'char-1', short_description: 'Favored by the dawn', visibility_direction: 'first_to_second' }];
             }
             return [];
         });
@@ -759,12 +762,14 @@ describe('domainRouter isolated unit tests', () => {
                         acquired_date: 'jan-01-200',
                         relinquished_date: 'jan-05-200',
                         short_description: 'First possession',
+                        relationAnchorIndex: 0,
                         pendingProposal: null,
                     },
                     {
                         acquired_date: 'jan-10-200',
                         relinquished_date: null,
                         short_description: 'Second possession',
+                        relationAnchorIndex: 0,
                         pendingProposal: null,
                     },
                 ],
@@ -1065,7 +1070,7 @@ describe('domainRouter isolated unit tests', () => {
             return null;
         });
         manifestCrudService.getMany
-            .mockResolvedValueOnce([{ character_id: 'char-1', item_id: 'item-1' }])
+            .mockResolvedValueOnce([{ character_id: 'char-1', item_id: 'item-1', visibility_direction: 'first_to_second' }])
             .mockResolvedValueOnce([])
             .mockResolvedValueOnce([])
             .mockResolvedValueOnce([]);
@@ -1558,6 +1563,7 @@ describe('domainRouter isolated unit tests', () => {
         expect(manifestCrudService.insert).toHaveBeenCalledWith('CharacterItem', {
             character_id: 'char-1',
             item_id: 'item-1',
+            visibility_direction: 'first_to_second',
         }, { actorUsername: 'dm-admin' });
     });
 
@@ -1614,6 +1620,7 @@ describe('domainRouter isolated unit tests', () => {
             deity_id: 'deity-1',
             adopted_date: '100-01-01',
             short_description: 'Chosen by prophecy',
+            visibility_direction: 'first_to_second',
         }, { actorUsername: 'dm-admin' });
     });
 

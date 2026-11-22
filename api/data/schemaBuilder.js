@@ -64,6 +64,7 @@ function makeRelationTableSql(relName, rel, manifest) {
         if (members.some((member) => member.key === field)) continue;
         let col = field + ' ' + toSqlType(meta.type);
         if (meta.required) col += ' NOT NULL';
+        if (meta.default !== undefined) col += ` DEFAULT '${String(meta.default).replace(/'/g, "''")}'`;
         cols.push(col);
     }
 

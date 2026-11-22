@@ -149,10 +149,13 @@ describe('manifestHelpers isolated unit tests', () => {
             );
         });
 
-        it('does not infer a reverse route from the target member', () => {
-            expect(() => getRelationByRoutes('items', 'characters', manifest)).toThrow(
-                'Unknown related route for items: characters'
-            );
+        it('finds the reverse route from the target member', () => {
+            expect(getRelationByRoutes('items', 'characters', manifest)).toEqual({
+                relationName: 'CharacterItem',
+                relationDef: manifest.relations.CharacterItem,
+                anchorMemberIndex: 1,
+                relatedMemberIndex: 0,
+            });
         });
 
         describe('validateDomainManifest', () => {
@@ -193,17 +196,11 @@ describe('manifestHelpers isolated unit tests', () => {
                 expect(() => validateDomainManifest(manifest)).toThrow(message);
             });
 
-            it('rejects non-two-member relations and mismatched perspective names', () => {
+            it('rejects non-two-member relations', () => {
                 expect(() => validateDomainManifest({
                     ...baseManifest,
                     relations: { CharacterItem: { members: [], keys: [] } },
                 })).toThrow('exactly two members');
-                expect(() => validateDomainManifest({
-                    ...baseManifest,
-                    relations: {
-                        ItemCharacter: baseManifest.relations.CharacterItem,
-                    },
-                })).toThrow('must begin with perspective entity');
             });
         });
     });

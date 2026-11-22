@@ -315,53 +315,53 @@ describe('visibilityHelpers', () => {
 
     describe('isEntityRelatedToAnchoredCharacter', () => {
         it('should return false if no anchored character IDs provided', async () => {
-            const mockCrudService = { getOne: jest.fn() };
+            const mockCrudService = { getMany: jest.fn() };
             const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'places', 'place-1', []);
             expect(result).toBe(false);
-            expect(mockCrudService.getOne).not.toHaveBeenCalled();
+            expect(mockCrudService.getMany).not.toHaveBeenCalled();
         });
 
         it('should return false if null anchored character IDs', async () => {
-            const mockCrudService = { getOne: jest.fn() };
+            const mockCrudService = { getMany: jest.fn() };
             const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'places', 'place-1', null);
             expect(result).toBe(false);
-            expect(mockCrudService.getOne).not.toHaveBeenCalled();
+            expect(mockCrudService.getMany).not.toHaveBeenCalled();
         });
 
         it('should return false if invalid entity route', async () => {
-            const mockCrudService = { getOne: jest.fn() };
+            const mockCrudService = { getMany: jest.fn() };
             const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'invalid-route', 'place-1', ['char-1']);
             expect(result).toBe(false);
-            expect(mockCrudService.getOne).not.toHaveBeenCalled();
+            expect(mockCrudService.getMany).not.toHaveBeenCalled();
         });
 
         it('should return true if entity is related to an anchored character', async () => {
             const mockCrudService = {
-                getOne: jest.fn().mockResolvedValue({ character_id: 'char-1', place_id: 'place-1' }),
+                getMany: jest.fn().mockResolvedValue([{ character_id: 'char-1', place_id: 'place-1', visibility_direction: 'both' }]),
             };
             const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'places', 'place-1', ['char-1']);
             expect(result).toBe(true);
-            expect(mockCrudService.getOne).toHaveBeenCalled();
+            expect(mockCrudService.getMany).toHaveBeenCalled();
         });
 
         it('should return false if entity is not related to any anchored character', async () => {
             const mockCrudService = {
-                getOne: jest.fn().mockResolvedValue(null),
+                getMany: jest.fn().mockResolvedValue([]),
             };
             const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'places', 'place-1', ['char-1']);
             expect(result).toBe(false);
-            expect(mockCrudService.getOne).toHaveBeenCalled();
+            expect(mockCrudService.getMany).toHaveBeenCalled();
         });
 
         it('should check multiple anchored characters', async () => {
             const mockCrudService = {
-                getOne: jest.fn()
-                    .mockResolvedValueOnce(null)  // char-1 has no relation
-                    .mockResolvedValueOnce({ character_id: 'char-2', item_id: 'item-1' }),  // char-2 has relation
+                getMany: jest.fn()
+                    .mockResolvedValueOnce([])
+                    .mockResolvedValueOnce([{ character_id: 'char-2', item_id: 'item-1', visibility_direction: 'first_to_second' }]),
             };
             const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'items', 'item-1', ['char-1', 'char-2']);
             expect(result).toBe(true);
-            expect(mockCrudService.getOne).toHaveBeenCalledTimes(2);
+            expect(mockCrudService.getMany).toHaveBeenCalledTimes(2);
         });
     });
 
@@ -386,7 +386,7 @@ describe('visibilityHelpers', () => {
                 getMany: jest.fn((relationName, where) => {
                     // CharacterDeity: char-1 -> deity-1
                     if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
-                        return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', character_id: 'char-1', deity_id: 'deity-1' }]);
                     }
                     if (relationName === 'CharacterDeity' && where.deity_id === 'char-1') {
                         return Promise.resolve([]);
@@ -405,14 +405,14 @@ describe('visibilityHelpers', () => {
                 getMany: jest.fn((relationName, where) => {
                     // Simulate: char-1 -> deity-1 -> sphere-1
                     if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
-                        return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', character_id: 'char-1', deity_id: 'deity-1' }]);
                     }
                     if (relationName === 'CharacterDeity' && where.deity_id === 'char-1') {
                         return Promise.resolve([]);
                     }
                     // deity-1 (hop 1, still expanded once to surface the locked edge) -> sphere-1 (hop 2)
                     if (relationName === 'DeitySphere' && where.deity_id === 'deity-1') {
-                        return Promise.resolve([{ deity_id: 'deity-1', sphere_id: 'sphere-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', deity_id: 'deity-1', sphere_id: 'sphere-1' }]);
                     }
                     return Promise.resolve([]);
                 }),
@@ -430,11 +430,11 @@ describe('visibilityHelpers', () => {
                 getMany: jest.fn((relationName, where) => {
                     // char-1 -> deity-1
                     if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
-                        return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', character_id: 'char-1', deity_id: 'deity-1' }]);
                     }
                     // deity-1 -> sphere-1
                     if (relationName === 'DeitySphere' && where.deity_id === 'deity-1') {
-                        return Promise.resolve([{ deity_id: 'deity-1', sphere_id: 'sphere-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', deity_id: 'deity-1', sphere_id: 'sphere-1' }]);
                     }
                     // All other queries return empty
                     return Promise.resolve([]);
@@ -452,10 +452,10 @@ describe('visibilityHelpers', () => {
                 getMany: jest.fn((relationName, where) => {
                     // Simulate a chain: char-1 -> deity-1 -> sphere-1
                     if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
-                        return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', character_id: 'char-1', deity_id: 'deity-1' }]);
                     }
                     if (relationName === 'DeitySphere' && where.deity_id === 'deity-1') {
-                        return Promise.resolve([{ deity_id: 'deity-1', sphere_id: 'sphere-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', deity_id: 'deity-1', sphere_id: 'sphere-1' }]);
                     }
                     // Unlimited should also expand sphere-1 (even if no more relations)
                     if (relationName === 'CharacterDeity' && where.deity_id === 'char-1') {
@@ -479,14 +479,14 @@ describe('visibilityHelpers', () => {
                 getMany: jest.fn((relationName, where) => {
                     // CharacterRelationship: char-1 related to char-2
                     if (relationName === 'CharacterRelationship' && where.character_id === 'char-1') {
-                        return Promise.resolve([{ character_id: 'char-1', related_id: 'char-2' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', character_id: 'char-1', related_id: 'char-2' }]);
                     }
                     if (relationName === 'CharacterRelationship' && where.related_id === 'char-1') {
                         return Promise.resolve([]);
                     }
                     // char-2 related to char-3: 2 hops out, surfaced as the locked outer edge
                     if (relationName === 'CharacterRelationship' && where.character_id === 'char-2') {
-                        return Promise.resolve([{ character_id: 'char-2', related_id: 'char-3' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', character_id: 'char-2', related_id: 'char-3' }]);
                     }
                     return Promise.resolve([]);
                 }),
@@ -502,10 +502,10 @@ describe('visibilityHelpers', () => {
                 getMany: jest.fn((relationName, where) => {
                     // Both char-1 and char-2 relate to deity-1
                     if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
-                        return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', character_id: 'char-1', deity_id: 'deity-1' }]);
                     }
                     if (relationName === 'CharacterDeity' && where.character_id === 'char-2') {
-                        return Promise.resolve([{ character_id: 'char-2', deity_id: 'deity-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', character_id: 'char-2', deity_id: 'deity-1' }]);
                     }
                     return Promise.resolve([]);
                 }),
@@ -534,7 +534,7 @@ describe('visibilityHelpers', () => {
             const mockCrudService = {
                 getMany: jest.fn((relationName, where) => {
                     if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
-                        return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', character_id: 'char-1', deity_id: 'deity-1' }]);
                     }
                     return Promise.resolve([]);
                 }),

@@ -6,7 +6,7 @@
 const { getEnumValues } = require('./enums');
 
 const domainManifest = {
-    schemaVersion: 5,
+    schemaVersion: 6,
     entities: {
         Character: {
             table: 'characters',
@@ -342,6 +342,17 @@ const domainManifest = {
         },
     },
 };
+
+// Direction is stored relative to the stable order of the relation's member keys.
+for (const relation of Object.values(domainManifest.relations)) {
+    relation.payload.visibility_direction = {
+        type: 'string',
+        required: true,
+        enum: ['first_to_second', 'second_to_first', 'both'],
+        default: 'both',
+        access: { playerProposable: false },
+    };
+}
 
 function buildEntityTableMap(manifest = domainManifest) {
     const map = {};

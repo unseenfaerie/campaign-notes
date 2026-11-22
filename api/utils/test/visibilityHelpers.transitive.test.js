@@ -78,7 +78,7 @@ class MockCrudService {
         if (!this.relations[relationName]) {
             this.relations[relationName] = [];
         }
-        this.relations[relationName].push(record);
+        this.relations[relationName].push({ visibility_direction: 'first_to_second', ...record });
     }
 
     /**
@@ -224,6 +224,26 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
         expect(visible.size).toBe(1);
     });
 
+    test('follows a place-origin edge after a character-origin edge, but not their reverse', async () => {
+        mockCrudService.addRelation('CharacterPlace', {
+            character_id: 'char-1', place_id: 'place-1', visibility_direction: 'first_to_second',
+        });
+        mockCrudService.addRelation('CharacterPlace', {
+            character_id: 'char-2', place_id: 'place-1', visibility_direction: 'second_to_first',
+        });
+        const fromFirst = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 2);
+        const fromSecond = await getVisibleEntityIdsForUser(mockCrudService, ['char-2'], 2);
+        expect(fromFirst.get('Character:char-2')).toBe(2);
+        expect(fromSecond.has('Place:place-1')).toBe(false);
+    });
+
+    test('traverses a bidirectional self-relation from either member', async () => {
+        mockCrudService.addRelation('CharacterRelationship', {
+            character_a_id: 'char-1', character_b_id: 'char-2', visibility_direction: 'both',
+        });
+        expect((await getVisibleEntityIdsForUser(mockCrudService, ['char-2'])).get('Character:char-1')).toBe(1);
+    });
+
     test('should not infinite loop on circular references', async () => {
         // Character A -> Organization -> Character A (circular)
         mockCrudService.addRelation('CharacterOrganization', {
@@ -332,7 +352,7 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
         expect(visible.size).toBe(6);
     });
 
-    test('should handle relation query failures gracefully', async () => {
+    test('should report relation query failures', async () => {
         const failingService = {
             async getMany() {
                 throw new Error('Database error');
@@ -342,9 +362,7 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
             },
         };
 
-        // Should not throw, just return anchored characters
-        const visible = await getVisibleEntityIdsForUser(failingService, ['char-1']);
-        expect(visible.has('Character:char-1')).toBe(true);
+        await expect(getVisibleEntityIdsForUser(failingService, ['char-1'])).rejects.toThrow('Database error');
     });
 
     test('should deduplicate entities when reachable via multiple paths', async () => {
