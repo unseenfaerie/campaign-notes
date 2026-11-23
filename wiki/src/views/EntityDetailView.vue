@@ -1231,8 +1231,23 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
 
       <p v-if="directionError" class="status-card error" role="alert">{{ directionError }}</p>
       <template v-for="group in relatedSectionGroups" :key="group.key">
-      <div v-if="group.sections.length > 0" class="section-heading-row">
+      <div
+        v-if="
+          group.sections.length > 0 ||
+          (group.key === 'outgoing' && auth.isAdmin.value && missingRelationSections.length > 0)
+        "
+        class="section-heading-row related-section-heading-row"
+      >
         <h3>{{ group.title }}</h3>
+        <button
+          v-if="group.key === 'outgoing' && auth.isAdmin.value && missingRelationSections.length > 0 && !showingNewRelatedPicker"
+          type="button"
+          class="secondary-button"
+          :disabled="directionSavingKey !== null"
+          @click="showingNewRelatedPicker = true"
+        >
+          New Related Entity
+        </button>
       </div>
 
       <CollapseSection
@@ -1652,19 +1667,8 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
         </div>
       </CollapseSection>
 
-      <section v-if="group.key === 'outgoing' && auth.isAdmin.value && missingRelationSections.length > 0" class="article-section">
-        <button
-          v-if="!showingNewRelatedPicker"
-          type="button"
-          class="secondary-button"
-          :disabled="directionSavingKey !== null"
-          @click="showingNewRelatedPicker = true"
-        >
-          New Related Entity
-        </button>
-
+      <section v-if="group.key === 'outgoing' && auth.isAdmin.value && missingRelationSections.length > 0 && showingNewRelatedPicker" class="article-section">
         <AddRelatedEntityForm
-          v-else
           :entity-route="entityRoute"
           :id="id"
           :options="missingRelationSections"

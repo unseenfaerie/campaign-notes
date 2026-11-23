@@ -253,6 +253,10 @@ a:hover {
     gap: 1rem;
 }
 
+.related-section-heading-row {
+    justify-content: flex-start;
+}
+
 .row-actions-end {
     display: flex;
     gap: 0.5rem;
