@@ -1348,6 +1348,16 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
         </button>
       </div>
 
+      <section v-if="group.key === 'outgoing' && auth.isAdmin.value && missingRelationSections.length > 0 && showingNewRelatedPicker" class="article-section">
+        <AddRelatedEntityForm
+          :entity-route="entityRoute"
+          :id="id"
+          :options="missingRelationSections"
+          @created="onRelationCreated"
+          @cancel="showingNewRelatedPicker = false"
+        />
+      </section>
+
       <CollapseSection
         v-for="[relatedRoute, records] in group.sections"
         :key="relatedRoute"
@@ -1767,15 +1777,6 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
         </div>
       </CollapseSection>
 
-      <section v-if="group.key === 'outgoing' && auth.isAdmin.value && missingRelationSections.length > 0 && showingNewRelatedPicker" class="article-section">
-        <AddRelatedEntityForm
-          :entity-route="entityRoute"
-          :id="id"
-          :options="missingRelationSections"
-          @created="onRelationCreated"
-          @cancel="showingNewRelatedPicker = false"
-        />
-      </section>
       </template>
       </fieldset>
       </template>
