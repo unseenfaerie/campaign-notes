@@ -229,3 +229,41 @@ test('conditional amendments reject proposals changed or resolved since they wer
     await markRejected(first.id, { reviewedBy: 'dm', reviewedAt: new Date().toISOString() });
     expect(await amendPendingProposal(first, { short_description: 'Too late' })).toBeNull();
 });
+
+test('acceptance and amendments serialize so acceptance applies the latest proposal', async () => {
+    const { getPendingProposalForTarget, amendPendingProposal, acceptPendingProposal } = require('../../data/editProposalRepository');
+    const create = await request(app).post('/api/characters/hero/propose')
+        .set('x-role', 'player').send({ short_description: 'Original proposal' });
+    const original = await getPendingProposalForTarget('Character', { id: 'hero' });
+
+    let startApplying;
+    const applying = new Promise(resolve => { startApplying = resolve; });
+    let releaseApply;
+    const applyGate = new Promise(resolve => { releaseApply = resolve; });
+    const acceptance = acceptPendingProposal(create.body.id, {
+        reviewedBy: 'dm',
+        reviewedAt: new Date().toISOString(),
+    }, async proposal => {
+        startApplying();
+        await applyGate;
+        await manifestCrudService.update('Character', { id: 'hero' }, proposal.proposed_changes);
+    });
+
+    await applying;
+    let amendmentFinished = false;
+    const amendment = amendPendingProposal(original, { short_description: 'Amended proposal' })
+        .then(result => {
+            amendmentFinished = true;
+            return result;
+        });
+    await Promise.resolve();
+    expect(amendmentFinished).toBe(false);
+
+    releaseApply();
+    const [accepted, amended] = await Promise.all([acceptance, amendment]);
+    expect(accepted.kind).toBe('accepted');
+    expect(accepted.proposal.proposed_changes).toEqual({ short_description: 'Original proposal' });
+    expect(amended).toBeNull();
+    expect((await manifestCrudService.getOne('Character', { id: 'hero' })).short_description)
+        .toBe('Original proposal');
+});

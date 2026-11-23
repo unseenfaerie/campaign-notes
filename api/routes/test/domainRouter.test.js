@@ -22,6 +22,9 @@ jest.mock('../../data/editProposalRepository', () => ({
     getPendingProposalForTarget: jest.fn().mockResolvedValue(null),
     getPendingProposalsForResource: jest.fn().mockResolvedValue([]),
     getPendingProposals: jest.fn().mockResolvedValue([]),
+    amendPendingProposal: jest.fn(),
+    acceptPendingProposal: jest.fn(),
+    withProposalMutationLock: jest.fn((operation) => operation()),
     markAccepted: jest.fn(),
     markRejected: jest.fn(),
 }));
@@ -145,6 +148,7 @@ const {
     getPendingProposalsForResource,
     getPendingProposals,
     markRejected,
+    withProposalMutationLock,
 } = require('../../data/editProposalRepository');
 const manifestHelpers = require('../../utils/manifestHelpers');
 const router = require('../domainRouter');
@@ -187,6 +191,7 @@ beforeEach(() => {
     getPendingProposalForTarget.mockResolvedValue(null);
     getPendingProposalsForResource.mockResolvedValue([]);
     getPendingProposals.mockResolvedValue([]);
+    withProposalMutationLock.mockImplementation((operation) => operation());
 
     manifestHelpers.coerceValueByType.mockImplementation((type, value) => {
         if (type === 'number') {

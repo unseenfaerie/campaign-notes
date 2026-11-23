@@ -11,7 +11,8 @@ const {
     getPendingProposalsForResource,
     getProposalById,
     amendPendingProposal,
-    markAccepted,
+    acceptPendingProposal,
+    withProposalMutationLock,
     markRejected,
 } = require('../data/editProposalRepository');
 const {
@@ -604,25 +605,27 @@ router.post('/proposals/:proposalId/accept', async (req, res) => {
             return res.status(authErr.status).json({ error: authErr.error });
         }
 
-        const proposal = await getProposalById(req.params.proposalId);
-        if (!proposal) {
+        const outcome = await acceptPendingProposal(
+            req.params.proposalId,
+            {
+                reviewedBy: req.auth.userId,
+                reviewedAt: new Date().toISOString(),
+            },
+            async (proposal) => {
+                const proposer = await findUserById(proposal.proposed_by);
+                await manifestCrudService.update(proposal.resource_name, proposal.target_key, proposal.proposed_changes, {
+                    actorUsername: proposer ? proposer.username : undefined,
+                });
+            }
+        );
+        if (outcome.kind === 'not_found') {
             return res.status(404).json({ error: 'Proposal not found' });
         }
-        if (proposal.status !== 'pending') {
+        if (outcome.kind === 'not_pending') {
             return res.status(409).json({ error: 'Proposal is not pending' });
         }
 
-        const proposer = await findUserById(proposal.proposed_by);
-        await manifestCrudService.update(proposal.resource_name, proposal.target_key, proposal.proposed_changes, {
-            actorUsername: proposer ? proposer.username : undefined,
-        });
-
-        const updated = await markAccepted(req.params.proposalId, {
-            reviewedBy: req.auth.userId,
-            reviewedAt: new Date().toISOString(),
-        });
-
-        return res.json(await toProposalView(updated));
+        return res.json(await toProposalView(outcome.proposal));
     } catch (err) {
         const httpErr = toHttpError(err);
         return res.status(httpErr.status).json({ error: httpErr.message });
@@ -637,21 +640,23 @@ router.post('/proposals/:proposalId/reject', async (req, res) => {
             return res.status(authErr.status).json({ error: authErr.error });
         }
 
-        const proposal = await getProposalById(req.params.proposalId);
-        if (!proposal) {
-            return res.status(404).json({ error: 'Proposal not found' });
-        }
-        if (proposal.status !== 'pending') {
-            return res.status(409).json({ error: 'Proposal is not pending' });
-        }
+        return await withProposalMutationLock(async () => {
+            const proposal = await getProposalById(req.params.proposalId);
+            if (!proposal) {
+                return res.status(404).json({ error: 'Proposal not found' });
+            }
+            if (proposal.status !== 'pending') {
+                return res.status(409).json({ error: 'Proposal is not pending' });
+            }
 
-        const updated = await markRejected(req.params.proposalId, {
-            reviewedBy: req.auth.userId,
-            reviewedAt: new Date().toISOString(),
-            reviewNote: req.body && req.body.note,
+            const updated = await markRejected(req.params.proposalId, {
+                reviewedBy: req.auth.userId,
+                reviewedAt: new Date().toISOString(),
+                reviewNote: req.body && req.body.note,
+            });
+
+            return res.json(await toProposalView(updated));
         });
-
-        return res.json(await toProposalView(updated));
     } catch (err) {
         const httpErr = toHttpError(err);
         return res.status(httpErr.status).json({ error: httpErr.message });
@@ -665,24 +670,26 @@ router.post('/proposals/:proposalId/revoke', async (req, res) => {
             return res.status(401).json({ error: 'Unauthorized' });
         }
 
-        const proposal = await getProposalById(req.params.proposalId);
-        if (!proposal) {
-            return res.status(404).json({ error: 'Proposal not found' });
-        }
-        if (proposal.status !== 'pending') {
-            return res.status(409).json({ error: 'Proposal is not pending' });
-        }
-        if (proposal.proposed_by !== req.auth.userId) {
-            return res.status(403).json({ error: 'Only the proposal author can revoke it' });
-        }
+        return await withProposalMutationLock(async () => {
+            const proposal = await getProposalById(req.params.proposalId);
+            if (!proposal) {
+                return res.status(404).json({ error: 'Proposal not found' });
+            }
+            if (proposal.status !== 'pending') {
+                return res.status(409).json({ error: 'Proposal is not pending' });
+            }
+            if (proposal.proposed_by !== req.auth.userId) {
+                return res.status(403).json({ error: 'Only the proposal author can revoke it' });
+            }
 
-        const updated = await markRejected(req.params.proposalId, {
-            reviewedBy: req.auth.userId,
-            reviewedAt: new Date().toISOString(),
-            reviewNote: 'Revoked by author',
+            const updated = await markRejected(req.params.proposalId, {
+                reviewedBy: req.auth.userId,
+                reviewedAt: new Date().toISOString(),
+                reviewNote: 'Revoked by author',
+            });
+
+            return res.json(await toProposalView(updated));
         });
-
-        return res.json(await toProposalView(updated));
     } catch (err) {
         const httpErr = toHttpError(err);
         return res.status(httpErr.status).json({ error: httpErr.message });

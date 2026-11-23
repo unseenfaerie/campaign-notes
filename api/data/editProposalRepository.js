@@ -1,6 +1,14 @@
 const { run, get, all } = require('./sqliteAsync');
 const { stableStringify } = require('../utils/proposalHelpers');
 
+let mutationQueue = Promise.resolve();
+
+function withProposalMutationLock(operation) {
+    const result = mutationQueue.then(operation);
+    mutationQueue = result.then(() => undefined, () => undefined);
+    return result;
+}
+
 async function createProposal({
     targetKind,
     resourceName,
@@ -70,24 +78,38 @@ async function getPendingProposals() {
 }
 
 async function amendPendingProposal(proposal, proposedChanges) {
-    const withdrawn = Object.keys(proposedChanges).length === 0;
-    const result = await run(
-        `UPDATE edit_proposals
-         SET proposed_changes = ?, status = ?, reviewed_by = ?, reviewed_at = ?, review_note = ?
-         WHERE id = ? AND proposed_by = ? AND status = 'pending' AND proposed_changes = ?`,
-        [
-            JSON.stringify(proposedChanges),
-            withdrawn ? 'rejected' : 'pending',
-            withdrawn ? proposal.proposed_by : null,
-            withdrawn ? new Date().toISOString() : null,
-            withdrawn ? 'Withdrawn by author after reverting all changes' : null,
-            proposal.id,
-            proposal.proposed_by,
-            JSON.stringify(proposal.proposed_changes),
-        ]
-    );
-    if (result.changes === 0) return null;
-    return getProposalById(proposal.id);
+    return withProposalMutationLock(async () => {
+        const withdrawn = Object.keys(proposedChanges).length === 0;
+        const result = await run(
+            `UPDATE edit_proposals
+             SET proposed_changes = ?, status = ?, reviewed_by = ?, reviewed_at = ?, review_note = ?
+             WHERE id = ? AND proposed_by = ? AND status = 'pending' AND proposed_changes = ?`,
+            [
+                JSON.stringify(proposedChanges),
+                withdrawn ? 'rejected' : 'pending',
+                withdrawn ? proposal.proposed_by : null,
+                withdrawn ? new Date().toISOString() : null,
+                withdrawn ? 'Withdrawn by author after reverting all changes' : null,
+                proposal.id,
+                proposal.proposed_by,
+                JSON.stringify(proposal.proposed_changes),
+            ]
+        );
+        if (result.changes === 0) return null;
+        return getProposalById(proposal.id);
+    });
+}
+
+async function acceptPendingProposal(id, { reviewedBy, reviewedAt }, applyChanges) {
+    return withProposalMutationLock(async () => {
+        const proposal = await getProposalById(id);
+        if (!proposal) return { kind: 'not_found' };
+        if (proposal.status !== 'pending') return { kind: 'not_pending' };
+
+        await applyChanges(proposal);
+        const accepted = await markAccepted(id, { reviewedBy, reviewedAt });
+        return { kind: 'accepted', proposal: accepted };
+    });
 }
 
 async function markAccepted(id, { reviewedBy, reviewedAt }) {
@@ -113,6 +135,8 @@ module.exports = {
     getPendingProposalsForResource,
     getPendingProposals,
     amendPendingProposal,
+    acceptPendingProposal,
+    withProposalMutationLock,
     markAccepted,
     markRejected,
 };
