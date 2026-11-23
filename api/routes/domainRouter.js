@@ -3,6 +3,7 @@ const { domainManifest } = require('../../common/domainManifest');
 const { manifestCrudService } = require('../data/genericCrudService');
 const { findUserById } = require('../data/authRepository');
 const { resolveViewingCharacterId, getVisibilityAuth } = require('../utils/viewingCharacterHelpers');
+const { canTraverseRelation, outwardDirection } = require('../utils/relationDirection');
 const {
     createProposal,
     getPendingProposalForTarget,
@@ -42,10 +43,7 @@ const {
 const {
     getVisibilityHopsForCharacter,
     isEntityVisibleToUser,
-    isRelationVisibleToUser,
     filterEntitiesByVisibility,
-    filterRelationsByVisibility,
-    getRelatedEntityIds,
     getVisibleEntityIdsForUser,
     resolveEntityAccess,
     isTargetEntityLocked,
@@ -54,10 +52,45 @@ const {
 
 const router = express.Router();
 
+function getRequestedRelation(req) {
+    const result = getRelationByRoutes(req.params.entityRoute, req.params.relatedRoute);
+    const requested = req.query.anchorMemberIndex;
+    if (requested === undefined) return result;
+    const members = getRelationMembers(result.relationDef);
+    if (members[0].entity !== members[1].entity || (requested !== '0' && requested !== '1')) {
+        throw new Error('Invalid anchorMemberIndex');
+    }
+    const anchorMemberIndex = Number(requested);
+    return { ...result, anchorMemberIndex, relatedMemberIndex: 1 - anchorMemberIndex };
+}
+
+async function canReadRelationRow(req, row, relationDef, anchorMemberIndex, sourceEntity, targetEntity) {
+    const { visibilityAuth, viewingCharacterIds, viewingCharacterHops } = await resolveVisibilityContext(req);
+    if (isDm(visibilityAuth)) return true;
+    if (!sourceEntity || !targetEntity || !canTraverseRelation(row, anchorMemberIndex)) return false;
+    let graph;
+    if (visibilityAuth && visibilityAuth.role === 'player' && viewingCharacterIds.length) {
+        graph = await getVisibleEntityIdsForUser(manifestCrudService, viewingCharacterIds, viewingCharacterHops);
+    }
+    const members = getRelationMembers(relationDef);
+    const sourceRoute = domainManifest.entities[members[anchorMemberIndex].entity].route;
+    const targetRoute = domainManifest.entities[members[1 - anchorMemberIndex].entity].route;
+    return resolveEntityAccess(sourceEntity, sourceRoute, visibilityAuth, viewingCharacterIds, graph, viewingCharacterHops) === 'full'
+        && resolveEntityAccess(targetEntity, targetRoute, visibilityAuth, viewingCharacterIds, graph, viewingCharacterHops) === 'full';
+}
+
 async function loadAssociatedRecords(relationName, relationDef, sourceId, anchorMemberIndex, user, anchoredCharacterIds, visibleEntityHops, maxHops, relatedRoute) {
     const members = getRelationMembers(relationDef);
     const relationContext = getRelationContext(members, anchorMemberIndex);
-    const relationRows = await loadRelationRows(relationName, relationContext, sourceId);
+    let relationRows = (await loadRelationRows(relationName, relationContext, sourceId))
+        .map(row => ({ ...row, relationAnchorIndex: anchorMemberIndex }));
+    if (members[0].entity === members[1].entity) {
+        const reverseContext = getRelationContext(members, 1 - anchorMemberIndex);
+        const reverseRows = await loadRelationRows(relationName, reverseContext, sourceId);
+        relationRows = relationRows.concat(reverseRows
+            .filter(row => row[members[anchorMemberIndex].key] !== sourceId)
+            .map(row => ({ ...row, relationAnchorIndex: 1 - anchorMemberIndex })));
+    }
 
     if (relationRows.length === 0) {
         return [];
@@ -76,12 +109,11 @@ async function loadAssociatedRecords(relationName, relationDef, sourceId, anchor
         }
     }
 
-    // Filter relations by visibility - check both member entities
+    // A visible target alone does not make an incoming relation visible.
     let visibleRows = relationRows;
     if (user && user.role !== 'dm') {
         // Load source entity once
         const sourceEntityDef = domainManifest.entities[members[anchorMemberIndex].entity];
-        const sourceRoute = sourceEntityDef.route;
         const sourceEntity = await manifestCrudService.getOne(
             members[anchorMemberIndex].entity,
             { [sourceEntityDef.idField]: sourceId }
@@ -90,20 +122,12 @@ async function loadAssociatedRecords(relationName, relationDef, sourceId, anchor
         visibleRows = [];
         for (const row of relationRows) {
             // Get the target entity
-            const targetId = getRelatedIdForRow(row, members, sourceId, anchorMemberIndex);
+            const targetId = getRelatedIdForRow(row, members, sourceId, row.relationAnchorIndex);
             const targetEntity = targetById.get(targetId);
 
-            // Check if both members are visible
             if (sourceEntity && targetEntity) {
-                const memberEntities = anchorMemberIndex === 0
-                    ? [sourceEntity, targetEntity]
-                    : [targetEntity, sourceEntity];
-                // Fall back to the transitive graph: both members reachable there means the
-                // relation connecting them should show too, even if neither is directly anchored.
-                const transitivelyVisible = !!visibleEntityHops
-                    && visibleEntityHops.has(sourceEntity.id)
-                    && visibleEntityHops.has(targetEntity.id);
-                if (isRelationVisibleToUser(relationName, memberEntities, user, anchoredCharacterIds) || transitivelyVisible) {
+                const targetAccess = resolveEntityAccess(targetEntity, relatedRoute, user, anchoredCharacterIds, visibleEntityHops, maxHops);
+                if (canTraverseRelation(row, row.relationAnchorIndex) && targetAccess !== 'hidden') {
                     visibleRows.push(row);
                 }
             }
@@ -111,15 +135,15 @@ async function loadAssociatedRecords(relationName, relationDef, sourceId, anchor
     }
 
     if (relationDef.kind === 'simple') {
-        return buildSimpleResults(
-            visibleRows.map(row => getRelatedIdForRow(row, members, sourceId, anchorMemberIndex)),
-            targetById,
-            relatedRoute,
-            lockedTargetIds
-        );
+        return visibleRows.map(row => {
+            const targetId = getRelatedIdForRow(row, members, sourceId, row.relationAnchorIndex);
+            const target = targetById.get(targetId);
+            if (!target) return null;
+            if (lockedTargetIds.has(targetId)) return buildLockedEntityStub(target, relatedRoute);
+            return { ...target, relationship: omitKeys(row, memberKeys) };
+        }).filter(Boolean);
     }
 
-    // Simple relations have no payload fields, so nothing to propose/lock there.
     const pendingProposals = await getPendingProposalsForResource(relationName);
     const proposalByKey = new Map(pendingProposals.map((proposal) => [stableStringify(proposal.target_key), proposal]));
 
@@ -129,7 +153,7 @@ async function loadAssociatedRecords(relationName, relationDef, sourceId, anchor
 
     if (relationDef.kind === 'history') {
         const visibleTargetIds = visibleRows
-            .map(row => getRelatedIdForRow(row, members, sourceId, anchorMemberIndex))
+            .map(row => getRelatedIdForRow(row, members, sourceId, row.relationAnchorIndex))
             .filter((id, index, arr) => arr.indexOf(id) === index);
         return buildHistoryResults(visibleTargetIds, visibleRows, targetById, members, memberKeys, sourceId, anchorMemberIndex, relationDef, proposalByKey, relatedRoute, lockedTargetIds);
     }
@@ -158,25 +182,7 @@ function buildRelationWhereCandidates({
         historyValue,
     });
 
-    const relatedMemberIndex = anchorMemberIndex === 0 ? 1 : 0;
-    const isSelfRelation = members[anchorMemberIndex].entity === members[relatedMemberIndex].entity;
-
-    // For directional relations (e.g., CharacterRelationship), only query the forward direction
-    // If marked as directional or if not a self-relation, return only the forward WHERE clause
-    if (!isSelfRelation || sourceId === relatedId || relationDef.directional) {
-        return [where];
-    }
-
-    const reverseWhere = buildRelationWhere({
-        members,
-        anchorMemberIndex,
-        sourceId: relatedId,
-        relatedId: sourceId,
-        relationDef,
-        historyValue,
-    });
-
-    return [where, reverseWhere];
+    return [where];
 }
 
 async function getFirstRelationRecordByWhereCandidates(relationName, whereCandidates) {
@@ -230,11 +236,8 @@ async function removeFirstRelationRecordByWhereCandidates(relationName, whereCan
 }
 
 async function loadRelationRows(relationName, relationContext, sourceId) {
-    const { anchorMember, relatedMember } = relationContext;
+    const { anchorMember } = relationContext;
 
-    // For directional relations (e.g., CharacterRelationship), only query from the anchor member's perspective
-    // If both members are the same entity type and the relation is marked as directional,
-    // only return records where sourceId is in the anchor_key position
     return manifestCrudService.getMany(relationName, {
         [anchorMember.key]: sourceId,
     });
@@ -254,7 +257,7 @@ function collectTargetIds(relationRows, members, sourceId, anchorMemberIndex) {
     const ids = [];
 
     for (const row of relationRows) {
-        const targetId = getRelatedIdForRow(row, members, sourceId, anchorMemberIndex);
+        const targetId = getRelatedIdForRow(row, members, sourceId, row.relationAnchorIndex);
         if (targetId === null || targetId === undefined) {
             continue;
         }
@@ -286,24 +289,11 @@ async function loadTargetMap(targetInfo, targetIds) {
     return targetById;
 }
 
-function buildSimpleResults(targetIds, targetById, relatedRoute, lockedTargetIds) {
-    const results = [];
-
-    for (const targetId of targetIds) {
-        const target = targetById.get(targetId);
-        if (target) {
-            results.push(lockedTargetIds.has(targetId) ? buildLockedEntityStub(target, relatedRoute) : target);
-        }
-    }
-
-    return results;
-}
-
 async function buildRelationshipResults(relationRows, targetById, members, memberKeys, sourceId, anchorMemberIndex, relationDef, proposalByKey, relatedRoute, lockedTargetIds) {
     const results = [];
 
     for (const row of relationRows) {
-        const targetId = getRelatedIdForRow(row, members, sourceId, anchorMemberIndex);
+        const targetId = getRelatedIdForRow(row, members, sourceId, row.relationAnchorIndex);
         const target = targetById.get(targetId);
         if (!target) {
             continue;
@@ -314,7 +304,7 @@ async function buildRelationshipResults(relationRows, targetById, members, membe
             continue;
         }
 
-        const targetKey = buildRelationWhere({ members, anchorMemberIndex, sourceId, relatedId: targetId, relationDef });
+        const targetKey = buildRelationWhere({ members, anchorMemberIndex: row.relationAnchorIndex, sourceId, relatedId: targetId, relationDef });
         const pendingProposal = await toProposalView(proposalByKey.get(stableStringify(targetKey)) || null);
 
         results.push({
@@ -342,11 +332,11 @@ async function buildHistoryResults(targetIds, relationRows, targetById, members,
 
         const history = [];
         for (const row of relationRows) {
-            const relatedId = getRelatedIdForRow(row, members, sourceId, anchorMemberIndex);
+            const relatedId = getRelatedIdForRow(row, members, sourceId, row.relationAnchorIndex);
             if (relatedId === targetId) {
                 const targetKey = buildRelationWhere({
                     members,
-                    anchorMemberIndex,
+                    anchorMemberIndex: row.relationAnchorIndex,
                     sourceId,
                     relatedId,
                     relationDef,
@@ -374,7 +364,7 @@ function toHttpError(err) {
     }
 
     if (
-        /Invalid number value|Invalid boolean value|Unknown field for route|Unknown field for relation|Unknown query field for relation|Missing required query field|Cannot update primary key field|Primary key updates are not allowed|Data must be an object|Invalid slug id format for field|Missing history start date value for chronology validation|Invalid history date format for field|History end date must be after history start date|Parent place does not exist|A place cannot be its own parent|Parent assignment would create a cycle|Unknown field for proposal|Cannot propose changes to primary key field|Field is not player-proposable|No proposed changes differ from the current record|This relation type has no editable fields/i.test(
+        /Invalid value|Invalid anchorMemberIndex|Invalid number value|Invalid boolean value|Unknown field for route|Unknown field for relation|Unknown query field for relation|Missing required query field|Cannot update primary key field|Primary key updates are not allowed|Data must be an object|Invalid slug id format for field|Missing history start date value for chronology validation|Invalid history date format for field|History end date must be after history start date|Parent place does not exist|A place cannot be its own parent|Parent assignment would create a cycle|Unknown field for proposal|Cannot propose changes to primary key field|Field is not player-proposable|No proposed changes differ from the current record|This relation type has no editable fields/i.test(
             message
         )
     ) {
@@ -968,10 +958,7 @@ router.post('/:entityRoute/:id/:relatedRoute', async (req, res) => {
         }
 
         const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
-        const { relationName, relationDef, anchorMemberIndex } = getRelationByRoutes(
-            req.params.entityRoute,
-            req.params.relatedRoute
-        );
+        const { relationName, relationDef, anchorMemberIndex } = getRequestedRelation(req);
 
         const sourceIdField = entityDef.idField;
         const sourceIdMeta = entityDef.fields[sourceIdField];
@@ -996,6 +983,9 @@ router.post('/:entityRoute/:id/:relatedRoute', async (req, res) => {
 
         const { id: _, ...rawPayload } = req.body || {};
         const payload = normalizeRelationPayload(rawPayload, relationDef);
+        if (payload.visibility_direction === undefined) {
+            payload.visibility_direction = outwardDirection(anchorMemberIndex);
+        }
         validateHistoryChronology({
             relationDef,
             startValue: relationDef.historyKey ? payload[relationDef.historyKey] : undefined,
@@ -1104,10 +1094,7 @@ router.get('/:entityRoute/:id/full', async (req, res) => {
 router.get('/:entityRoute/:id/:relatedRoute', async (req, res) => {
     try {
         const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
-        const { relationName, relationDef, anchorMemberIndex } = getRelationByRoutes(
-            req.params.entityRoute,
-            req.params.relatedRoute
-        );
+        const { relationName, relationDef, anchorMemberIndex } = getRequestedRelation(req);
         const idField = entityDef.idField;
         const idMeta = entityDef.fields[idField];
         const sourceId = coerceValueByType(idMeta.type, req.params.id);
@@ -1131,9 +1118,7 @@ router.get('/:entityRoute/:id/:relatedRoute', async (req, res) => {
                 viewingCharacterIds,
                 viewingCharacterHops
             );
-            if (!sourceVisible) {
-                sourceVisible = visibleEntityIds.has(sourceId);
-            }
+            sourceVisible = resolveEntityAccess(sourceRecord, req.params.entityRoute, visibilityAuth, viewingCharacterIds, visibleEntityIds, viewingCharacterHops) === 'full';
         }
 
         if (!sourceVisible) {
@@ -1161,10 +1146,7 @@ router.get('/:entityRoute/:id/:relatedRoute', async (req, res) => {
 // get this one specific related entity
 router.get('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
     try {
-        const { relationName, relationDef, anchorMemberIndex, relatedMemberIndex } = getRelationByRoutes(
-            req.params.entityRoute,
-            req.params.relatedRoute
-        );
+        const { relationName, relationDef, anchorMemberIndex, relatedMemberIndex } = getRequestedRelation(req);
         const members = getRelationMembers(relationDef);
 
         const sourceMember = members[anchorMemberIndex];
@@ -1228,8 +1210,7 @@ router.get('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
                 }
 
                 if (shouldCheckRelationVisibility) {
-                    const memberEntities = [sourceEntity, relatedEntity];
-                    if (!isRelationVisibleToUser(relationName, memberEntities, visibilityAuth, viewingCharacterIds)) {
+                    if (!await canReadRelationRow(req, record, relationDef, anchorMemberIndex, sourceEntity, relatedEntity)) {
                         return res.status(404).json({ error: 'Record not found' });
                     }
                 }
@@ -1237,14 +1218,16 @@ router.get('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
                 return res.json(record);
             }
 
-            const records = await getAllRelationRecordsByWhereCandidates(relationName, whereCandidates);
+            let records = await getAllRelationRecordsByWhereCandidates(relationName, whereCandidates);
             if (records.length === 0) {
                 return res.status(404).json({ error: 'Record not found' });
             }
 
             if (shouldCheckRelationVisibility) {
-                const memberEntities = [sourceEntity, relatedEntity];
-                if (!isRelationVisibleToUser(relationName, memberEntities, visibilityAuth, viewingCharacterIds)) {
+                const checks = await Promise.all(records.map(row =>
+                    canReadRelationRow(req, row, relationDef, anchorMemberIndex, sourceEntity, relatedEntity)));
+                records = records.filter((row, index) => checks[index]);
+                if (!records.length) {
                     return res.status(404).json({ error: 'Record not found' });
                 }
             }
@@ -1258,8 +1241,7 @@ router.get('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
         }
 
         if (shouldCheckRelationVisibility) {
-            const memberEntities = [sourceEntity, relatedEntity];
-            if (!isRelationVisibleToUser(relationName, memberEntities, visibilityAuth, viewingCharacterIds)) {
+            if (!await canReadRelationRow(req, record, relationDef, anchorMemberIndex, sourceEntity, relatedEntity)) {
                 return res.status(404).json({ error: 'Record not found' });
             }
         }
@@ -1280,10 +1262,7 @@ router.patch('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => {
         }
 
         const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
-        const { relationName, relationDef, anchorMemberIndex } = getRelationByRoutes(
-            req.params.entityRoute,
-            req.params.relatedRoute
-        );
+        const { relationName, relationDef, anchorMemberIndex } = getRequestedRelation(req);
         const members = getRelationMembers(relationDef);
         const { relatedEntityDef } = getRelatedMemberInfo(relationDef, anchorMemberIndex);
 
@@ -1365,10 +1344,7 @@ router.delete('/:entityRoute/:id/:relatedRoute/:relatedId', async (req, res) => 
         }
 
         const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
-        const { relationName, relationDef, anchorMemberIndex } = getRelationByRoutes(
-            req.params.entityRoute,
-            req.params.relatedRoute
-        );
+        const { relationName, relationDef, anchorMemberIndex } = getRequestedRelation(req);
         const members = getRelationMembers(relationDef);
         const { relatedEntityDef } = getRelatedMemberInfo(relationDef, anchorMemberIndex);
 
@@ -1432,10 +1408,7 @@ router.post('/:entityRoute/:id/:relatedRoute/:relatedId/propose', async (req, re
         }
 
         const { entityName, entityDef } = getEntityByRoute(req.params.entityRoute);
-        const { relationName, relationDef, anchorMemberIndex } = getRelationByRoutes(
-            req.params.entityRoute,
-            req.params.relatedRoute
-        );
+        const { relationName, relationDef, anchorMemberIndex } = getRequestedRelation(req);
 
         if (relationDef.kind === 'simple') {
             return res.status(400).json({ error: 'This relation type has no editable fields' });
@@ -1471,9 +1444,7 @@ router.post('/:entityRoute/:id/:relatedRoute/:relatedId/propose', async (req, re
         const { visibilityAuth, viewingCharacterIds, viewingCharacterHops } = await resolveVisibilityContext(req);
         const sourceEntity = await manifestCrudService.getOne(entityName, { [sourceIdField]: sourceId });
         const relatedEntity = await manifestCrudService.getOne(relatedMember.entity, { [relatedIdField]: relatedId });
-        const memberEntities = anchorMemberIndex === 0 ? [sourceEntity, relatedEntity] : [relatedEntity, sourceEntity];
-
-        if (!sourceEntity || !relatedEntity || !isRelationVisibleToUser(relationName, memberEntities, visibilityAuth, viewingCharacterIds)) {
+        if (!await canReadRelationRow(req, row, relationDef, anchorMemberIndex, sourceEntity, relatedEntity)) {
             return res.status(404).json({ error: 'Record not found' });
         }
 

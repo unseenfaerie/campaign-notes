@@ -19,7 +19,9 @@ const ENUMS = {
         'pantheon',
         'informal',
         'enterprise',
-        'gang'
+        'gang',
+        'family',
+        'association'
     ],
     ancestry: [
         'human',
@@ -47,7 +49,8 @@ const ENUMS = {
         'mentor',
         'student',
         'lover',
-        'spouse'
+        'spouse',
+        'family'
     ]
 };
 

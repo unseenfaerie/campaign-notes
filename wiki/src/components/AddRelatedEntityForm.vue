@@ -6,6 +6,7 @@ import type { EntityFieldSchema, RelationFormSchema } from '../services/metaServ
 import LoreDateInput from './LoreDateInput.vue'
 import RealDateInput from './RealDateInput.vue'
 import SearchableSelect from './SearchableSelect.vue'
+import { directionOptions } from '../utils/relationDirection'
 
 const props = defineProps<{
   entityRoute: string
@@ -104,7 +105,9 @@ async function loadTargets() {
 function resetFormValues() {
   const initialValues: Record<string, any> = {}
   for (const field of selectedSchema.value?.fields ?? []) {
-    initialValues[field.name] = field.type === 'boolean' ? false : ''
+    initialValues[field.name] = field.name === 'visibility_direction'
+      ? directionOptions(selectedSchema.value?.anchorMemberIndex ?? 0)[0]!.value
+      : field.type === 'boolean' ? false : ''
   }
   formValues.value = initialValues
 }
@@ -231,7 +234,7 @@ watch(selectedRelatedRoute, () => {
           v-else-if="field.enum"
           :id="`add-relation-field-${field.name}`"
           v-model="formValues[field.name]"
-          :options="[
+          :options="field.name === 'visibility_direction' ? directionOptions(selectedSchema.anchorMemberIndex) : [
             ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
             ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
           ]"

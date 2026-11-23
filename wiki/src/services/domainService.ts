@@ -30,6 +30,16 @@ export type EntityFullResponse = {
     children?: DomainEntity[]
 }
 
+type RelationSelector = { key?: string; value?: string; anchorMemberIndex?: number }
+
+function relationQuery(selector?: RelationSelector): string {
+    const query = new URLSearchParams()
+    if (selector?.key && selector.value !== undefined) query.set(selector.key, selector.value)
+    if (selector?.anchorMemberIndex !== undefined) query.set('anchorMemberIndex', String(selector.anchorMemberIndex))
+    const encoded = query.toString()
+    return encoded ? `?${encoded}` : ''
+}
+
 export async function listEntities(entityRoute: string): Promise<DomainEntity[]> {
     return requestJson<DomainEntity[]>(`/${entityRoute}`)
 }
@@ -76,11 +86,9 @@ export async function updateRelation(
     relatedRoute: string,
     relatedId: string,
     data: DomainEntity,
-    historySelector?: { key: string; value: string }
+    historySelector?: RelationSelector
 ): Promise<{ updated: number; record: DomainEntity }> {
-    const query = historySelector
-        ? `?${encodeURIComponent(historySelector.key)}=${encodeURIComponent(historySelector.value)}`
-        : ''
+    const query = relationQuery(historySelector)
 
     return requestJson<{ updated: number; record: DomainEntity }>(
         `/${entityRoute}/${encodeURIComponent(id)}/${relatedRoute}/${encodeURIComponent(relatedId)}${query}`,
@@ -93,11 +101,9 @@ export async function deleteRelation(
     id: string,
     relatedRoute: string,
     relatedId: string,
-    historySelector?: { key: string; value: string }
+    historySelector?: RelationSelector
 ): Promise<void> {
-    const query = historySelector
-        ? `?${encodeURIComponent(historySelector.key)}=${encodeURIComponent(historySelector.value)}`
-        : ''
+    const query = relationQuery(historySelector)
 
     await requestJson<void>(
         `/${entityRoute}/${encodeURIComponent(id)}/${relatedRoute}/${encodeURIComponent(relatedId)}${query}`,
@@ -122,11 +128,9 @@ export async function proposeRelationEdit(
     relatedRoute: string,
     relatedId: string,
     data: DomainEntity,
-    historySelector?: { key: string; value: string }
+    historySelector?: RelationSelector
 ): Promise<PendingProposal> {
-    const query = historySelector
-        ? `?${encodeURIComponent(historySelector.key)}=${encodeURIComponent(historySelector.value)}`
-        : ''
+    const query = relationQuery(historySelector)
 
     return requestJson<PendingProposal>(
         `/${entityRoute}/${encodeURIComponent(id)}/${relatedRoute}/${encodeURIComponent(relatedId)}/propose${query}`,

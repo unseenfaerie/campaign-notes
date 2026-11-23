@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import AddRelatedEntityForm from '../components/AddRelatedEntityForm.vue'
 import CollapseSection from '../components/CollapseSection.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
+import DirectionSelect from '../components/DirectionSelect.vue'
 import FieldList from '../components/FieldList.vue'
 import LastEditedStamp from '../components/LastEditedStamp.vue'
 import ProposalBanner from '../components/ProposalBanner.vue'
@@ -30,6 +31,7 @@ import {
 import { refreshMentionTargets } from '../services/mentionService'
 import {
   getEntitySchema,
+  getDateSystem,
   getRelationSchemas,
   type EntityFieldSchema,
   type EntitySchema,
@@ -40,6 +42,8 @@ import RealDateInput from '../components/RealDateInput.vue'
 import SearchableSelect from '../components/SearchableSelect.vue'
 import LinkifiedText from '../components/LinkifiedText.vue'
 import { useAuthStore } from '../stores/auth'
+import { directionOptions, splitRelatedSections } from '../utils/relationDirection'
+import { formatLoreDate, isCanonicalLoreDate, type DateSystem } from '../utils/loreDate'
 
 type FullState = {
   entity: DomainEntity
@@ -58,6 +62,8 @@ const router = useRouter()
 const loading = ref(true)
 const errorMessage = ref('')
 const fullData = ref<FullState | null>(null)
+const relatedSections = ref<ReturnType<typeof splitRelatedSections>>({ outgoing: [], incoming: [] })
+const dateSystem = ref<DateSystem | null>(null)
 
 const isEditing = ref(false)
 const editFields = ref<EntityFieldSchema[]>([])
@@ -84,9 +90,17 @@ const relationEditError = ref('')
 
 const editingHistoryKey = ref<string | null>(null)
 const historyEditValues = ref<Record<string, any>>({})
-const historyEditOriginalSelector = ref<{ key: string; value: string } | null>(null)
+const historyEditOriginalSelector = ref<{ key: string; value: string; anchorMemberIndex?: number } | null>(null)
 const historyEditSaving = ref(false)
 const historyEditError = ref('')
+const directionSavingKey = ref<string | null>(null)
+const directionError = ref('')
+const directionDisabled = computed(() =>
+  directionSavingKey.value !== null || isEditing.value || editingRelationKey.value !== null ||
+  editingHistoryKey.value !== null || openAddFormRoute.value !== null ||
+  showingNewRelatedPicker.value || showAddAliasForm.value || deleteModalOpen.value ||
+  proposalActionBusy.value
+)
 
 // Proposal (player edit-request) state. Keyed per record so the same view can track
 // proposal UI independently for the core entity and each relation/history record.
@@ -162,25 +176,16 @@ const entityFactsFields = computed(() =>
   )
 )
 
-const sortedRelatedSections = computed(() => {
-  if (!fullData.value) {
-    return [] as Array<[string, DomainEntity[]]>
-  }
-
-  return Object.entries(fullData.value.related || {})
-    .map(([relatedRoute, records]) => {
-      // Skip deduplication for directional relations (CharacterRelationship) since they represent independent perspectives
-      const shouldDedupe = relatedRoute !== 'relationships'
-      const processed = shouldDedupe ? dedupeRelatedRecords(records || []) : (records || [])
-      return [relatedRoute, processed] as [string, DomainEntity[]]
-    })
-    .filter(([, records]) => Array.isArray(records) && records.length > 0)
-    .sort(([left], [right]) => left.localeCompare(right))
-})
+const relatedSectionGroups = computed(() => [
+  { key: 'outgoing', title: 'Related Data', sections: relatedSections.value.outgoing },
+  ...(auth.isAdmin.value
+    ? [{ key: 'incoming', title: 'Incoming Related Data', sections: relatedSections.value.incoming }]
+    : []),
+])
 
 const missingRelationSections = computed(() => {
-  const related = fullData.value?.related || {}
-  return relationSchemas.value.filter((schema) => (related[schema.relatedRoute] || []).length === 0)
+  const outgoingRoutes = new Set(relatedSections.value.outgoing.map(([route]) => route))
+  return relationSchemas.value.filter((schema) => !outgoingRoutes.has(schema.relatedRoute))
 })
 
 function titleCaseLabel(label: string): string {
@@ -189,39 +194,6 @@ function titleCaseLabel(label: string): string {
   }
 
   return label.charAt(0).toUpperCase() + label.slice(1)
-}
-
-function relatedRecordIdentity(record: DomainEntity): string {
-  if (record.id !== undefined && record.id !== null && record.id !== '') {
-    return `id:${String(record.id)}`
-  }
-
-  if (typeof record.name === 'string' && record.name.trim()) {
-    return `name:${record.name.trim().toLowerCase()}`
-  }
-
-  if (typeof record.alias === 'string' && record.alias.trim()) {
-    return `alias:${record.alias.trim().toLowerCase()}`
-  }
-
-  return `record:${JSON.stringify(record)}`
-}
-
-function dedupeRelatedRecords(records: DomainEntity[]): DomainEntity[] {
-  const seen = new Set<string>()
-  const unique: DomainEntity[] = []
-
-  for (const record of records) {
-    const identity = relatedRecordIdentity(record)
-    if (seen.has(identity)) {
-      continue
-    }
-
-    seen.add(identity)
-    unique.push(record)
-  }
-
-  return unique
 }
 
 function relationPayload(record: DomainEntity): DomainEntity {
@@ -245,7 +217,7 @@ function historyPayload(record: DomainEntity): DomainEntity[] {
 // Fields returned by the API that aren't manifest-declared display fields (audit stamp columns
 // live on every table, pendingProposal is attached per-request) and so need explicit stripping
 // here rather than relying on the schema-driven hidden/expository filters used elsewhere.
-const NON_DISPLAY_FIELDS = ['id', 'pendingProposal', 'last_edited_by', 'last_edited_at']
+const NON_DISPLAY_FIELDS = ['id', 'pendingProposal', 'last_edited_by', 'last_edited_at', 'relationAnchorIndex', 'visibility_direction']
 
 function withoutIdField(record: DomainEntity): DomainEntity {
   return Object.fromEntries(Object.entries(record).filter(([key]) => !NON_DISPLAY_FIELDS.includes(key)))
@@ -263,38 +235,16 @@ function relationDisplayPayload(record: DomainEntity): DomainEntity {
 
 // Like relationDisplayPayload, but reflects the proposed/accepted toggle for a given relation row
 // and keeps last_edited_by/at + pendingProposal intact (factsData strips those from the rendered fields).
-function relationDisplayPayloadForView(relatedRoute: string, record: DomainEntity): DomainEntity {
+function relationDisplayPayloadForView(viewKey: string, record: DomainEntity): DomainEntity {
   const payload = relationPayload(record)
-  const viewKey = `${relatedRoute}::${relatedRecordId(record)}`
   return withProposalView(payload, pendingProposalOf(payload), viewKey)
 }
 
-// Dedup is based on content only (system fields stripped for signature purposes), but the raw
-// entries are returned so the template can still read last_edited_by/at + pendingProposal.
 function historyDisplayPayload(record: DomainEntity): DomainEntity[] {
-  const seen = new Set<string>()
-  const uniqueEntries: DomainEntity[] = []
-
-  for (const entry of historyPayload(record)) {
-    const contentOnly = withoutIdField(entry)
-    if (Object.keys(contentOnly).length === 0) {
-      continue
-    }
-
-    const signature = domainEntitySignature(contentOnly)
-    if (seen.has(signature)) {
-      continue
-    }
-
-    seen.add(signature)
-    uniqueEntries.push(entry)
-  }
-
-  return uniqueEntries
+  return historyPayload(record)
 }
 
-function historyEntryForView(relatedRoute: string, index: number, historyIndex: number, historyEntry: DomainEntity): DomainEntity {
-  const viewKey = `${relatedRoute}-${index}-history-${historyIndex}`
+function historyEntryForView(viewKey: string, historyEntry: DomainEntity): DomainEntity {
   return withProposalView(historyEntry, pendingProposalOf(historyEntry), viewKey)
 }
 
@@ -334,6 +284,7 @@ async function loadDetail(options: { silent?: boolean } = {}) {
     loading.value = true
   }
   errorMessage.value = ''
+  directionError.value = ''
   isEditing.value = false
   openAddFormRoute.value = null
   showingNewRelatedPicker.value = false
@@ -344,16 +295,20 @@ async function loadDetail(options: { silent?: boolean } = {}) {
   aliasFormError.value = ''
 
   try {
-    const [full, schema, relations, fetchedAliases] = await Promise.all([
+    const [full, schema, relations, fetchedAliases, fetchedDateSystem] = await Promise.all([
       getEntityFull(props.entityRoute, props.id),
       getEntitySchema(props.entityRoute),
       getRelationSchemas(props.entityRoute),
       getAliases(routeToEntityType(props.entityRoute), props.id),
+      getDateSystem(),
     ])
+    const sections = splitRelatedSections(full.related || {}, auth.isAdmin.value)
     fullData.value = full
+    relatedSections.value = sections
     entitySchema.value = schema || null
     relationSchemas.value = relations
     aliases.value = fetchedAliases
+    dateSystem.value = fetchedDateSystem
 
     const refRoutes = [...new Set((schema?.fields ?? []).map((field) => field.ref).filter((route): route is string => !!route))]
     const loadedOptions = await Promise.all(refRoutes.map((route) => listEntities(route)))
@@ -366,7 +321,7 @@ async function loadDetail(options: { silent?: boolean } = {}) {
       ])
     )
   } catch (error) {
-    if (error instanceof ApiError) {
+    if (error instanceof Error) {
       errorMessage.value = error.message
     } else {
       errorMessage.value = 'Could not load detail view.'
@@ -383,6 +338,82 @@ function relationSchemaForRoute(relatedRoute: string): RelationFormSchema[] {
 
 function findRelationSchema(relatedRoute: string): RelationFormSchema | undefined {
   return relationSchemas.value.find((entry) => entry.relatedRoute === relatedRoute)
+}
+
+function relationAnchor(relatedRoute: string, payload: DomainEntity): number {
+  const index = payload.relationAnchorIndex
+  return index === 0 || index === 1 ? index : (findRelationSchema(relatedRoute)?.anchorMemberIndex ?? 0)
+}
+
+function relationSelector(relatedRoute: string, payload: DomainEntity): { anchorMemberIndex?: number } {
+  return relatedRoute === props.entityRoute
+    ? { anchorMemberIndex: relationAnchor(relatedRoute, payload) }
+    : {}
+}
+
+function historyEntryLabel(relatedRoute: string, entry: DomainEntity): string {
+  const key = findRelationSchema(relatedRoute)?.historyKey
+  const rawDate = key ? entry[key] : undefined
+  const date = typeof rawDate === 'string'
+    ? (dateSystem.value && isCanonicalLoreDate(rawDate) ? formatLoreDate(dateSystem.value, rawDate) : rawDate)
+    : 'Undated'
+  const description = typeof entry.short_description === 'string' ? entry.short_description.trim() : ''
+  return description ? `${date}: ${description}` : date
+}
+
+async function changeRelationDirection(
+  relatedRoute: string,
+  record: DomainEntity,
+  payload: DomainEntity,
+  key: string,
+  history: boolean,
+  direction: string,
+) {
+  directionError.value = ''
+  directionSavingKey.value = key
+  const sourceRoute = props.entityRoute
+  const sourceId = props.id
+  let saved = false
+  try {
+    const selector: { key?: string; value?: string; anchorMemberIndex?: number } = relationSelector(relatedRoute, payload)
+    if (history) {
+      const historyField = findRelationSchema(relatedRoute)?.historyKey
+      const historyValue = historyField ? payload[historyField] : undefined
+      if (!historyField || typeof historyValue !== 'string' || !historyValue) {
+        throw new Error('Missing history record selector')
+      }
+      selector.key = historyField
+      selector.value = historyValue
+    }
+
+    if (!directionOptions(relationAnchor(relatedRoute, payload)).some(option => option.value === direction)) {
+      throw new Error('Invalid relation visibility direction')
+    }
+    const result = await updateRelation(sourceRoute, sourceId, relatedRoute, relatedRecordId(record), {
+      visibility_direction: direction,
+    }, selector)
+    saved = true
+    if (props.entityRoute !== sourceRoute || props.id !== sourceId) return
+    if (result.record.visibility_direction !== direction) {
+      throw new Error('The saved relation direction did not match the requested direction')
+    }
+
+    const full = await getEntityFull(sourceRoute, sourceId)
+    if (props.entityRoute !== sourceRoute || props.id !== sourceId) return
+    const sections = splitRelatedSections(full.related || {}, auth.isAdmin.value)
+    fullData.value = full
+    relatedSections.value = sections
+  } catch (error) {
+    if (props.entityRoute !== sourceRoute || props.id !== sourceId) return
+    const message = error instanceof Error ? error.message : 'Unexpected error'
+    if (saved) {
+      errorMessage.value = `Direction update may have been saved, but the detail view could not be updated: ${message}`
+    } else {
+      directionError.value = `Could not change relation direction: ${message}`
+    }
+  } finally {
+    directionSavingKey.value = null
+  }
 }
 
 function relatedEntityLabel(relatedRoute: string): string {
@@ -408,20 +439,27 @@ function hasCollapsibleRecordBody(relatedRoute: string): boolean {
 
 const collapsedRecordKeys = ref<Set<string>>(new Set())
 
-function recordCollapseKey(relatedRoute: string, record: DomainEntity, index: number): string {
-  return `${relatedRoute}::${relatedRecordId(record) || index}`
+function recordKey(group: string, relatedRoute: string, record: DomainEntity, index: number): string {
+  const identity = record.locked || !relatedRecordId(record) ? `index-${index}` : isHistoryKind(relatedRoute)
+    ? 'history'
+    : String(relationPayload(record).relationAnchorIndex)
+  return JSON.stringify([group, relatedRoute, relatedRecordId(record), identity])
 }
 
-function isRecordCollapsed(relatedRoute: string, record: DomainEntity, index: number): boolean {
-  return collapsedRecordKeys.value.has(recordCollapseKey(relatedRoute, record, index))
+function historyKey(key: string, relatedRoute: string, historyEntry: DomainEntity): string {
+  const field = findRelationSchema(relatedRoute)?.historyKey
+  return JSON.stringify([key, historyEntry.relationAnchorIndex, field ? historyEntry[field] : null])
 }
 
-function expandRecord(relatedRoute: string, record: DomainEntity, index: number) {
-  collapsedRecordKeys.value.delete(recordCollapseKey(relatedRoute, record, index))
+function isRecordCollapsed(key: string): boolean {
+  return collapsedRecordKeys.value.has(key)
 }
 
-function toggleRecordCollapse(relatedRoute: string, record: DomainEntity, index: number) {
-  const key = recordCollapseKey(relatedRoute, record, index)
+function expandRecord(key: string) {
+  collapsedRecordKeys.value.delete(key)
+}
+
+function toggleRecordCollapse(key: string) {
   if (collapsedRecordKeys.value.has(key)) {
     collapsedRecordKeys.value.delete(key)
   } else {
@@ -479,7 +517,7 @@ function confirmDeleteRelation(relatedRoute: string, record: DomainEntity) {
   openDeleteConfirm(
     `Remove this ${relatedEntityLabel(relatedRoute)} relationship with ${relatedRecordLabel(record)}?`,
     async () => {
-      await deleteRelation(props.entityRoute, props.id, relatedRoute, relatedRecordId(record))
+      await deleteRelation(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), relationSelector(relatedRoute, relationPayload(record)))
       await loadDetail({ silent: true })
     }
   )
@@ -491,7 +529,7 @@ function confirmDeleteHistoryEntry(relatedRoute: string, record: DomainEntity, h
     return
   }
 
-  const selector = { key: schema.historyKey, value: String(historyEntry[schema.historyKey] ?? '') }
+  const selector = { key: schema.historyKey, value: String(historyEntry[schema.historyKey] ?? ''), ...relationSelector(relatedRoute, historyEntry) }
 
   openDeleteConfirm(`Delete this history record for ${relatedRecordLabel(record)}?`, async () => {
     await deleteRelation(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), selector)
@@ -654,7 +692,7 @@ function buildFieldsPayload(
   return payload
 }
 
-function startEditRelation(relatedRoute: string, record: DomainEntity, index: number) {
+function startEditRelation(relatedRoute: string, record: DomainEntity, key: string) {
   const schema = findRelationSchema(relatedRoute)
   if (!schema) {
     return
@@ -662,8 +700,8 @@ function startEditRelation(relatedRoute: string, record: DomainEntity, index: nu
 
   relationEditError.value = ''
   relationEditValues.value = fieldValuesFromRecord(fieldsForRole(schema.fields), relationPayload(record))
-  editingRelationKey.value = `${relatedRoute}::${relatedRecordId(record)}`
-  expandRecord(relatedRoute, record, index)
+  editingRelationKey.value = key
+  expandRecord(key)
 }
 
 function cancelEditRelation() {
@@ -685,9 +723,9 @@ async function saveEditRelation(relatedRoute: string, record: DomainEntity) {
       clearOptionalLoreDates: true,
     })
     if (auth.isAdmin.value) {
-      await updateRelation(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), payload)
+      await updateRelation(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), payload, relationSelector(relatedRoute, relationPayload(record)))
     } else {
-      await proposeRelationEdit(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), payload)
+      await proposeRelationEdit(props.entityRoute, props.id, relatedRoute, relatedRecordId(record), payload, relationSelector(relatedRoute, relationPayload(record)))
     }
     editingRelationKey.value = null
     await loadDetail({ silent: true })
@@ -710,7 +748,7 @@ function canOpenRelationEdit(relatedRoute: string): boolean {
   return auth.isAdmin.value || proposableFields(schema.fields).length > 0
 }
 
-function startEditHistory(relatedRoute: string, record: DomainEntity, index: number, historyEntry: DomainEntity, historyKey: string) {
+function startEditHistory(relatedRoute: string, recordKey: string, historyEntry: DomainEntity, entryKey: string) {
   const schema = findRelationSchema(relatedRoute)
   if (!schema || !schema.historyKey) {
     return
@@ -720,9 +758,9 @@ function startEditHistory(relatedRoute: string, record: DomainEntity, index: num
 
   historyEditError.value = ''
   historyEditValues.value = fieldValuesFromRecord(fieldsForRole(schema.fields), historyEntry)
-  historyEditOriginalSelector.value = { key: schema.historyKey, value: String(originalValue ?? '') }
-  editingHistoryKey.value = historyKey
-  expandRecord(relatedRoute, record, index)
+  historyEditOriginalSelector.value = { key: schema.historyKey, value: String(originalValue ?? ''), ...relationSelector(relatedRoute, historyEntry) }
+  editingHistoryKey.value = entryKey
+  expandRecord(recordKey)
 }
 
 function cancelEditHistory() {
@@ -990,6 +1028,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               v-if="auth.isAdmin.value && !isEditing && !entityPendingProposal"
               type="button"
               class="secondary-button"
+              :disabled="directionSavingKey !== null"
               @click="toggleAddAliasForm"
             >
               {{ showAddAliasForm ? 'Cancel' : 'Add Alias' }}
@@ -998,6 +1037,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               v-if="canOpenEntityEdit && !isEditing && !entityPendingProposal"
               type="button"
               class="secondary-button"
+              :disabled="directionSavingKey !== null"
               @click="startEdit"
             >
               Edit
@@ -1006,6 +1046,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               v-if="auth.isAdmin.value && !isEditing && !entityPendingProposal"
               type="button"
               class="danger-button"
+              :disabled="directionSavingKey !== null"
               @click="confirmDeleteEntity"
             >
               Delete
@@ -1018,7 +1059,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
           :proposal="entityPendingProposal"
           :is-admin="auth.isAdmin.value"
           :is-author="isProposalAuthor(entityPendingProposal)"
-          :busy="proposalActionBusy"
+          :busy="proposalActionBusy || directionSavingKey !== null"
           :error-message="proposalActionError"
           @accept="acceptPendingProposal(entityPendingProposal)"
           @reject="rejectPendingProposal(entityPendingProposal)"
@@ -1188,28 +1229,45 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
 
       </section>
 
-      <div v-if="sortedRelatedSections.length > 0" class="section-heading-row">
-        <h3>Related data</h3>
+      <p v-if="directionError" class="status-card error" role="alert">{{ directionError }}</p>
+      <template v-for="group in relatedSectionGroups" :key="group.key">
+      <div
+        v-if="
+          group.sections.length > 0 ||
+          (group.key === 'outgoing' && auth.isAdmin.value && missingRelationSections.length > 0)
+        "
+        class="section-heading-row related-section-heading-row"
+      >
+        <h3>{{ group.title }}</h3>
+        <button
+          v-if="group.key === 'outgoing' && auth.isAdmin.value && missingRelationSections.length > 0 && !showingNewRelatedPicker"
+          type="button"
+          class="secondary-button"
+          :disabled="directionSavingKey !== null"
+          @click="showingNewRelatedPicker = true"
+        >
+          New Related Entity
+        </button>
       </div>
 
       <CollapseSection
-        v-for="[relatedRoute, records] in sortedRelatedSections"
+        v-for="[relatedRoute, records] in group.sections"
         :key="relatedRoute"
-        :ref="(instance) => setCollapseSectionRef(relatedRoute, instance)"
+        :ref="(instance) => group.key === 'outgoing' && setCollapseSectionRef(relatedRoute, instance)"
         class="article-section"
         :title="titleCaseLabel(relatedEntityLabel(relatedRoute))"
         :count="records.length"
         :initially-open="false"
       >
-        <template v-if="auth.isAdmin.value" #header-actions>
-          <button type="button" class="secondary-button" @click="toggleAddForm(relatedRoute)">
+        <template v-if="auth.isAdmin.value && group.key === 'outgoing'" #header-actions>
+          <button type="button" class="secondary-button" :disabled="directionSavingKey !== null" @click="toggleAddForm(relatedRoute)">
             {{ openAddFormRoute === relatedRoute ? 'Cancel' : 'New' }}
           </button>
         </template>
 
         <div>
           <AddRelatedEntityForm
-            v-if="openAddFormRoute === relatedRoute"
+            v-if="group.key === 'outgoing' && openAddFormRoute === relatedRoute"
             :entity-route="entityRoute"
             :id="id"
             :options="relationSchemaForRoute(relatedRoute)"
@@ -1218,17 +1276,17 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
             @cancel="openAddFormRoute = null"
           />
 
-          <article v-for="(record, index) in records" :key="`${relatedRoute}-${index}`" class="related-record">
+          <article v-for="(record, index) in records" :key="recordKey(group.key, relatedRoute, record, index)" class="related-record">
             <div class="section-heading-row">
               <h4>
                 <button
                   v-if="hasCollapsibleRecordBody(relatedRoute) && !record.locked"
                   type="button"
                   class="record-collapse-toggle"
-                  :class="{ 'is-expanded': !isRecordCollapsed(relatedRoute, record, index) }"
-                  :aria-expanded="!isRecordCollapsed(relatedRoute, record, index)"
-                  :aria-label="isRecordCollapsed(relatedRoute, record, index) ? 'Expand details' : 'Collapse details'"
-                  @click="toggleRecordCollapse(relatedRoute, record, index)"
+                  :class="{ 'is-expanded': !isRecordCollapsed(recordKey(group.key, relatedRoute, record, index)) }"
+                  :aria-expanded="!isRecordCollapsed(recordKey(group.key, relatedRoute, record, index))"
+                  :aria-label="isRecordCollapsed(recordKey(group.key, relatedRoute, record, index)) ? 'Expand details' : 'Collapse details'"
+                  @click="toggleRecordCollapse(recordKey(group.key, relatedRoute, record, index))"
                 >
                   ▸
                 </button>
@@ -1244,18 +1302,29 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 <template v-else>{{ relatedRecordLabel(record) }}</template>
               </h4>
               <div v-if="!record.locked" class="row-actions-end">
+                <DirectionSelect
+                  v-if="auth.isAdmin.value && !isHistoryKind(relatedRoute) && !pendingProposalOf(relationPayload(record))"
+                  :direction="relationPayload(record).visibility_direction"
+                  :anchor-member-index="relationAnchor(relatedRoute, relationPayload(record))"
+                  :subject="relatedRecordLabel(record)"
+                  :disabled="directionDisabled"
+                  :saving="directionSavingKey === recordKey(group.key, relatedRoute, record, index)"
+                  @change="changeRelationDirection(relatedRoute, record, relationPayload(record), recordKey(group.key, relatedRoute, record, index), false, $event)"
+                />
                 <button
-                  v-if="isRelationshipKind(relatedRoute) && canOpenRelationEdit(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}` && !pendingProposalOf(relationPayload(record))"
+                  v-if="(isRelationshipKind(relatedRoute) || (isSimpleRelation(relatedRoute) && auth.isAdmin.value)) && canOpenRelationEdit(relatedRoute) && editingRelationKey !== recordKey(group.key, relatedRoute, record, index) && !pendingProposalOf(relationPayload(record))"
                   type="button"
                   class="secondary-button"
-                  @click="startEditRelation(relatedRoute, record, index)"
+                  :disabled="directionSavingKey !== null"
+                  @click="startEditRelation(relatedRoute, record, recordKey(group.key, relatedRoute, record, index))"
                 >
                   Edit
                 </button>
                 <button
-                  v-if="auth.isAdmin.value && !isHistoryKind(relatedRoute) && editingRelationKey !== `${relatedRoute}::${relatedRecordId(record)}` && !pendingProposalOf(relationPayload(record))"
+                  v-if="auth.isAdmin.value && !isHistoryKind(relatedRoute) && editingRelationKey !== recordKey(group.key, relatedRoute, record, index) && !pendingProposalOf(relationPayload(record))"
                   type="button"
                   class="danger-button"
+                  :disabled="directionSavingKey !== null"
                   @click="confirmDeleteRelation(relatedRoute, record)"
                 >
                   Delete
@@ -1268,7 +1337,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               :proposal="pendingProposalOf(relationPayload(record))!"
               :is-admin="auth.isAdmin.value"
               :is-author="isProposalAuthor(pendingProposalOf(relationPayload(record))!)"
-              :busy="proposalActionBusy"
+              :busy="proposalActionBusy || directionSavingKey !== null"
               :error-message="proposalActionError"
               @accept="acceptPendingProposal(pendingProposalOf(relationPayload(record))!)"
               @reject="rejectPendingProposal(pendingProposalOf(relationPayload(record))!)"
@@ -1277,10 +1346,27 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
 
             <p v-if="record.locked" class="status-card">Locked</p>
             <div
-              v-else-if="!hasCollapsibleRecordBody(relatedRoute) || !isRecordCollapsed(relatedRoute, record, index)"
+              v-if="auth.isAdmin.value && !record.locked && isHistoryKind(relatedRoute) && isRecordCollapsed(recordKey(group.key, relatedRoute, record, index))"
+              class="history-direction-controls"
+            >
+              <div v-for="historyEntry in historyDisplayPayload(record)" :key="historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry)" class="history-direction-row">
+                <span>{{ historyEntryLabel(relatedRoute, historyEntry) }}</span>
+                <DirectionSelect
+                  v-if="!pendingProposalOf(historyEntry)"
+                  :direction="historyEntry.visibility_direction"
+                  :anchor-member-index="relationAnchor(relatedRoute, historyEntry)"
+                  :subject="`${relatedRecordLabel(record)}, ${historyEntryLabel(relatedRoute, historyEntry)}`"
+                  :disabled="directionDisabled"
+                  :saving="directionSavingKey === historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry)"
+                  @change="changeRelationDirection(relatedRoute, record, historyEntry, historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry), true, $event)"
+                />
+              </div>
+            </div>
+            <div
+              v-if="!record.locked && (!hasCollapsibleRecordBody(relatedRoute) || !isRecordCollapsed(recordKey(group.key, relatedRoute, record, index)))"
             >
             <form
-              v-if="editingRelationKey === `${relatedRoute}::${relatedRecordId(record)}`"
+              v-if="editingRelationKey === recordKey(group.key, relatedRoute, record, index)"
               class="entity-form"
               @submit.prevent="saveEditRelation(relatedRoute, record)"
             >
@@ -1294,22 +1380,22 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 :key="field.name"
                 class="form-row"
               >
-                <label :for="`edit-relation-${relatedRoute}-${index}-${field.name}`">
+                <label :for="`edit-relation-${group.key}-${relatedRoute}-${index}-${field.name}`">
                   {{ prettyFieldName(field.name) }}
                   <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
                 </label>
 
                 <input
                   v-if="field.type === 'boolean'"
-                  :id="`edit-relation-${relatedRoute}-${index}-${field.name}`"
+                  :id="`edit-relation-${group.key}-${relatedRoute}-${index}-${field.name}`"
                   v-model="relationEditValues[field.name]"
                   type="checkbox"
                 />
                 <SearchableSelect
                   v-else-if="field.enum"
-                  :id="`edit-relation-${relatedRoute}-${index}-${field.name}`"
+                  :id="`edit-relation-${group.key}-${relatedRoute}-${index}-${field.name}`"
                   v-model="relationEditValues[field.name]"
-                  :options="[
+                  :options="field.name === 'visibility_direction' ? directionOptions(relationAnchor(relatedRoute, relationPayload(record))) : [
                     ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
                     ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
                   ]"
@@ -1317,7 +1403,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 />
                 <input
                   v-else-if="field.type === 'number'"
-                  :id="`edit-relation-${relatedRoute}-${index}-${field.name}`"
+                  :id="`edit-relation-${group.key}-${relatedRoute}-${index}-${field.name}`"
                   v-model="relationEditValues[field.name]"
                   type="number"
                   step="any"
@@ -1325,7 +1411,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 />
                 <textarea
                   v-else-if="isLongTextField(field)"
-                  :id="`edit-relation-${relatedRoute}-${index}-${field.name}`"
+                  :id="`edit-relation-${group.key}-${relatedRoute}-${index}-${field.name}`"
                   v-model="relationEditValues[field.name]"
                   rows="4"
                   :required="field.required"
@@ -1342,7 +1428,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 />
                 <input
                   v-else
-                  :id="`edit-relation-${relatedRoute}-${index}-${field.name}`"
+                  :id="`edit-relation-${group.key}-${relatedRoute}-${index}-${field.name}`"
                   v-model="relationEditValues[field.name]"
                   type="text"
                   :required="field.required"
@@ -1369,17 +1455,17 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
             <template v-else-if="showRelationMetadata(record)">
               <div class="entity-overview">
                 <FieldList
-                  v-if="Object.keys(factsData(relationDisplayPayloadForView(relatedRoute, record), relationSchemaForRoute(relatedRoute)[0]?.fields)).length > 0"
+                  v-if="Object.keys(factsData(relationDisplayPayloadForView(recordKey(group.key, relatedRoute, record, index), record), relationSchemaForRoute(relatedRoute)[0]?.fields)).length > 0"
                   class="entity-facts"
-                  :data="factsData(relationDisplayPayloadForView(relatedRoute, record), relationSchemaForRoute(relatedRoute)[0]?.fields)"
+                  :data="factsData(relationDisplayPayloadForView(recordKey(group.key, relatedRoute, record, index), record), relationSchemaForRoute(relatedRoute)[0]?.fields)"
                   :fields="factsFields(relationSchemaForRoute(relatedRoute)[0]?.fields)"
                 />
                 <div
-                  v-if="expositoryFieldEntries(relationDisplayPayloadForView(relatedRoute, record), relationSchemaForRoute(relatedRoute)[0]?.fields).length > 0"
+                  v-if="expositoryFieldEntries(relationDisplayPayloadForView(recordKey(group.key, relatedRoute, record, index), record), relationSchemaForRoute(relatedRoute)[0]?.fields).length > 0"
                   class="entity-long-description"
                 >
                   <template
-                    v-for="field in expositoryFieldEntries(relationDisplayPayloadForView(relatedRoute, record), relationSchemaForRoute(relatedRoute)[0]?.fields)"
+                    v-for="field in expositoryFieldEntries(relationDisplayPayloadForView(recordKey(group.key, relatedRoute, record, index), record), relationSchemaForRoute(relatedRoute)[0]?.fields)"
                     :key="field.name"
                   >
                     <h4>{{ prettyFieldName(field.name) }}</h4>
@@ -1393,8 +1479,8 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               />
               <ProposalViewToggle
                 v-if="pendingProposalOf(relationPayload(record))"
-                :model-value="getViewMode(`${relatedRoute}::${relatedRecordId(record)}`)"
-                @update:model-value="(mode) => setViewMode(`${relatedRoute}::${relatedRecordId(record)}`, mode)"
+                :model-value="getViewMode(recordKey(group.key, relatedRoute, record, index))"
+                @update:model-value="(mode) => setViewMode(recordKey(group.key, relatedRoute, record, index), mode)"
               />
             </template>
 
@@ -1402,11 +1488,11 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               <p class="meta-title">History records</p>
               <article
                 v-for="(historyEntry, historyIndex) in historyDisplayPayload(record)"
-                :key="`${relatedRoute}-${index}-history-${historyIndex}`"
+                :key="historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry)"
                 class="history-record"
               >
                 <form
-                  v-if="editingHistoryKey === `${relatedRoute}-${index}-history-${historyIndex}`"
+                  v-if="editingHistoryKey === historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry)"
                   class="entity-form"
                   @submit.prevent="saveEditHistory(relatedRoute, record)"
                 >
@@ -1420,22 +1506,22 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                     :key="field.name"
                     class="form-row"
                   >
-                    <label :for="`edit-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`">
+                    <label :for="`edit-history-${group.key}-${relatedRoute}-${index}-${historyIndex}-${field.name}`">
                       {{ prettyFieldName(field.name) }}
                       <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
                     </label>
 
                     <input
                       v-if="field.type === 'boolean'"
-                      :id="`edit-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
+                      :id="`edit-history-${group.key}-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
                       v-model="historyEditValues[field.name]"
                       type="checkbox"
                     />
                     <SearchableSelect
                       v-else-if="field.enum"
-                      :id="`edit-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
+                      :id="`edit-history-${group.key}-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
                       v-model="historyEditValues[field.name]"
-                      :options="[
+                      :options="field.name === 'visibility_direction' ? directionOptions(relationAnchor(relatedRoute, historyEntry)) : [
                         ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
                         ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
                       ]"
@@ -1443,7 +1529,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                     />
                     <input
                       v-else-if="field.type === 'number'"
-                      :id="`edit-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
+                      :id="`edit-history-${group.key}-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
                       v-model="historyEditValues[field.name]"
                       type="number"
                       step="any"
@@ -1451,7 +1537,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                     />
                     <textarea
                       v-else-if="isLongTextField(field)"
-                      :id="`edit-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
+                      :id="`edit-history-${group.key}-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
                       v-model="historyEditValues[field.name]"
                       rows="4"
                       :required="field.required"
@@ -1468,7 +1554,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                     />
                     <input
                       v-else
-                      :id="`edit-history-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
+                      :id="`edit-history-${group.key}-${relatedRoute}-${index}-${historyIndex}-${field.name}`"
                       v-model="historyEditValues[field.name]"
                       type="text"
                       :required="field.required"
@@ -1498,7 +1584,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                     :proposal="pendingProposalOf(historyEntry)!"
                     :is-admin="auth.isAdmin.value"
                     :is-author="isProposalAuthor(pendingProposalOf(historyEntry)!)"
-                    :busy="proposalActionBusy"
+                    :busy="proposalActionBusy || directionSavingKey !== null"
                     :error-message="proposalActionError"
                     @accept="acceptPendingProposal(pendingProposalOf(historyEntry)!)"
                     @reject="rejectPendingProposal(pendingProposalOf(historyEntry)!)"
@@ -1511,33 +1597,44 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                     <button
                       type="button"
                       class="secondary-button"
+                      :disabled="directionSavingKey !== null"
                       @click="
-                        startEditHistory(relatedRoute, record, index, historyEntry, `${relatedRoute}-${index}-history-${historyIndex}`)
+                        startEditHistory(relatedRoute, recordKey(group.key, relatedRoute, record, index), historyEntry, historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry))
                       "
                     >
                       Edit
                     </button>
+                    <DirectionSelect
+                      v-if="auth.isAdmin.value"
+                      :direction="historyEntry.visibility_direction"
+                      :anchor-member-index="relationAnchor(relatedRoute, historyEntry)"
+                      :subject="`${relatedRecordLabel(record)}, ${historyEntryLabel(relatedRoute, historyEntry)}`"
+                      :disabled="directionDisabled"
+                      :saving="directionSavingKey === historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry)"
+                      @change="changeRelationDirection(relatedRoute, record, historyEntry, historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry), true, $event)"
+                    />
                     <button
                       v-if="auth.isAdmin.value"
                       type="button"
                       class="danger-button"
+                      :disabled="directionSavingKey !== null"
                       @click="confirmDeleteHistoryEntry(relatedRoute, record, historyEntry)"
                     >
                       Delete
                     </button>
                   </div>
                   <FieldList
-                    v-if="Object.keys(factsData(historyEntryForView(relatedRoute, index, historyIndex, historyEntry), relationSchemaForRoute(relatedRoute)[0]?.fields)).length > 0"
+                    v-if="Object.keys(factsData(historyEntryForView(historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry), historyEntry), relationSchemaForRoute(relatedRoute)[0]?.fields)).length > 0"
                     class="entity-facts"
-                    :data="factsData(historyEntryForView(relatedRoute, index, historyIndex, historyEntry), relationSchemaForRoute(relatedRoute)[0]?.fields)"
+                    :data="factsData(historyEntryForView(historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry), historyEntry), relationSchemaForRoute(relatedRoute)[0]?.fields)"
                     :fields="factsFields(relationSchemaForRoute(relatedRoute)[0]?.fields)"
                   />
                   <div
-                    v-if="expositoryFieldEntries(historyEntryForView(relatedRoute, index, historyIndex, historyEntry), relationSchemaForRoute(relatedRoute)[0]?.fields).length > 0"
+                    v-if="expositoryFieldEntries(historyEntryForView(historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry), historyEntry), relationSchemaForRoute(relatedRoute)[0]?.fields).length > 0"
                     class="entity-long-description"
                   >
                     <template
-                      v-for="field in expositoryFieldEntries(historyEntryForView(relatedRoute, index, historyIndex, historyEntry), relationSchemaForRoute(relatedRoute)[0]?.fields)"
+                      v-for="field in expositoryFieldEntries(historyEntryForView(historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry), historyEntry), relationSchemaForRoute(relatedRoute)[0]?.fields)"
                       :key="field.name"
                     >
                       <h4>{{ prettyFieldName(field.name) }}</h4>
@@ -1547,8 +1644,8 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                   <LastEditedStamp :by="(historyEntry as any).last_edited_by" :at="(historyEntry as any).last_edited_at" />
                   <ProposalViewToggle
                     v-if="pendingProposalOf(historyEntry)"
-                    :model-value="getViewMode(`${relatedRoute}-${index}-history-${historyIndex}`)"
-                    @update:model-value="(mode) => setViewMode(`${relatedRoute}-${index}-history-${historyIndex}`, mode)"
+                    :model-value="getViewMode(historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry))"
+                    @update:model-value="(mode) => setViewMode(historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry), mode)"
                   />
                 </div>
               </article>
@@ -1570,18 +1667,8 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
         </div>
       </CollapseSection>
 
-      <section v-if="auth.isAdmin.value && missingRelationSections.length > 0" class="article-section">
-        <button
-          v-if="!showingNewRelatedPicker"
-          type="button"
-          class="secondary-button"
-          @click="showingNewRelatedPicker = true"
-        >
-          New Related Entity
-        </button>
-
+      <section v-if="group.key === 'outgoing' && auth.isAdmin.value && missingRelationSections.length > 0 && showingNewRelatedPicker" class="article-section">
         <AddRelatedEntityForm
-          v-else
           :entity-route="entityRoute"
           :id="id"
           :options="missingRelationSections"
@@ -1589,6 +1676,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
           @cancel="showingNewRelatedPicker = false"
         />
       </section>
+      </template>
       </template>
     </article>
 

@@ -89,7 +89,7 @@ function getValidatedHistorySelector(query, relationDef, { required = false } = 
     const queryKeys = Object.keys(query || {});
 
     for (const key of queryKeys) {
-        if (key !== historyKey) {
+        if (key !== historyKey && key !== 'anchorMemberIndex') {
             throw new Error(`Unknown query field for relation: ${key}`);
         }
     }

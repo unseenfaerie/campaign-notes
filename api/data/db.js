@@ -4,6 +4,7 @@ const fs = require('fs');
 const { buildAllCreateTableSql } = require('./schemaBuilder');
 const { dbPath, dbBusyTimeoutMs } = require('../config');
 const { domainManifest } = require('../../common/domainManifest');
+const { validateDomainManifest } = require('../utils/manifestHelpers');
 const { MigrationService } = require('../utils/migrationService');
 
 function ensureDatabaseDirectory(databasePath) {
@@ -58,6 +59,7 @@ function getAuthCreateTableSql() {
 }
 
 async function initializeDatabase(database = db) {
+  validateDomainManifest(domainManifest);
   const statements = [...buildAllCreateTableSql(), ...getAuthCreateTableSql()];
 
   // Keep FK enforcement aligned with table definitions at runtime.

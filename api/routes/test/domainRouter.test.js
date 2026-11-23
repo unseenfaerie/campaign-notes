@@ -97,6 +97,11 @@ jest.mock('../../../common/domainManifest', () => ({
                 route: 'items',
                 fields: { id: { type: 'string' } },
             },
+            Event: {
+                idField: 'id',
+                route: 'events',
+                fields: { id: { type: 'string' } },
+            },
             Deity: {
                 idField: 'id',
                 route: 'deities',
@@ -121,11 +126,11 @@ jest.mock('../../../common/domainManifest', () => ({
                     { entity: 'Item', key: 'item_id', route: 'characters' },
                 ],
             },
-            EventCharacter: {
+            CharacterEvent: {
                 kind: 'relationship',
                 members: [
-                    { entity: 'Deity', key: 'deity_id', route: 'characters' },
-                    { entity: 'Character', key: 'character_id', route: 'deities' },
+                    { entity: 'Character', key: 'character_id', route: 'events' },
+                    { entity: 'Event', key: 'event_id', route: 'characters' },
                 ],
             },
         },
@@ -176,6 +181,7 @@ function buildEntity(entityName, route, idType = 'string') {
 
 beforeEach(() => {
     jest.resetAllMocks();
+    manifestCrudService.getMany.mockResolvedValue([]);
     listAnchoredCharacterIdsByUserId.mockResolvedValue([]);
     findUserById.mockResolvedValue(null);
     getPendingProposalForTarget.mockResolvedValue(null);
@@ -338,16 +344,16 @@ describe('domainRouter isolated unit tests', () => {
         getPendingProposals.mockResolvedValueOnce([{
             id: 8,
             target_kind: 'relation',
-            resource_name: 'EventCharacter',
-            target_key: { deity_id: 'deity-1', character_id: 'char-1' },
+            resource_name: 'CharacterEvent',
+            target_key: { character_id: 'char-1', event_id: 'event-1' },
             proposed_changes: { long_explanation: 'New context' },
-            base_snapshot: { deity_id: 'deity-1', character_id: 'char-1' },
+            base_snapshot: { character_id: 'char-1', event_id: 'event-1' },
             proposed_by: 'player-one',
             proposed_at: '2026-09-19T12:00:00.000Z',
         }]);
         manifestCrudService.getOne
-            .mockResolvedValueOnce({ id: 'deity-1', name: 'Aster' })
-            .mockResolvedValueOnce({ id: 'char-1', name: 'Hero' });
+            .mockResolvedValueOnce({ id: 'char-1', name: 'Hero' })
+            .mockResolvedValueOnce({ id: 'event-1', name: 'Dawn' });
 
         const response = await request(app).get('/api/proposals');
 
@@ -355,8 +361,8 @@ describe('domainRouter isolated unit tests', () => {
         expect(response.body[0].target).toEqual({
             kind: 'relation',
             entities: [
-                { entityRoute: 'deities', id: 'deity-1', label: 'Aster' },
                 { entityRoute: 'characters', id: 'char-1', label: 'Hero' },
+                { entityRoute: 'events', id: 'event-1', label: 'Dawn' },
             ],
         });
     });
@@ -435,7 +441,7 @@ describe('domainRouter isolated unit tests', () => {
                 { id: 'item-2', name: 'Shield', is_public: true },
                 { id: 'item-3', name: 'Hidden' },
             ])
-            .mockResolvedValueOnce([{ character_id: 'char-1', item_id: 'item-1' }])
+            .mockResolvedValueOnce([{ character_id: 'char-1', item_id: 'item-1', visibility_direction: 'first_to_second' }])
             .mockResolvedValueOnce([])
             .mockResolvedValueOnce([])
             .mockResolvedValueOnce([]);
@@ -542,8 +548,8 @@ describe('domainRouter isolated unit tests', () => {
             if (resourceName === 'Item' && where.id === 'item-1') {
                 return { id: 'item-1', name: 'Sword' };
             }
-            if (resourceName === 'Deity' && where.id === 'deity-1') {
-                return { id: 'deity-1', name: 'Sun God' };
+            if (resourceName === 'Event' && where.id === 'event-1') {
+                return { id: 'event-1', name: 'Dawn' };
             }
             return null;
         });
@@ -560,7 +566,7 @@ describe('domainRouter isolated unit tests', () => {
             ])
             .mockResolvedValueOnce([
                 {
-                    deity_id: 'deity-1',
+                    event_id: 'event-1',
                     character_id: 'char-1',
                     short_description: 'Favored by the dawn',
                 },
@@ -581,17 +587,19 @@ describe('domainRouter isolated unit tests', () => {
                                 acquired_date: 'jan-01-200',
                                 relinquished_date: null,
                                 short_description: 'Current possession',
+                                relationAnchorIndex: 0,
                                 pendingProposal: null,
                             },
                         ],
                     },
                 ],
-                deities: [
+                events: [
                     {
-                        id: 'deity-1',
-                        name: 'Sun God',
+                        id: 'event-1',
+                        name: 'Dawn',
                         relationship: {
                             short_description: 'Favored by the dawn',
+                            relationAnchorIndex: 0,
                             pendingProposal: null,
                         },
                     },
@@ -599,7 +607,7 @@ describe('domainRouter isolated unit tests', () => {
             },
         });
         expect(manifestCrudService.getMany).toHaveBeenNthCalledWith(1, 'CharacterItem', { character_id: 'char-1' });
-        expect(manifestCrudService.getMany).toHaveBeenNthCalledWith(2, 'EventCharacter', { character_id: 'char-1' });
+        expect(manifestCrudService.getMany).toHaveBeenNthCalledWith(2, 'CharacterEvent', { character_id: 'char-1' });
     });
 
     it('GET /:entityRoute/:id/full returns a locked stub when the entity is at the outer hop boundary', async () => {
@@ -614,7 +622,7 @@ describe('domainRouter isolated unit tests', () => {
             return null;
         });
         manifestCrudService.getMany
-            .mockResolvedValueOnce([{ character_id: 'char-1', item_id: 'item-1' }])
+            .mockResolvedValueOnce([{ character_id: 'char-1', item_id: 'item-1', visibility_direction: 'first_to_second' }])
             .mockResolvedValueOnce([])
             .mockResolvedValueOnce([])
             .mockResolvedValueOnce([]);
@@ -641,17 +649,17 @@ describe('domainRouter isolated unit tests', () => {
             if (resourceName === 'Item' && where.id === 'item-1') {
                 return { id: 'item-1', name: 'Sword' };
             }
-            if (resourceName === 'Deity' && where.id === 'deity-1') {
-                return { id: 'deity-1', name: 'Sun God' };
+            if (resourceName === 'Event' && where.id === 'event-1') {
+                return { id: 'event-1', name: 'Dawn' };
             }
             return null;
         });
         manifestCrudService.getMany.mockImplementation(async (relationName, where) => {
             if (relationName === 'CharacterItem' && where.character_id === 'char-1') {
-                return [{ character_id: 'char-1', item_id: 'item-1', short_description: 'Current possession' }];
+                return [{ character_id: 'char-1', item_id: 'item-1', short_description: 'Current possession', visibility_direction: 'first_to_second' }];
             }
-            if (relationName === 'EventCharacter' && where.character_id === 'char-1') {
-                return [{ deity_id: 'deity-1', character_id: 'char-1', short_description: 'Favored by the dawn' }];
+            if (relationName === 'CharacterEvent' && where.character_id === 'char-1') {
+                return [{ event_id: 'event-1', character_id: 'char-1', short_description: 'Favored by the dawn', visibility_direction: 'first_to_second' }];
             }
             return [];
         });
@@ -667,7 +675,7 @@ describe('domainRouter isolated unit tests', () => {
             entity: { id: 'char-1', intelligence: 1, pendingProposal: null },
             related: {
                 items: [{ id: 'item-1', name: 'Sword', locked: true }],
-                deities: [{ id: 'deity-1', name: 'Sun God', locked: true }],
+                events: [{ id: 'event-1', name: 'Dawn', locked: true }],
             },
         });
     });
@@ -754,12 +762,14 @@ describe('domainRouter isolated unit tests', () => {
                         acquired_date: 'jan-01-200',
                         relinquished_date: 'jan-05-200',
                         short_description: 'First possession',
+                        relationAnchorIndex: 0,
                         pendingProposal: null,
                     },
                     {
                         acquired_date: 'jan-10-200',
                         relinquished_date: null,
                         short_description: 'Second possession',
+                        relationAnchorIndex: 0,
                         pendingProposal: null,
                     },
                 ],
@@ -904,7 +914,6 @@ describe('domainRouter isolated unit tests', () => {
             relationDef: {
                 kind: 'history',
                 historyKey: 'established_date',
-                directional: true,
                 members: [
                     { entity: 'Character', key: 'character_id', route: 'relationships' },
                     { entity: 'Character', key: 'related_id', route: 'relationships' },
@@ -941,7 +950,6 @@ describe('domainRouter isolated unit tests', () => {
             relationDef: {
                 kind: 'history',
                 historyKey: 'established_date',
-                directional: true,
                 members: [
                     { entity: 'Character', key: 'character_id', route: 'relationships' },
                     { entity: 'Character', key: 'related_id', route: 'relationships' },
@@ -1062,7 +1070,7 @@ describe('domainRouter isolated unit tests', () => {
             return null;
         });
         manifestCrudService.getMany
-            .mockResolvedValueOnce([{ character_id: 'char-1', item_id: 'item-1' }])
+            .mockResolvedValueOnce([{ character_id: 'char-1', item_id: 'item-1', visibility_direction: 'first_to_second' }])
             .mockResolvedValueOnce([])
             .mockResolvedValueOnce([])
             .mockResolvedValueOnce([]);
@@ -1341,7 +1349,7 @@ describe('domainRouter isolated unit tests', () => {
         expect(response.body).toEqual({ error: 'Cannot update primary key field: acquired_date' });
     });
 
-    it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId updates reverse-stored self history relation records', async () => {
+    it('PATCH /:entityRoute/:id/:relatedRoute/:relatedId does not update reverse-stored self history records', async () => {
         manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
             relationName: 'CharacterRelationship',
             relationDef: {
@@ -1364,35 +1372,15 @@ describe('domainRouter isolated unit tests', () => {
             .mockResolvedValueOnce({ id: 'char-1' })
             .mockResolvedValueOnce({ id: 'char-2' });
 
-        manifestCrudService.update
-            .mockResolvedValueOnce({ updated: 0, record: null })
-            .mockResolvedValueOnce({
-                updated: 1,
-                record: {
-                    character_id: 'char-2',
-                    related_id: 'char-1',
-                    established_date: '100-01-01',
-                    relationship_type: 'ally',
-                    short_description: 'Mutual trust',
-                },
-            });
+        manifestCrudService.update.mockResolvedValueOnce({ updated: 0, record: null });
 
         const response = await request(app)
             .patch('/api/characters/char-1/relationships/char-2')
             .query({ established_date: '100-01-01' })
             .send({ short_description: 'Mutual trust' });
 
-        expect(response.status).toBe(200);
-        expect(response.body).toEqual({
-            updated: 1,
-            record: {
-                character_id: 'char-2',
-                related_id: 'char-1',
-                established_date: '100-01-01',
-                relationship_type: 'ally',
-                short_description: 'Mutual trust',
-            },
-        });
+        expect(response.status).toBe(404);
+        expect(response.body).toEqual({ error: 'Record not found' });
         expect(manifestCrudService.update).toHaveBeenNthCalledWith(1, 'CharacterRelationship', {
             character_id: 'char-1',
             related_id: 'char-2',
@@ -1400,13 +1388,7 @@ describe('domainRouter isolated unit tests', () => {
         }, {
             short_description: 'Mutual trust',
         }, { actorUsername: 'dm-admin' });
-        expect(manifestCrudService.update).toHaveBeenNthCalledWith(2, 'CharacterRelationship', {
-            related_id: 'char-1',
-            character_id: 'char-2',
-            established_date: '100-01-01',
-        }, {
-            short_description: 'Mutual trust',
-        }, { actorUsername: 'dm-admin' });
+        expect(manifestCrudService.update).toHaveBeenCalledTimes(1);
     });
 
     it('DELETE /:entityRoute/:id/:relatedRoute/:relatedId deletes non-history relation', async () => {
@@ -1501,7 +1483,7 @@ describe('domainRouter isolated unit tests', () => {
         expect(response.body).toEqual({ error: 'Missing required query field: acquired_date' });
     });
 
-    it('DELETE /:entityRoute/:id/:relatedRoute/:relatedId deletes reverse-stored self history relation records', async () => {
+    it('DELETE /:entityRoute/:id/:relatedRoute/:relatedId does not delete reverse-stored self history records', async () => {
         manifestHelpers.getRelationByRoutes.mockReturnValueOnce({
             relationName: 'CharacterRelationship',
             relationDef: {
@@ -1522,24 +1504,18 @@ describe('domainRouter isolated unit tests', () => {
         manifestCrudService.getOne
             .mockResolvedValueOnce({ id: 'char-1' })
             .mockResolvedValueOnce({ id: 'char-2' });
-        manifestCrudService.remove
-            .mockResolvedValueOnce({ deleted: 0 })
-            .mockResolvedValueOnce({ deleted: 1 });
+        manifestCrudService.remove.mockResolvedValueOnce({ deleted: 0 });
 
         const response = await request(app)
             .delete('/api/characters/char-1/relationships/char-2')
             .query({ established_date: '100-01-01' });
 
-        expect(response.status).toBe(200);
-        expect(response.body).toEqual({ deleted: 1 });
+        expect(response.status).toBe(404);
+        expect(response.body).toEqual({ error: 'Record not found' });
+        expect(manifestCrudService.remove).toHaveBeenCalledTimes(1);
         expect(manifestCrudService.remove).toHaveBeenNthCalledWith(1, 'CharacterRelationship', {
             character_id: 'char-1',
             related_id: 'char-2',
-            established_date: '100-01-01',
-        });
-        expect(manifestCrudService.remove).toHaveBeenNthCalledWith(2, 'CharacterRelationship', {
-            related_id: 'char-1',
-            character_id: 'char-2',
             established_date: '100-01-01',
         });
     });
@@ -1587,6 +1563,7 @@ describe('domainRouter isolated unit tests', () => {
         expect(manifestCrudService.insert).toHaveBeenCalledWith('CharacterItem', {
             character_id: 'char-1',
             item_id: 'item-1',
+            visibility_direction: 'first_to_second',
         }, { actorUsername: 'dm-admin' });
     });
 
@@ -1643,6 +1620,7 @@ describe('domainRouter isolated unit tests', () => {
             deity_id: 'deity-1',
             adopted_date: '100-01-01',
             short_description: 'Chosen by prophecy',
+            visibility_direction: 'first_to_second',
         }, { actorUsername: 'dm-admin' });
     });
 

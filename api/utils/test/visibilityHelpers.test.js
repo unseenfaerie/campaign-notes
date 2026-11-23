@@ -211,7 +211,7 @@ describe('visibilityHelpers', () => {
                 const dmUser = { role: 'dm' };
                 expect(isRelationVisibleToUser('DeitySphere', [publicMember1, publicMember2], dmUser, [])).toBe(true);
                 expect(isRelationVisibleToUser('CharacterItem', [privateMember1, privateMember2], dmUser, [])).toBe(true);
-                expect(isRelationVisibleToUser('EventCharacter', [publicMember1, privateMember1], dmUser, [])).toBe(true);
+                expect(isRelationVisibleToUser('CharacterEvent', [publicMember1, privateMember1], dmUser, [])).toBe(true);
             });
         });
 
@@ -223,7 +223,7 @@ describe('visibilityHelpers', () => {
             });
 
             it('should not see relation if one member is private and not anchored', () => {
-                expect(isRelationVisibleToUser('EventCharacter', [publicMember1, privateMember1], playerUser, [])).toBe(false);
+                expect(isRelationVisibleToUser('CharacterEvent', [publicMember1, privateMember1], playerUser, [])).toBe(false);
             });
 
             it('should not see relation if both members are private', () => {
@@ -243,14 +243,14 @@ describe('visibilityHelpers', () => {
             it('should see relation if second member is anchored (even if first is private)', () => {
                 const otherPrivateMember = { id: 'char-2', is_public: false };
                 const anchorIds = ['char-2'];
-                expect(isRelationVisibleToUser('CharacterRelationship', [privateMember1, otherPrivateMember], playerUser, anchorIds)).toBe(true);
+                expect(isRelationVisibleToUser('CharacterRelationship', [privateMember1, otherPrivateMember], playerUser, anchorIds)).toBe(false);
             });
         });
 
         describe('Null user visibility', () => {
             it('should see relation only if both members are public', () => {
                 expect(isRelationVisibleToUser('DeitySphere', [publicMember1, publicMember2], null, [])).toBe(true);
-                expect(isRelationVisibleToUser('EventCharacter', [publicMember1, privateMember1], null, [])).toBe(false);
+                expect(isRelationVisibleToUser('CharacterEvent', [publicMember1, privateMember1], null, [])).toBe(false);
             });
         });
     });
@@ -315,53 +315,53 @@ describe('visibilityHelpers', () => {
 
     describe('isEntityRelatedToAnchoredCharacter', () => {
         it('should return false if no anchored character IDs provided', async () => {
-            const mockCrudService = { getOne: jest.fn() };
+            const mockCrudService = { getMany: jest.fn() };
             const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'places', 'place-1', []);
             expect(result).toBe(false);
-            expect(mockCrudService.getOne).not.toHaveBeenCalled();
+            expect(mockCrudService.getMany).not.toHaveBeenCalled();
         });
 
         it('should return false if null anchored character IDs', async () => {
-            const mockCrudService = { getOne: jest.fn() };
+            const mockCrudService = { getMany: jest.fn() };
             const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'places', 'place-1', null);
             expect(result).toBe(false);
-            expect(mockCrudService.getOne).not.toHaveBeenCalled();
+            expect(mockCrudService.getMany).not.toHaveBeenCalled();
         });
 
         it('should return false if invalid entity route', async () => {
-            const mockCrudService = { getOne: jest.fn() };
+            const mockCrudService = { getMany: jest.fn() };
             const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'invalid-route', 'place-1', ['char-1']);
             expect(result).toBe(false);
-            expect(mockCrudService.getOne).not.toHaveBeenCalled();
+            expect(mockCrudService.getMany).not.toHaveBeenCalled();
         });
 
         it('should return true if entity is related to an anchored character', async () => {
             const mockCrudService = {
-                getOne: jest.fn().mockResolvedValue({ character_id: 'char-1', place_id: 'place-1' }),
+                getMany: jest.fn().mockResolvedValue([{ character_id: 'char-1', place_id: 'place-1', visibility_direction: 'both' }]),
             };
             const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'places', 'place-1', ['char-1']);
             expect(result).toBe(true);
-            expect(mockCrudService.getOne).toHaveBeenCalled();
+            expect(mockCrudService.getMany).toHaveBeenCalled();
         });
 
         it('should return false if entity is not related to any anchored character', async () => {
             const mockCrudService = {
-                getOne: jest.fn().mockResolvedValue(null),
+                getMany: jest.fn().mockResolvedValue([]),
             };
             const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'places', 'place-1', ['char-1']);
             expect(result).toBe(false);
-            expect(mockCrudService.getOne).toHaveBeenCalled();
+            expect(mockCrudService.getMany).toHaveBeenCalled();
         });
 
         it('should check multiple anchored characters', async () => {
             const mockCrudService = {
-                getOne: jest.fn()
-                    .mockResolvedValueOnce(null)  // char-1 has no relation
-                    .mockResolvedValueOnce({ character_id: 'char-2', item_id: 'item-1' }),  // char-2 has relation
+                getMany: jest.fn()
+                    .mockResolvedValueOnce([])
+                    .mockResolvedValueOnce([{ character_id: 'char-2', item_id: 'item-1', visibility_direction: 'first_to_second' }]),
             };
             const result = await isEntityRelatedToAnchoredCharacter(mockCrudService, 'items', 'item-1', ['char-1', 'char-2']);
             expect(result).toBe(true);
-            expect(mockCrudService.getOne).toHaveBeenCalledTimes(2);
+            expect(mockCrudService.getMany).toHaveBeenCalledTimes(2);
         });
     });
 
@@ -378,7 +378,7 @@ describe('visibilityHelpers', () => {
             };
             const anchoredIds = ['char-1', 'char-2'];
             const result = await getVisibleEntityIdsForUser(mockCrudService, anchoredIds, 0);
-            expect(result).toEqual(new Map([['char-1', 0], ['char-2', 0]]));
+            expect(result).toEqual(new Map([['Character:char-1', 0], ['Character:char-2', 0]]));
         });
 
         it('should expand to direct relations at hop depth 1', async () => {
@@ -386,7 +386,7 @@ describe('visibilityHelpers', () => {
                 getMany: jest.fn((relationName, where) => {
                     // CharacterDeity: char-1 -> deity-1
                     if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
-                        return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', character_id: 'char-1', deity_id: 'deity-1' }]);
                     }
                     if (relationName === 'CharacterDeity' && where.deity_id === 'char-1') {
                         return Promise.resolve([]);
@@ -396,8 +396,8 @@ describe('visibilityHelpers', () => {
                 }),
             };
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 1);
-            expect(result.has('char-1')).toBe(true);
-            expect(result.has('deity-1')).toBe(true);
+            expect(result.has('Character:char-1')).toBe(true);
+            expect(result.has('Deity:deity-1')).toBe(true);
         });
 
         it('should include the outer locked edge one hop beyond the limit', async () => {
@@ -405,14 +405,14 @@ describe('visibilityHelpers', () => {
                 getMany: jest.fn((relationName, where) => {
                     // Simulate: char-1 -> deity-1 -> sphere-1
                     if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
-                        return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', character_id: 'char-1', deity_id: 'deity-1' }]);
                     }
                     if (relationName === 'CharacterDeity' && where.deity_id === 'char-1') {
                         return Promise.resolve([]);
                     }
                     // deity-1 (hop 1, still expanded once to surface the locked edge) -> sphere-1 (hop 2)
                     if (relationName === 'DeitySphere' && where.deity_id === 'deity-1') {
-                        return Promise.resolve([{ deity_id: 'deity-1', sphere_id: 'sphere-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', deity_id: 'deity-1', sphere_id: 'sphere-1' }]);
                     }
                     return Promise.resolve([]);
                 }),
@@ -420,9 +420,9 @@ describe('visibilityHelpers', () => {
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 1);
             // char-1 (0) and deity-1 (1) are fully visible; sphere-1 (2) is the locked outer edge,
             // present in the map but not expanded further.
-            expect(result.get('char-1')).toBe(0);
-            expect(result.get('deity-1')).toBe(1);
-            expect(result.get('sphere-1')).toBe(2);
+            expect(result.get('Character:char-1')).toBe(0);
+            expect(result.get('Deity:deity-1')).toBe(1);
+            expect(result.get('Sphere:sphere-1')).toBe(2);
         });
 
         it('should expand to 2 hops when maxHops=2', async () => {
@@ -430,11 +430,11 @@ describe('visibilityHelpers', () => {
                 getMany: jest.fn((relationName, where) => {
                     // char-1 -> deity-1
                     if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
-                        return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', character_id: 'char-1', deity_id: 'deity-1' }]);
                     }
                     // deity-1 -> sphere-1
                     if (relationName === 'DeitySphere' && where.deity_id === 'deity-1') {
-                        return Promise.resolve([{ deity_id: 'deity-1', sphere_id: 'sphere-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', deity_id: 'deity-1', sphere_id: 'sphere-1' }]);
                     }
                     // All other queries return empty
                     return Promise.resolve([]);
@@ -442,9 +442,9 @@ describe('visibilityHelpers', () => {
             };
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 2);
             // Should have all three entities
-            expect(result.has('char-1')).toBe(true);
-            expect(result.has('deity-1')).toBe(true);
-            expect(result.has('sphere-1')).toBe(true);
+            expect(result.has('Character:char-1')).toBe(true);
+            expect(result.has('Deity:deity-1')).toBe(true);
+            expect(result.has('Sphere:sphere-1')).toBe(true);
         });
 
         it('should handle unlimited hops (maxHops=undefined)', async () => {
@@ -452,10 +452,10 @@ describe('visibilityHelpers', () => {
                 getMany: jest.fn((relationName, where) => {
                     // Simulate a chain: char-1 -> deity-1 -> sphere-1
                     if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
-                        return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', character_id: 'char-1', deity_id: 'deity-1' }]);
                     }
                     if (relationName === 'DeitySphere' && where.deity_id === 'deity-1') {
-                        return Promise.resolve([{ deity_id: 'deity-1', sphere_id: 'sphere-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', deity_id: 'deity-1', sphere_id: 'sphere-1' }]);
                     }
                     // Unlimited should also expand sphere-1 (even if no more relations)
                     if (relationName === 'CharacterDeity' && where.deity_id === 'char-1') {
@@ -469,9 +469,9 @@ describe('visibilityHelpers', () => {
             };
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], undefined);
             // All entities should be visible with unlimited hops
-            expect(result.has('char-1')).toBe(true);
-            expect(result.has('deity-1')).toBe(true);
-            expect(result.has('sphere-1')).toBe(true);
+            expect(result.has('Character:char-1')).toBe(true);
+            expect(result.has('Deity:deity-1')).toBe(true);
+            expect(result.has('Sphere:sphere-1')).toBe(true);
         });
 
         it('should handle self-relations (Character <-> Character) including the locked outer edge', async () => {
@@ -479,22 +479,22 @@ describe('visibilityHelpers', () => {
                 getMany: jest.fn((relationName, where) => {
                     // CharacterRelationship: char-1 related to char-2
                     if (relationName === 'CharacterRelationship' && where.character_id === 'char-1') {
-                        return Promise.resolve([{ character_id: 'char-1', related_id: 'char-2' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', character_id: 'char-1', related_id: 'char-2' }]);
                     }
                     if (relationName === 'CharacterRelationship' && where.related_id === 'char-1') {
                         return Promise.resolve([]);
                     }
                     // char-2 related to char-3: 2 hops out, surfaced as the locked outer edge
                     if (relationName === 'CharacterRelationship' && where.character_id === 'char-2') {
-                        return Promise.resolve([{ character_id: 'char-2', related_id: 'char-3' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', character_id: 'char-2', related_id: 'char-3' }]);
                     }
                     return Promise.resolve([]);
                 }),
             };
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 1);
-            expect(result.get('char-1')).toBe(0);
-            expect(result.get('char-2')).toBe(1);
-            expect(result.get('char-3')).toBe(2); // locked outer edge, one hop beyond maxHops=1
+            expect(result.get('Character:char-1')).toBe(0);
+            expect(result.get('Character:char-2')).toBe(1);
+            expect(result.get('Character:char-3')).toBe(2); // locked outer edge, one hop beyond maxHops=1
         });
 
         it('should deduplicate entities seen via multiple paths', async () => {
@@ -502,10 +502,10 @@ describe('visibilityHelpers', () => {
                 getMany: jest.fn((relationName, where) => {
                     // Both char-1 and char-2 relate to deity-1
                     if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
-                        return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', character_id: 'char-1', deity_id: 'deity-1' }]);
                     }
                     if (relationName === 'CharacterDeity' && where.character_id === 'char-2') {
-                        return Promise.resolve([{ character_id: 'char-2', deity_id: 'deity-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', character_id: 'char-2', deity_id: 'deity-1' }]);
                     }
                     return Promise.resolve([]);
                 }),
@@ -513,7 +513,7 @@ describe('visibilityHelpers', () => {
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1', 'char-2'], 1);
             // deity-1 should appear only once in the Set
             expect(result.size).toBe(3); // char-1, char-2, deity-1
-            expect(result.has('deity-1')).toBe(true);
+            expect(result.has('Deity:deity-1')).toBe(true);
         });
 
         it('should handle empty anchored character list', async () => {
@@ -534,13 +534,13 @@ describe('visibilityHelpers', () => {
             const mockCrudService = {
                 getMany: jest.fn((relationName, where) => {
                     if (relationName === 'CharacterDeity' && where.character_id === 'char-1') {
-                        return Promise.resolve([{ character_id: 'char-1', deity_id: 'deity-1' }]);
+                        return Promise.resolve([{ visibility_direction: 'first_to_second', character_id: 'char-1', deity_id: 'deity-1' }]);
                     }
                     return Promise.resolve([]);
                 }),
             };
             const result = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 0);
-            expect(result).toEqual(new Map([['char-1', 0], ['deity-1', 1]]));
+            expect(result).toEqual(new Map([['Character:char-1', 0], ['Deity:deity-1', 1]]));
             expect(mockCrudService.getMany).toHaveBeenCalled();
         });
     });

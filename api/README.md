@@ -229,7 +229,29 @@ Use this for domain-shaped access by entity route names from the manifest (examp
 Current capabilities:
 
 - Supports entity create/read/update/delete (`POST`, `GET`, `PATCH`, `DELETE`) endpoints
-- Supports related-entity expansion via relation routes from `routeFromSource`
+- Supports related-entity expansion and creation from either member's relation route
+
+### Relation visibility
+
+Each relation record has a DM-controlled `visibility_direction`: `first_to_second`,
+`second_to_first`, or `both`, relative to the order of its `members` in the domain
+manifest. New records default to outward from the entity used in the create route;
+the request may explicitly specify any of the three values. Migration 6 initializes
+existing records to `both` for manual review.
+
+Players traverse only permitted directions, subject to their viewing character's
+intelligence-based hop limit. A relation appears on a player-visible detail page only
+when it is outgoing from that page and its target is visible or locked. Public
+entities remain independently visible. DMs can see incoming and outgoing relations
+and edit their direction; previewing a character uses that character's visibility.
+Direction is not player-proposable.
+
+History records have their own direction. For a self-relation, expanded results
+include `relationAnchorIndex` on each relation or history record. Supply that value
+as the `anchorMemberIndex` query parameter when reading, editing, deleting, or
+proposing changes to that particular record from the displayed page. This selects
+the correct stored orientation when both orientations exist. History operations
+also require the existing history-key selector where applicable.
 
 ### `POST /api/:entityRoute`
 
@@ -471,5 +493,5 @@ Error payload shape:
 ## Notes
 
 - Data router field names and required fields are derived from the manifest; no resource-specific route files are needed.
-- Domain router route names are derived from each entity `route` value and relation `routeFromSource` values.
+- Domain router route names are derived from each entity `route` value and relation member `route` values.
 - If you add or change resources in [../common/domainManifest.js](../common/domainManifest.js), both routers update accordingly.

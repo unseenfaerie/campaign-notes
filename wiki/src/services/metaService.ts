@@ -29,6 +29,7 @@ export type EntitySchema = {
 export type RelationFormSchema = {
     relatedRoute: string
     relationName: string
+    anchorMemberIndex: number
     kind: 'simple' | 'relationship' | 'history'
     relatedEntityRoute: string
     relatedEntityLabel: string

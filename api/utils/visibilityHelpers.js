@@ -5,10 +5,11 @@
  * - DM (role='dm'): Sees all entities and relations (bypass all checks)
  * - Player (role='player'): Sees their active viewing character + its relations + related entity pages + public entities/relations
  *
- * Visibility is controlled by the is_public boolean field on each entity instance.
+ * Entity visibility uses is_public and directed per-record relation traversal.
  */
 
 const { domainManifest } = require('../../common/domainManifest');
+const { canTraverseRelation } = require('./relationDirection');
 
 /**
  * Visibility hop brackets: how many relationship hops a player can traverse from their
@@ -95,6 +96,10 @@ function getEntityNameByRoute(entityRoute) {
 function getRouteByEntityName(entityName) {
     const entityDef = domainManifest.entities[entityName];
     return entityDef ? entityDef.route : null;
+}
+
+function buildGraphKey(entityName, entityId) {
+    return `${entityName}:${entityId}`;
 }
 
 /**
@@ -252,10 +257,7 @@ function isRelationVisibleToUser(relationName, memberEntities, user, anchoredCha
         const member0Visible = isEntityVisibleToUser(memberEntities[0], memberRoute0, user, anchoredCharacterIds);
         const member1Visible = isEntityVisibleToUser(memberEntities[1], memberRoute1, user, anchoredCharacterIds);
         const member0Anchored = isAnchoredCharacter(memberRoute0, memberEntities[0].id, anchoredCharacterIds);
-        const member1Anchored = isAnchoredCharacter(memberRoute1, memberEntities[1].id, anchoredCharacterIds);
-
-        // Both members visible (standard visibility) OR at least one is anchored (relation visibility)
-        return (member0Visible && member1Visible) || member0Anchored || member1Anchored;
+        return (member0Visible && member1Visible) || member0Anchored;
     }
 
     // Null user or no auth: only see public relations
@@ -301,76 +303,7 @@ async function isEntityRelatedToAnchoredCharacter(manifestCrudService, entityRou
         return false;
     }
 
-    // Check all relations in the manifest
-    for (const [relationName, relationDef] of Object.entries(domainManifest.relations)) {
-        if (!relationDef.members || relationDef.members.length < 2) {
-            continue;
-        }
-
-        // Find all indices where this relation involves our entity type
-        const entityMemberIndices = [];
-        for (let i = 0; i < relationDef.members.length; i++) {
-            if (relationDef.members[i].entity === entityName) {
-                entityMemberIndices.push(i);
-            }
-        }
-
-        // If this relation doesn't involve our entity type, skip it
-        if (entityMemberIndices.length === 0) {
-            continue;
-        }
-
-        // Case 1: Self-relation where both members are the same entity type
-        if (entityMemberIndices.length === 2) {
-            const member0 = relationDef.members[0];
-            const member1 = relationDef.members[1];
-
-            // Check if this entity is related to any anchored character in either direction
-            for (const anchoredCharacterId of anchoredCharacterIds) {
-                try {
-                    // Direction 1: entity is member 0, anchored char is member 1
-                    const record1 = await manifestCrudService.getOne(relationName, {
-                        [member0.key]: entityId,
-                        [member1.key]: anchoredCharacterId,
-                    });
-                    if (record1) return true;
-
-                    // Direction 2: entity is member 1, anchored char is member 0
-                    const record2 = await manifestCrudService.getOne(relationName, {
-                        [member0.key]: anchoredCharacterId,
-                        [member1.key]: entityId,
-                    });
-                    if (record2) return true;
-                } catch (error) {
-                    // If query fails, continue to next relation
-                    continue;
-                }
-            }
-        }
-        // Case 2: Cross-entity relation where one member is our entity and the other is different
-        else if (entityMemberIndices.length === 1) {
-            const entityMemberIndex = entityMemberIndices[0];
-            const otherMemberIndex = 1 - entityMemberIndex;
-            const entityMember = relationDef.members[entityMemberIndex];
-            const otherMember = relationDef.members[otherMemberIndex];
-
-            // Check if this entity is related to any anchored character
-            for (const anchoredCharacterId of anchoredCharacterIds) {
-                try {
-                    const record = await manifestCrudService.getOne(relationName, {
-                        [entityMember.key]: entityId,
-                        [otherMember.key]: anchoredCharacterId,
-                    });
-                    if (record) return true;
-                } catch (error) {
-                    // If query fails, continue to next relation
-                    continue;
-                }
-            }
-        }
-    }
-
-    return false;
+    return (await getRelatedEntityIds(manifestCrudService, entityRoute, anchoredCharacterIds)).includes(entityId);
 }
 
 /**
@@ -383,10 +316,8 @@ async function isEntityRelatedToAnchoredCharacter(manifestCrudService, entityRou
  *
  * Algorithm:
  * 1. Start with all anchored character IDs in a queue
- * 2. For each entity, find all relations connecting to it
- * 3. Add related entities to queue if not yet visited
- * 4. Continue until queue is empty
- * 5. Return Set of all visited entity IDs
+ * 2. Follow permitted outgoing relation directions up to the hop limit and locked edge
+ * 3. Record the shortest hop depth for each reached entity
  *
  * @param {object} manifestCrudService - the CRUD service for database access
  * @param {string[]} anchoredCharacterIds - list of anchored character IDs for this user
@@ -400,19 +331,17 @@ async function getVisibleEntityIdsForUser(manifestCrudService, anchoredCharacter
         return visibleIds;
     }
 
-    // Initialize queue with all anchored characters at hop depth 0
-    // Queue entries are { id, hopDepth }
-    const queue = anchoredCharacterIds.map(id => ({ id, hopDepth: 0 }));
-    const visited = new Set(anchoredCharacterIds);
+    const queue = anchoredCharacterIds.map(id => ({ entityName: 'Character', id, hopDepth: 0 }));
+    const visited = new Set(anchoredCharacterIds.map(id => buildGraphKey('Character', id)));
 
     // Add anchored characters to visible set
     for (const charId of anchoredCharacterIds) {
-        visibleIds.set(charId, 0);
+        visibleIds.set(buildGraphKey('Character', charId), 0);
     }
 
     // BFS traversal: for each entity, find all related entities up to maxHops distance
     while (queue.length > 0) {
-        const { id: currentEntityId, hopDepth: currentHopDepth } = queue.shift();
+        const { entityName: currentEntityName, id: currentEntityId, hopDepth: currentHopDepth } = queue.shift();
 
         // Check if we should continue expanding from this entity (respects maxHops limit).
         // Expansion is allowed one hop past maxHops so the outer "locked" edge is discovered
@@ -422,82 +351,28 @@ async function getVisibleEntityIdsForUser(manifestCrudService, anchoredCharacter
             continue;
         }
 
-        // Find all relations that include this entity
         for (const [relationName, relationDef] of Object.entries(domainManifest.relations)) {
-            if (!relationDef.members || relationDef.members.length < 2) {
+            if (!relationDef.members || relationDef.members.length !== 2) {
                 continue;
             }
 
-            const member0 = relationDef.members[0];
-            const member1 = relationDef.members[1];
-
-            try {
-                // Case 1: Self-relation (both members same type, e.g., CharacterRelationship)
-                if (member0.entity === member1.entity) {
-                    // Query in both directions
-                    const records1 = await manifestCrudService.getMany(relationName, {
-                        [member0.key]: currentEntityId,
-                    });
-                    if (Array.isArray(records1)) {
-                        for (const record of records1) {
-                            const relatedId = record[member1.key];
-                            if (relatedId && !visited.has(relatedId)) {
-                                visited.add(relatedId);
-                                visibleIds.set(relatedId, currentHopDepth + 1);
-                                queue.push({ id: relatedId, hopDepth: currentHopDepth + 1 });
-                            }
-                        }
-                    }
-
-                    const records2 = await manifestCrudService.getMany(relationName, {
-                        [member1.key]: currentEntityId,
-                    });
-                    if (Array.isArray(records2)) {
-                        for (const record of records2) {
-                            const relatedId = record[member0.key];
-                            if (relatedId && !visited.has(relatedId)) {
-                                visited.add(relatedId);
-                                visibleIds.set(relatedId, currentHopDepth + 1);
-                                queue.push({ id: relatedId, hopDepth: currentHopDepth + 1 });
-                            }
-                        }
+            for (const anchorIndex of [0, 1]) {
+                const anchor = relationDef.members[anchorIndex];
+                const target = relationDef.members[1 - anchorIndex];
+                if (anchor.entity !== currentEntityName) continue;
+                const records = await manifestCrudService.getMany(relationName, {
+                    [anchor.key]: currentEntityId,
+                });
+                for (const record of records) {
+                    if (!canTraverseRelation(record, anchorIndex)) continue;
+                    const relatedId = record[target.key];
+                    const graphKey = buildGraphKey(target.entity, relatedId);
+                    if (relatedId && !visited.has(graphKey)) {
+                        visited.add(graphKey);
+                        visibleIds.set(graphKey, currentHopDepth + 1);
+                        queue.push({ entityName: target.entity, id: relatedId, hopDepth: currentHopDepth + 1 });
                     }
                 }
-                // Case 2: Cross-entity relations
-                else {
-                    // Check if current entity is member 0
-                    const records1 = await manifestCrudService.getMany(relationName, {
-                        [member0.key]: currentEntityId,
-                    });
-                    if (Array.isArray(records1)) {
-                        for (const record of records1) {
-                            const relatedId = record[member1.key];
-                            if (relatedId && !visited.has(relatedId)) {
-                                visited.add(relatedId);
-                                visibleIds.set(relatedId, currentHopDepth + 1);
-                                queue.push({ id: relatedId, hopDepth: currentHopDepth + 1 });
-                            }
-                        }
-                    }
-
-                    // Check if current entity is member 1
-                    const records2 = await manifestCrudService.getMany(relationName, {
-                        [member1.key]: currentEntityId,
-                    });
-                    if (Array.isArray(records2)) {
-                        for (const record of records2) {
-                            const relatedId = record[member0.key];
-                            if (relatedId && !visited.has(relatedId)) {
-                                visited.add(relatedId);
-                                visibleIds.set(relatedId, currentHopDepth + 1);
-                                queue.push({ id: relatedId, hopDepth: currentHopDepth + 1 });
-                            }
-                        }
-                    }
-                }
-            } catch (error) {
-                // If query fails for a relation, continue to next relation
-                continue;
             }
         }
     }
@@ -528,7 +403,10 @@ function resolveEntityAccess(entity, entityRoute, user, anchoredCharacterIds = [
         return 'full';
     }
 
-    const hopDepth = hopDepthMap ? hopDepthMap.get(entity.id) : undefined;
+    const entityName = getEntityNameByRoute(entityRoute);
+    const hopDepth = hopDepthMap
+        ? (hopDepthMap.get(buildGraphKey(entityName, entity.id)) ?? hopDepthMap.get(entity.id))
+        : undefined;
     if (hopDepth === undefined) {
         return 'hidden';
     }
@@ -587,88 +465,23 @@ async function getRelatedEntityIds(manifestCrudService, entityRoute, anchoredCha
 
     const relatedIds = new Set();
 
-    // Check all relations in the manifest
     for (const [relationName, relationDef] of Object.entries(domainManifest.relations)) {
-        if (!relationDef.members || relationDef.members.length < 2) {
+        if (!relationDef.members || relationDef.members.length !== 2) {
             continue;
         }
 
-        // Find all indices where this relation involves our entity type
-        const entityMemberIndices = [];
-        for (let i = 0; i < relationDef.members.length; i++) {
-            if (relationDef.members[i].entity === entityName) {
-                entityMemberIndices.push(i);
-            }
-        }
-
-        // If this relation doesn't involve our entity type, skip it
-        if (entityMemberIndices.length === 0) {
-            continue;
-        }
-
-        // Case 1: Self-relation where both members are the same entity type (e.g., CharacterRelationship)
-        if (entityMemberIndices.length === 2) {
-            const member0 = relationDef.members[0];
-            const member1 = relationDef.members[1];
-
-            // Query in both directions to find all related entities
+        for (const anchorIndex of [0, 1]) {
+            const perspectiveMember = relationDef.members[anchorIndex];
+            const targetMember = relationDef.members[1 - anchorIndex];
+            if (perspectiveMember.entity !== 'Character' || targetMember.entity !== entityName) continue;
             for (const anchoredCharacterId of anchoredCharacterIds) {
-                try {
-                    // Direction 1: anchored char is member 0, get member 1
-                    const records1 = await manifestCrudService.getMany(relationName, {
-                        [member0.key]: anchoredCharacterId,
-                    });
-                    if (Array.isArray(records1)) {
-                        for (const record of records1) {
-                            const relatedId = record[member1.key];
-                            if (relatedId) {
-                                relatedIds.add(relatedId);
-                            }
-                        }
-                    }
-
-                    // Direction 2: anchored char is member 1, get member 0
-                    const records2 = await manifestCrudService.getMany(relationName, {
-                        [member1.key]: anchoredCharacterId,
-                    });
-                    if (Array.isArray(records2)) {
-                        for (const record of records2) {
-                            const relatedId = record[member0.key];
-                            if (relatedId) {
-                                relatedIds.add(relatedId);
-                            }
-                        }
-                    }
-                } catch (error) {
-                    // If query fails, continue to next relation
-                    continue;
-                }
-            }
-        }
-        // Case 2: Cross-entity relation where one member is our entity and the other is different
-        else if (entityMemberIndices.length === 1) {
-            const entityMemberIndex = entityMemberIndices[0];
-            const otherMemberIndex = 1 - entityMemberIndex;
-            const entityMember = relationDef.members[entityMemberIndex];
-            const otherMember = relationDef.members[otherMemberIndex];
-
-            // Query for all relations where the other member is an anchored character
-            for (const anchoredCharacterId of anchoredCharacterIds) {
-                try {
-                    const records = await manifestCrudService.getMany(relationName, {
-                        [otherMember.key]: anchoredCharacterId,
-                    });
-                    if (Array.isArray(records)) {
-                        for (const record of records) {
-                            const relatedId = record[entityMember.key];
-                            if (relatedId) {
-                                relatedIds.add(relatedId);
-                            }
-                        }
-                    }
-                } catch (error) {
-                    // If query fails, continue to next relation
-                    continue;
+                const records = await manifestCrudService.getMany(relationName, {
+                    [perspectiveMember.key]: anchoredCharacterId,
+                });
+                for (const record of records) {
+                    if (!canTraverseRelation(record, anchorIndex)) continue;
+                    const relatedId = record[targetMember.key];
+                    if (relatedId) relatedIds.add(relatedId);
                 }
             }
         }
@@ -685,6 +498,7 @@ module.exports = {
     getEntityDefByRoute,
     getEntityNameByRoute,
     getRouteByEntityName,
+    buildGraphKey,
     isEntityPublic,
     isEntityVisibleToUser,
     getRelationMembers,

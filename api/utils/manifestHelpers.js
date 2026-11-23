@@ -83,18 +83,39 @@ function getEntityByRoute(entityRoute, manifest = domainManifest) {
 }
 
 function getRelationMembers(relationDef) {
-    if (Array.isArray(relationDef.members) && relationDef.members.length === 2) {
+    if (Array.isArray(relationDef.members)) {
+        if (relationDef.members.length !== 2) {
+            throw new Error('Relation must define exactly two members');
+        }
         return relationDef.members;
     }
 
-    if (relationDef.source && relationDef.target && relationDef.sourceKey && relationDef.targetKey) {
-        return [
-            { entity: relationDef.source, key: relationDef.sourceKey, route: relationDef.routeFromSource },
-            { entity: relationDef.target, key: relationDef.targetKey, route: relationDef.routeFromTarget },
-        ];
+    throw new Error('Relation must define exactly two members');
+}
+
+function validateDomainManifest(manifest = domainManifest) {
+    for (const [relationName, relationDef] of Object.entries(manifest.relations || {})) {
+        const members = getRelationMembers(relationDef);
+        const [firstMember, secondMember] = members;
+
+        for (const [index, member] of members.entries()) {
+            if (!manifest.entities[member.entity]) {
+                throw new Error(`Relation ${relationName} member ${index} references unknown entity: ${member.entity}`);
+            }
+            if (!member.key || !member.route) {
+                throw new Error(`Relation ${relationName} member ${index} must define key and route`);
+            }
+            if (!Object.values(manifest.entities).some((entity) => entity.route === member.route)) {
+                throw new Error(`Relation ${relationName} member ${index} has unknown route: ${member.route}`);
+            }
+        }
+
+        if (!Array.isArray(relationDef.keys) || !relationDef.keys.includes(firstMember.key) || !relationDef.keys.includes(secondMember.key)) {
+            throw new Error(`Relation ${relationName} keys must include both member keys`);
+        }
     }
 
-    throw new Error('Relation must define exactly two members');
+    return manifest;
 }
 
 function getRelationByRoutes(entityRoute, relatedRoute, manifest = domainManifest) {
@@ -102,20 +123,14 @@ function getRelationByRoutes(entityRoute, relatedRoute, manifest = domainManifes
 
     for (const [relationName, relationDef] of Object.entries(manifest.relations)) {
         const members = getRelationMembers(relationDef);
-
-        for (let anchorMemberIndex = 0; anchorMemberIndex < members.length; anchorMemberIndex += 1) {
-            const anchorMember = members[anchorMemberIndex];
-            const anchorEntityDef = manifest.entities[anchorMember.entity];
-            if (!anchorEntityDef || anchorEntityDef.route !== entityRoute) {
-                continue;
-            }
-
-            if (anchorMember.route === relatedRoute) {
+        for (const anchorMemberIndex of [0, 1]) {
+            const anchor = members[anchorMemberIndex];
+            if (manifest.entities[anchor.entity].route === entityRoute && anchor.route === relatedRoute) {
                 return {
                     relationName,
                     relationDef,
                     anchorMemberIndex,
-                    relatedMemberIndex: anchorMemberIndex === 0 ? 1 : 0,
+                    relatedMemberIndex: 1 - anchorMemberIndex,
                 };
             }
         }
@@ -127,34 +142,12 @@ function getRelationByRoutes(entityRoute, relatedRoute, manifest = domainManifes
 function getRelationContext(members, anchorMemberIndex) {
     return {
         anchorMember: members[anchorMemberIndex],
-        relatedMember: members[anchorMemberIndex === 0 ? 1 : 0],
+        relatedMember: members[1 - anchorMemberIndex],
     };
 }
 
 function getRelatedIdForRow(row, members, sourceId, anchorMemberIndex) {
-    const anchorMember = members[anchorMemberIndex];
-    const relatedMember = members[anchorMemberIndex === 0 ? 1 : 0];
-
-    if (anchorMember.entity === relatedMember.entity) {
-        const anchorMatches = row[anchorMember.key] === sourceId;
-        const relatedMatches = row[relatedMember.key] === sourceId;
-
-        if (anchorMatches && relatedMatches) {
-            return sourceId;
-        }
-
-        if (anchorMatches) {
-            return row[relatedMember.key];
-        }
-
-        if (relatedMatches) {
-            return row[anchorMember.key];
-        }
-
-        return null;
-    }
-
-    return row[relatedMember.key];
+    return row[members[1 - anchorMemberIndex].key];
 }
 
 function mapFieldDefs(fieldsObj) {
@@ -223,29 +216,22 @@ function getRelationsForEntityRoute(entityRoute, manifest = domainManifest) {
 
     for (const [relationName, relationDef] of Object.entries(manifest.relations || {})) {
         const members = getRelationMembers(relationDef);
-
-        for (let anchorMemberIndex = 0; anchorMemberIndex < members.length; anchorMemberIndex += 1) {
+        for (const anchorMemberIndex of [0, 1]) {
             const anchorMember = members[anchorMemberIndex];
-            const anchorEntityDef = manifest.entities[anchorMember.entity];
-
-            if (!anchorEntityDef || anchorEntityDef.route !== entityRoute) {
-                continue;
-            }
-
-            const relatedMember = members[anchorMemberIndex === 0 ? 1 : 0];
-            const relatedEntityDef = manifest.entities[relatedMember.entity];
-
+            const targetMember = members[1 - anchorMemberIndex];
+            const relatedEntityDef = manifest.entities[targetMember.entity];
+            if (manifest.entities[anchorMember.entity].route !== entityRoute) continue;
+            // Self-relations have one route but query both member columns at read time.
+            if (anchorMemberIndex === 1 && members[0].entity === members[1].entity) continue;
             relations.push({
                 relationName,
                 relationDef,
                 anchorMemberIndex,
                 relatedRoute: anchorMember.route,
-                relatedEntityName: relatedMember.entity,
+                relatedEntityName: targetMember.entity,
                 relatedEntityRoute: relatedEntityDef.route,
                 relatedIdField: relatedEntityDef.idField,
             });
-
-            break;
         }
     }
 
@@ -263,6 +249,7 @@ function buildRelationFormSchemas(manifest = domainManifest) {
                 return {
                     relatedRoute: relation.relatedRoute,
                     relationName: relation.relationName,
+                    anchorMemberIndex: relation.anchorMemberIndex,
                     kind: relation.relationDef.kind,
                     relatedEntityRoute: relation.relatedEntityRoute,
                     relatedEntityLabel: relatedEntityDef.ui?.label || relation.relatedEntityName,
@@ -313,6 +300,7 @@ module.exports = {
     dedupeRows,
     getEntityByRoute,
     getRelationMembers,
+    validateDomainManifest,
     getRelationByRoutes,
     getRelationContext,
     getRelatedIdForRow,

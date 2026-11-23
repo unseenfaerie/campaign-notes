@@ -78,7 +78,7 @@ class MockCrudService {
         if (!this.relations[relationName]) {
             this.relations[relationName] = [];
         }
-        this.relations[relationName].push(record);
+        this.relations[relationName].push({ visibility_direction: 'first_to_second', ...record });
     }
 
     /**
@@ -125,7 +125,7 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
         const anchoredIds = ['char-1'];
         const visible = await getVisibleEntityIdsForUser(mockCrudService, anchoredIds);
 
-        expect(visible.has('char-1')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
         expect(visible.size).toBe(1);
     });
 
@@ -149,8 +149,8 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
 
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1']);
 
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('place-1')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Place:place-1')).toBe(true);
         expect(visible.size).toBe(2);
     });
 
@@ -167,9 +167,9 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
 
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1']);
 
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('place-1')).toBe(true);
-        expect(visible.has('org-1')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Place:place-1')).toBe(true);
+        expect(visible.has('Organization:org-1')).toBe(true);
         expect(visible.size).toBe(3);
     });
 
@@ -189,10 +189,10 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
 
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1']);
 
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('place-1')).toBe(true);
-        expect(visible.has('org-1')).toBe(true);
-        expect(visible.has('item-1')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Place:place-1')).toBe(true);
+        expect(visible.has('Organization:org-1')).toBe(true);
+        expect(visible.has('Item:item-1')).toBe(true);
         expect(visible.size).toBe(4);
     });
 
@@ -205,8 +205,8 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
 
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1']);
 
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('char-2')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Character:char-2')).toBe(true);
         expect(visible.size).toBe(2);
     });
 
@@ -219,9 +219,29 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
 
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1']);
 
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('char-2')).toBe(true);
-        expect(visible.size).toBe(2);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Character:char-2')).toBe(false);
+        expect(visible.size).toBe(1);
+    });
+
+    test('follows a place-origin edge after a character-origin edge, but not their reverse', async () => {
+        mockCrudService.addRelation('CharacterPlace', {
+            character_id: 'char-1', place_id: 'place-1', visibility_direction: 'first_to_second',
+        });
+        mockCrudService.addRelation('CharacterPlace', {
+            character_id: 'char-2', place_id: 'place-1', visibility_direction: 'second_to_first',
+        });
+        const fromFirst = await getVisibleEntityIdsForUser(mockCrudService, ['char-1'], 2);
+        const fromSecond = await getVisibleEntityIdsForUser(mockCrudService, ['char-2'], 2);
+        expect(fromFirst.get('Character:char-2')).toBe(2);
+        expect(fromSecond.has('Place:place-1')).toBe(false);
+    });
+
+    test('traverses a bidirectional self-relation from either member', async () => {
+        mockCrudService.addRelation('CharacterRelationship', {
+            character_a_id: 'char-1', character_b_id: 'char-2', visibility_direction: 'both',
+        });
+        expect((await getVisibleEntityIdsForUser(mockCrudService, ['char-2'])).get('Character:char-1')).toBe(1);
     });
 
     test('should not infinite loop on circular references', async () => {
@@ -243,9 +263,9 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
         // This should not infinite loop
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1']);
 
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('org-1')).toBe(true);
-        expect(visible.has('place-1')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Organization:org-1')).toBe(true);
+        expect(visible.has('Place:place-1')).toBe(true);
         // Should not grow unboundedly
         expect(visible.size).toBe(3);
     });
@@ -264,10 +284,10 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
 
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1', 'char-2']);
 
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('char-2')).toBe(true);
-        expect(visible.has('place-1')).toBe(true);
-        expect(visible.has('place-2')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Character:char-2')).toBe(true);
+        expect(visible.has('Place:place-1')).toBe(true);
+        expect(visible.has('Place:place-2')).toBe(true);
         expect(visible.size).toBe(4);
     });
 
@@ -289,10 +309,10 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
 
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1']);
 
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('place-1')).toBe(true);
-        expect(visible.has('place-2')).toBe(true);
-        expect(visible.has('org-1')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Place:place-1')).toBe(true);
+        expect(visible.has('Place:place-2')).toBe(true);
+        expect(visible.has('Organization:org-1')).toBe(true);
         expect(visible.size).toBe(4);
     });
 
@@ -323,16 +343,16 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
 
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1']);
 
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('org-1')).toBe(true);
-        expect(visible.has('place-1')).toBe(true);
-        expect(visible.has('item-1')).toBe(true);
-        expect(visible.has('org-2')).toBe(true);
-        expect(visible.has('item-2')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Organization:org-1')).toBe(true);
+        expect(visible.has('Place:place-1')).toBe(true);
+        expect(visible.has('Item:item-1')).toBe(true);
+        expect(visible.has('Organization:org-2')).toBe(true);
+        expect(visible.has('Item:item-2')).toBe(true);
         expect(visible.size).toBe(6);
     });
 
-    test('should handle relation query failures gracefully', async () => {
+    test('should report relation query failures', async () => {
         const failingService = {
             async getMany() {
                 throw new Error('Database error');
@@ -342,9 +362,7 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
             },
         };
 
-        // Should not throw, just return anchored characters
-        const visible = await getVisibleEntityIdsForUser(failingService, ['char-1']);
-        expect(visible.has('char-1')).toBe(true);
+        await expect(getVisibleEntityIdsForUser(failingService, ['char-1'])).rejects.toThrow('Database error');
     });
 
     test('should deduplicate entities when reachable via multiple paths', async () => {
@@ -366,9 +384,9 @@ describe('getVisibleEntityIdsForUser - Graph Traversal Visibility', () => {
         const visible = await getVisibleEntityIdsForUser(mockCrudService, ['char-1']);
 
         // Should have char-1, place-1, org-1 (not duplicated)
-        expect(visible.has('char-1')).toBe(true);
-        expect(visible.has('place-1')).toBe(true);
-        expect(visible.has('org-1')).toBe(true);
+        expect(visible.has('Character:char-1')).toBe(true);
+        expect(visible.has('Place:place-1')).toBe(true);
+        expect(visible.has('Organization:org-1')).toBe(true);
         expect(visible.size).toBe(3);
     });
 });
