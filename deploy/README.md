@@ -82,12 +82,24 @@ Production deployment runs manually from GitHub Actions or when a version tag
 such as `v1.0.0` is pushed. The release archive is packaged with production
 dependencies already installed (including compiled native modules like
 `sqlite3`), so activation never runs `npm install`/`npm ci` on the VPS. The
-activation script extracts an immutable release, stops the old API, lets
-startup apply pending migrations, atomically switches the `current` symlink,
-restarts systemd, and checks `/health`. A failed activation restores the
-previous symlink and service.
+activation script extracts an immutable release, stops the old API, takes a
+SQLite snapshot, applies migrations, switches the `current` symlink, starts
+systemd, and checks both local health and `SMOKE_BASE_URL/health` from the VPS.
+Only one activation can run at a time. `DB_PATH` must be an absolute persistent
+path. Install the updated activation script on the VPS before deploying a
+release using this workflow.
 
-Create a database backup before deployment:
+If migration, startup, local health, or the external smoke test fails, the
+script stops the new service, restores the database snapshot and previous
+symlink, and starts the previous service. On a first deployment it restores
+the original database state and leaves the service stopped. If rollback cannot
+stop the service or restore the database, it leaves the service stopped where
+possible and reports the retained snapshot directory for manual recovery.
+Writes accepted by the new service before a failed health check are lost on
+rollback; avoid using the application until deployment succeeds. Abrupt machine
+failure or a forcibly terminated activation requires manual recovery.
+
+The temporary deployment snapshot is not a substitute for regular backups:
 
 ```bash
 sudo -u campaign-notes /usr/local/sbin/with-env.sh npm --prefix /opt/campaign-notes/current/api run backup

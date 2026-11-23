@@ -1,7 +1,7 @@
 const baseUrl = (process.env.SMOKE_BASE_URL || 'http://127.0.0.1:3001').replace(/\/$/, '');
 
 async function main() {
-    const response = await fetch(`${baseUrl}/health`);
+    const response = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(10000) });
     if (!response.ok) {
         throw new Error(`Health check failed with HTTP ${response.status}`);
     }
