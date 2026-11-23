@@ -1564,9 +1564,6 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 </form>
 
                 <div v-else class="entity-overview">
-                  <p v-if="auth.isAdmin.value">
-                    Visibility: {{ directionLabel(historyEntry.visibility_direction, relationAnchor(relatedRoute, historyEntry)) }}
-                  </p>
                   <ProposalBanner
                     v-if="pendingProposalOf(historyEntry)"
                     :proposal="pendingProposalOf(historyEntry)!"
