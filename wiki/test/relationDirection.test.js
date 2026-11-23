@@ -1,6 +1,19 @@
 import { strict as assert } from 'node:assert'
 import { test } from 'node:test'
-import { splitRelatedSections } from '../src/utils/relationDirection.ts'
+import { directionOptions, splitRelatedSections } from '../src/utils/relationDirection.ts'
+
+test('direction choices map outgoing and incoming relative to either member', () => {
+    assert.deepEqual(directionOptions(0), [
+        { value: 'first_to_second', label: 'Outgoing' },
+        { value: 'second_to_first', label: 'Incoming' },
+        { value: 'both', label: 'Bidirectional' },
+    ])
+    assert.deepEqual(directionOptions(1), [
+        { value: 'second_to_first', label: 'Outgoing' },
+        { value: 'first_to_second', label: 'Incoming' },
+        { value: 'both', label: 'Bidirectional' },
+    ])
+})
 
 test('separates incoming relations while keeping outgoing and bidirectional ones together', () => {
     const records = [

@@ -266,6 +266,20 @@ a:hover {
     gap: 0.5rem;
 }
 
+.history-direction-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.direction-select {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
 .post-meta {
     margin: 0.2rem 0 0.6rem;
     color: var(--ink-700);
