@@ -42,7 +42,7 @@ import RealDateInput from '../components/RealDateInput.vue'
 import SearchableSelect from '../components/SearchableSelect.vue'
 import LinkifiedText from '../components/LinkifiedText.vue'
 import { useAuthStore } from '../stores/auth'
-import { directionLabel, directionOptions, splitRelatedSections } from '../utils/relationDirection'
+import { directionOptions, splitRelatedSections } from '../utils/relationDirection'
 import { formatLoreDate, isCanonicalLoreDate, type DateSystem } from '../utils/loreDate'
 
 type FullState = {
