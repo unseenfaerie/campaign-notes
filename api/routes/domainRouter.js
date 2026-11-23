@@ -10,7 +10,9 @@ const {
     getPendingProposals,
     getPendingProposalsForResource,
     getProposalById,
-    markAccepted,
+    amendPendingProposal,
+    acceptPendingProposal,
+    withProposalMutationLock,
     markRejected,
 } = require('../data/editProposalRepository');
 const {
@@ -603,25 +605,27 @@ router.post('/proposals/:proposalId/accept', async (req, res) => {
             return res.status(authErr.status).json({ error: authErr.error });
         }
 
-        const proposal = await getProposalById(req.params.proposalId);
-        if (!proposal) {
+        const outcome = await acceptPendingProposal(
+            req.params.proposalId,
+            {
+                reviewedBy: req.auth.userId,
+                reviewedAt: new Date().toISOString(),
+            },
+            async (proposal) => {
+                const proposer = await findUserById(proposal.proposed_by);
+                await manifestCrudService.update(proposal.resource_name, proposal.target_key, proposal.proposed_changes, {
+                    actorUsername: proposer ? proposer.username : undefined,
+                });
+            }
+        );
+        if (outcome.kind === 'not_found') {
             return res.status(404).json({ error: 'Proposal not found' });
         }
-        if (proposal.status !== 'pending') {
+        if (outcome.kind === 'not_pending') {
             return res.status(409).json({ error: 'Proposal is not pending' });
         }
 
-        const proposer = await findUserById(proposal.proposed_by);
-        await manifestCrudService.update(proposal.resource_name, proposal.target_key, proposal.proposed_changes, {
-            actorUsername: proposer ? proposer.username : undefined,
-        });
-
-        const updated = await markAccepted(req.params.proposalId, {
-            reviewedBy: req.auth.userId,
-            reviewedAt: new Date().toISOString(),
-        });
-
-        return res.json(await toProposalView(updated));
+        return res.json(await toProposalView(outcome.proposal));
     } catch (err) {
         const httpErr = toHttpError(err);
         return res.status(httpErr.status).json({ error: httpErr.message });
@@ -636,21 +640,23 @@ router.post('/proposals/:proposalId/reject', async (req, res) => {
             return res.status(authErr.status).json({ error: authErr.error });
         }
 
-        const proposal = await getProposalById(req.params.proposalId);
-        if (!proposal) {
-            return res.status(404).json({ error: 'Proposal not found' });
-        }
-        if (proposal.status !== 'pending') {
-            return res.status(409).json({ error: 'Proposal is not pending' });
-        }
+        return await withProposalMutationLock(async () => {
+            const proposal = await getProposalById(req.params.proposalId);
+            if (!proposal) {
+                return res.status(404).json({ error: 'Proposal not found' });
+            }
+            if (proposal.status !== 'pending') {
+                return res.status(409).json({ error: 'Proposal is not pending' });
+            }
 
-        const updated = await markRejected(req.params.proposalId, {
-            reviewedBy: req.auth.userId,
-            reviewedAt: new Date().toISOString(),
-            reviewNote: req.body && req.body.note,
+            const updated = await markRejected(req.params.proposalId, {
+                reviewedBy: req.auth.userId,
+                reviewedAt: new Date().toISOString(),
+                reviewNote: req.body && req.body.note,
+            });
+
+            return res.json(await toProposalView(updated));
         });
-
-        return res.json(await toProposalView(updated));
     } catch (err) {
         const httpErr = toHttpError(err);
         return res.status(httpErr.status).json({ error: httpErr.message });
@@ -664,24 +670,26 @@ router.post('/proposals/:proposalId/revoke', async (req, res) => {
             return res.status(401).json({ error: 'Unauthorized' });
         }
 
-        const proposal = await getProposalById(req.params.proposalId);
-        if (!proposal) {
-            return res.status(404).json({ error: 'Proposal not found' });
-        }
-        if (proposal.status !== 'pending') {
-            return res.status(409).json({ error: 'Proposal is not pending' });
-        }
-        if (proposal.proposed_by !== req.auth.userId) {
-            return res.status(403).json({ error: 'Only the proposal author can revoke it' });
-        }
+        return await withProposalMutationLock(async () => {
+            const proposal = await getProposalById(req.params.proposalId);
+            if (!proposal) {
+                return res.status(404).json({ error: 'Proposal not found' });
+            }
+            if (proposal.status !== 'pending') {
+                return res.status(409).json({ error: 'Proposal is not pending' });
+            }
+            if (proposal.proposed_by !== req.auth.userId) {
+                return res.status(403).json({ error: 'Only the proposal author can revoke it' });
+            }
 
-        const updated = await markRejected(req.params.proposalId, {
-            reviewedBy: req.auth.userId,
-            reviewedAt: new Date().toISOString(),
-            reviewNote: 'Revoked by author',
+            const updated = await markRejected(req.params.proposalId, {
+                reviewedBy: req.auth.userId,
+                reviewedAt: new Date().toISOString(),
+                reviewNote: 'Revoked by author',
+            });
+
+            return res.json(await toProposalView(updated));
         });
-
-        return res.json(await toProposalView(updated));
     } catch (err) {
         const httpErr = toHttpError(err);
         return res.status(httpErr.status).json({ error: httpErr.message });
@@ -887,8 +895,8 @@ router.delete('/:entityRoute/:id', async (req, res) => {
     }
 });
 
-// propose a change to this entity (player-only; locks the record until a DM accepts/rejects)
-router.post('/:entityRoute/:id/propose', async (req, res) => {
+// A PATCH amends the author's existing proposal; a POST creates a new one.
+async function handleEntityProposal(req, res) {
     try {
         const authErr = ensurePlayerForProposal(req);
         if (authErr) {
@@ -923,10 +931,28 @@ router.post('/:entityRoute/:id/propose', async (req, res) => {
         }
 
         const targetKey = buildEntityTargetKey(idField, idValue);
-        await assertNoPendingProposal(entityName, targetKey);
+        const pending = await getPendingProposalForTarget(entityName, targetKey);
+        const isAmendment = req.method === 'PATCH';
+        if (isAmendment) {
+            if (!pending || pending.id !== req.body?.proposalId) {
+                return res.status(409).json({ error: 'Proposal is no longer pending; reload the page.' });
+            }
+            if (pending.proposed_by !== req.auth.userId) {
+                return res.status(403).json({ error: 'Only the proposal author can amend it' });
+            }
+        } else if (pending) {
+            return res.status(409).json({ error: 'A pending edit proposal exists for this record' });
+        }
 
-        const changes = filterProposableChanges(req.body, entityDef.fields);
-        const diff = diffAgainstCurrent(changes, record);
+        const changes = filterProposableChanges(isAmendment ? req.body.changes : req.body, entityDef.fields);
+        const diff = diffAgainstCurrent({ ...(pending?.proposed_changes || {}), ...changes }, record);
+        if (isAmendment) {
+            const updated = await amendPendingProposal(pending, diff);
+            if (!updated) {
+                return res.status(409).json({ error: 'Proposal changed or is no longer pending; reload the page.' });
+            }
+            return res.json(updated.status === 'pending' ? await toProposalView(updated) : null);
+        }
         if (Object.keys(diff).length === 0) {
             return res.status(400).json({ error: 'No proposed changes differ from the current record' });
         }
@@ -946,7 +972,9 @@ router.post('/:entityRoute/:id/propose', async (req, res) => {
         const httpErr = toHttpError(err);
         return res.status(httpErr.status).json({ error: httpErr.message });
     }
-});
+}
+router.post('/:entityRoute/:id/propose', handleEntityProposal);
+router.patch('/:entityRoute/:id/propose', handleEntityProposal);
 
 /* RELATIONAL ROUTES */
 // create relation between these two entities

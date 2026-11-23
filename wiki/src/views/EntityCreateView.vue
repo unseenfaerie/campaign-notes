@@ -198,7 +198,7 @@ watch(
 
     <form v-else class="wiki-article entity-form" @submit.prevent="submitCreate">
       <div v-for="field in visibleFields" :key="field.name" class="form-row">
-        <label :for="`create-field-${field.name}`">
+        <label v-if="field.type !== 'loreDate'" :for="`create-field-${field.name}`">
           {{ prettyFieldName(field.name) }}
           <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
         </label>
@@ -247,6 +247,7 @@ watch(
         <LoreDateInput
           v-else-if="field.type === 'loreDate'"
           v-model="formValues[field.name]"
+          :label="prettyFieldName(field.name)"
           :required="field.required"
         />
         <RealDateInput

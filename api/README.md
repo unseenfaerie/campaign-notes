@@ -198,6 +198,8 @@ Change these passwords immediately in shared environments.
 - `GET /api/:entityRoute/:id`
 - `GET /api/:entityRoute/:id/:relatedRoute`
 - `PATCH /api/:entityRoute/:id`
+- `POST /api/:entityRoute/:id/propose`
+- `PATCH /api/:entityRoute/:id/propose`
 - `DELETE /api/:entityRoute/:id`
 
 ## Generic Data Router (`/api/data`)
@@ -230,6 +232,16 @@ Current capabilities:
 
 - Supports entity create/read/update/delete (`POST`, `GET`, `PATCH`, `DELETE`) endpoints
 - Supports related-entity expansion and creation from either member's relation route
+
+### Entity edit proposals
+
+A player can submit an entity proposal with `POST /api/:entityRoute/:id/propose`
+and amend their own pending proposal with `PATCH` to the same route, using
+`{ "proposalId": 123, "changes": { "field": "value" } }`. Amendments merge into
+the existing proposal; fields restored to their accepted values are removed. Restoring
+every field withdraws the proposal and releases the entity lock. Other users cannot
+edit the locked entity until the DM accepts or rejects the proposal or the author
+withdraws it. An amendment against a changed or resolved proposal returns HTTP 409.
 
 ### Relation visibility
 

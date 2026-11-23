@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRouter } from 'vue-router'
 import AddRelatedEntityForm from '../components/AddRelatedEntityForm.vue'
 import CollapseSection from '../components/CollapseSection.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
 import DirectionSelect from '../components/DirectionSelect.vue'
+import EditButton from '../components/EditButton.vue'
 import FieldList from '../components/FieldList.vue'
 import LastEditedStamp from '../components/LastEditedStamp.vue'
 import ProposalBanner from '../components/ProposalBanner.vue'
@@ -18,6 +19,7 @@ import {
   deleteEntity,
   deleteRelation,
   proposeEntityEdit,
+  amendEntityProposal,
   proposeRelationEdit,
   acceptProposal,
   rejectProposal,
@@ -42,6 +44,7 @@ import RealDateInput from '../components/RealDateInput.vue'
 import SearchableSelect from '../components/SearchableSelect.vue'
 import LinkifiedText from '../components/LinkifiedText.vue'
 import { useAuthStore } from '../stores/auth'
+import { useProposalStore } from '../stores/proposals'
 import { directionOptions, splitRelatedSections } from '../utils/relationDirection'
 import { formatLoreDate, isCanonicalLoreDate, type DateSystem } from '../utils/loreDate'
 
@@ -57,6 +60,7 @@ const props = defineProps<{
 }>()
 
 const auth = useAuthStore()
+const proposals = useProposalStore()
 const router = useRouter()
 
 const loading = ref(true)
@@ -65,9 +69,11 @@ const fullData = ref<FullState | null>(null)
 const relatedSections = ref<ReturnType<typeof splitRelatedSections>>({ outgoing: [], incoming: [] })
 const dateSystem = ref<DateSystem | null>(null)
 
-const isEditing = ref(false)
+const editingEntitySection = ref<'core' | 'exposition' | null>(null)
+const isEditing = computed(() => editingEntitySection.value !== null)
 const editFields = ref<EntityFieldSchema[]>([])
 const editValues = ref<Record<string, any>>({})
+const originalEditValues = ref<Record<string, any>>({})
 const saving = ref(false)
 const saveError = ref('')
 
@@ -116,7 +122,7 @@ const pendingDeleteAction = ref<(() => Promise<void>) | null>(null)
 
 const entityTitle = computed(() => entitySchema.value?.label ?? props.entityRoute)
 const entityPageTitle = computed(() => {
-  const entity = fullData.value?.entity
+  const entity = fullData.value ? effectiveEntity.value : null
   if (!entity) {
     return loading.value ? 'Loading...' : entityTitle.value
   }
@@ -140,19 +146,9 @@ const effectiveEntity = computed(() =>
 
 const entityDisplayData = computed(() => withoutIdField(effectiveEntity.value))
 
-const entityExpositoryFields = computed(() => {
-  const entity = effectiveEntity.value
-  if (!fullData.value) {
-    return []
-  }
-
-  return (entitySchema.value?.fields || []).flatMap((field) => {
-    const value = entity[field.name]
-    return field.expository && typeof value === 'string' && value.trim()
-      ? [{ name: field.name, value }]
-      : []
-  })
-})
+const entityExpositoryFields = computed(() =>
+  expositoryFieldEntries(effectiveEntity.value, entitySchema.value?.fields)
+)
 
 const entityFactsData = computed(() =>
   Object.fromEntries(
@@ -285,7 +281,7 @@ async function loadDetail(options: { silent?: boolean } = {}) {
   }
   errorMessage.value = ''
   directionError.value = ''
-  isEditing.value = false
+  editingEntitySection.value = null
   openAddFormRoute.value = null
   showingNewRelatedPicker.value = false
   editingRelationKey.value = null
@@ -582,6 +578,7 @@ async function acceptPendingProposal(proposal: PendingProposal) {
   proposalActionBusy.value = true
   try {
     await acceptProposal(proposal.id)
+    if (auth.isAuthenticated.value && auth.isAdmin.value) void proposals.refresh()
     await loadDetail({ silent: true })
   } catch (error) {
     proposalActionError.value = error instanceof Error ? error.message : 'Could not accept this proposal.'
@@ -595,6 +592,7 @@ async function rejectPendingProposal(proposal: PendingProposal) {
   proposalActionBusy.value = true
   try {
     await rejectProposal(proposal.id)
+    if (auth.isAuthenticated.value && auth.isAdmin.value) void proposals.refresh()
     await loadDetail({ silent: true })
   } catch (error) {
     proposalActionError.value = error instanceof Error ? error.message : 'Could not reject this proposal.'
@@ -608,6 +606,7 @@ async function revokePendingProposal(proposal: PendingProposal) {
   proposalActionBusy.value = true
   try {
     await revokeProposal(proposal.id)
+    if (auth.isAuthenticated.value && auth.isAdmin.value) void proposals.refresh()
     await loadDetail({ silent: true })
   } catch (error) {
     proposalActionError.value = error instanceof Error ? error.message : 'Could not revoke this proposal.'
@@ -649,7 +648,7 @@ function fieldValuesFromRecord(fields: EntityFieldSchema[], record: DomainEntity
 function buildFieldsPayload(
   fields: EntityFieldSchema[],
   values: Record<string, any>,
-  { clearOptionalLoreDates = false, clearOptionalReferences = false } = {}
+  { clearOptionalLoreDates = false, clearOptionalReferences = false, clearOptionalValues = false } = {}
 ): Record<string, unknown> {
   const payload: Record<string, unknown> = {}
 
@@ -666,6 +665,7 @@ function buildFieldsPayload(
         if (field.required) {
           throw new Error(`${prettyFieldName(field.name)} is required.`)
         }
+        if (clearOptionalValues) payload[field.name] = null
         continue
       }
       payload[field.name] = Number(rawValue)
@@ -677,7 +677,7 @@ function buildFieldsPayload(
       if (field.required) {
         throw new Error(`${prettyFieldName(field.name)} is required.`)
       }
-      if (clearOptionalLoreDates && (field.type === 'loreDate' || field.type === 'realDate')) {
+      if (clearOptionalValues || (clearOptionalLoreDates && (field.type === 'loreDate' || field.type === 'realDate'))) {
         payload[field.name] = null
       }
       if (clearOptionalReferences && field.ref) {
@@ -882,32 +882,59 @@ function expositoryFieldEntries(data: DomainEntity, fields?: EntityFieldSchema[]
   })
 }
 
-async function startEdit() {
+function canEditEntityField(field: EntityFieldSchema): boolean {
+  const proposal = entityPendingProposal.value
+  return !field.primary &&
+    (auth.isAdmin.value || Boolean(field.proposable)) &&
+    (!proposal || (!auth.isAdmin.value && isProposalAuthor(proposal)))
+}
+
+const entityEditorBusy = computed(() =>
+  directionSavingKey.value !== null || editingRelationKey.value !== null ||
+  editingHistoryKey.value !== null || openAddFormRoute.value !== null ||
+  showingNewRelatedPicker.value || showAddAliasForm.value || deleteModalOpen.value ||
+  proposalActionBusy.value
+)
+
+function startEdit(section: 'core' | 'exposition') {
   saveError.value = ''
 
-  const schema = entitySchema.value || await getEntitySchema(props.entityRoute)
+  const schema = entitySchema.value
   const entity = fullData.value?.entity
-  if (!schema || !entity) {
+  if (!schema || !entity || isEditing.value || entityEditorBusy.value) {
     return
   }
 
-  editFields.value = schema.fields
-  editValues.value = fieldValuesFromRecord(editFields.value, entity)
+  editFields.value = schema.fields.filter((field) =>
+    canEditEntityField(field) && (section === 'core' ? !field.expository : field.expository)
+  )
+  if (editFields.value.length === 0) return
+  const proposed = entityPendingProposal.value
+  const editRecord = proposed ? { ...entity, ...proposed.proposedChanges } : entity
+  editValues.value = fieldValuesFromRecord(editFields.value, editRecord)
+  originalEditValues.value = { ...editValues.value }
 
-  isEditing.value = true
+  editingEntitySection.value = section
 }
 
 function cancelEdit() {
-  isEditing.value = false
+  editingEntitySection.value = null
   saveError.value = ''
 }
 
 function buildEditPayload(): Record<string, unknown> {
-  const payload = buildFieldsPayload(fieldsForRole(editFields.value), editValues.value, {
-    clearOptionalLoreDates: true,
-    clearOptionalReferences: true,
-  })
-
+  const changedFields = editFields.value.filter((field) => editValues.value[field.name] !== originalEditValues.value[field.name])
+  const payload = buildFieldsPayload(changedFields, editValues.value, { clearOptionalValues: true })
+  const entity = fullData.value?.entity
+  const proposal = entityPendingProposal.value
+  const current = proposal ? { ...entity, ...proposal.proposedChanges } : entity
+  for (const [name, value] of Object.entries(payload)) {
+    if (proposal && value === null && entity?.[name] === '') payload[name] = ''
+    const currentValue = current?.[name]
+    if (currentValue === payload[name] || (payload[name] === null && (currentValue === null || currentValue === undefined))) {
+      delete payload[name]
+    }
+  }
   return payload
 }
 
@@ -917,16 +944,26 @@ async function saveEdit() {
 
   try {
     const payload = buildEditPayload()
+    if (Object.keys(payload).length === 0) {
+      cancelEdit()
+      return
+    }
     if (auth.isAdmin.value) {
       const updated = await updateEntity(props.entityRoute, props.id, payload)
       if (fullData.value) {
         fullData.value.entity = { ...fullData.value.entity, ...updated }
       }
     } else {
-      await proposeEntityEdit(props.entityRoute, props.id, payload)
-      await loadDetail({ silent: true })
+      const pending = entityPendingProposal.value
+      const proposal = pending
+        ? await amendEntityProposal(props.entityRoute, props.id, pending.id, payload)
+        : await proposeEntityEdit(props.entityRoute, props.id, payload)
+      if (fullData.value) {
+        fullData.value.entity = { ...fullData.value.entity, pendingProposal: proposal }
+      }
+      setViewMode('entity', 'proposed')
     }
-    isEditing.value = false
+    editingEntitySection.value = null
   } catch (error) {
     if (error instanceof ApiError || error instanceof Error) {
       saveError.value = error.message
@@ -938,8 +975,30 @@ async function saveEdit() {
   }
 }
 
-const canOpenEntityEdit = computed(
-  () => auth.isAdmin.value || proposableFields(entitySchema.value?.fields || []).length > 0
+const canEditEntityCore = computed(() =>
+  (entitySchema.value?.fields || []).some((field) => !field.expository && canEditEntityField(field))
+)
+const canEditEntityExposition = computed(() =>
+  (entitySchema.value?.fields || []).some((field) => field.expository && canEditEntityField(field))
+)
+const entityEditDirty = computed(() =>
+  isEditing.value && JSON.stringify(editValues.value) !== JSON.stringify(originalEditValues.value)
+)
+
+function confirmLeaveEntityEdit(): boolean {
+  return !saving.value && (!entityEditDirty.value || window.confirm('Discard your unsaved entity edits?'))
+}
+
+function warnBeforeUnload(event: BeforeUnloadEvent) {
+  if (entityEditDirty.value || saving.value) {
+    event.preventDefault()
+    event.returnValue = ''
+  }
+}
+
+onBeforeRouteLeave(confirmLeaveEntityEdit)
+onBeforeRouteUpdate((to, from) =>
+  (to.params.entityRoute === from.params.entityRoute && to.params.id === from.params.id) || confirmLeaveEntityEdit()
 )
 
 function toggleAddAliasForm() {
@@ -999,16 +1058,44 @@ watch(
 )
 onBeforeUnmount(() => {
   document.title = baseDocumentTitle
+  window.removeEventListener('beforeunload', warnBeforeUnload)
 })
 
-onMounted(loadDetail)
+onMounted(() => {
+  window.addEventListener('beforeunload', warnBeforeUnload)
+  loadDetail()
+})
 watch(() => [props.entityRoute, props.id], () => loadDetail())
 </script>
 
 <template>
   <section>
-    <header class="view-header">
+    <header class="view-header entity-detail-header">
       <h1>{{ entityPageTitle }}</h1>
+      <div
+        v-if="fullData && !isEntityLocked && auth.isAdmin.value && !isEditing && !entityPendingProposal"
+        class="button-group"
+      >
+        <button
+          type="button"
+          class="secondary-button"
+          :disabled="directionSavingKey !== null"
+          @click="toggleAddAliasForm"
+        >
+          {{ showAddAliasForm ? 'Cancel' : 'Add Alias' }}
+        </button>
+        <button
+          type="button"
+          class="danger-button"
+          :disabled="directionSavingKey !== null"
+          @click="confirmDeleteEntity"
+        >
+          Delete
+        </button>
+      </div>
+      <p v-if="!loading && !errorMessage && fullData && !isEntityLocked && aliases.length > 0" class="aliases-list">
+        <em>A.K.A {{ aliases.map(a => a.alias).join(', ') }}</em>
+      </p>
     </header>
 
     <p v-if="loading" class="status-card">Loading entity detail...</p>
@@ -1016,59 +1103,29 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
 
     <article v-else-if="fullData" class="wiki-article">
       <section v-if="isEntityLocked" class="core-data-section">
-        <h3>Core data</h3>
-        <p class="status-card">Locked</p>
+        <div class="entity-overview">
+          <div class="entity-facts">
+            <h3>Core data</h3>
+            <p class="status-card">Locked</p>
+          </div>
+        </div>
       </section>
       <template v-else>
       <section class="core-data-section">
-        <div class="section-heading-row">
-          <h3>Core data</h3>
-          <div class="button-group">
-            <button
-              v-if="auth.isAdmin.value && !isEditing && !entityPendingProposal"
-              type="button"
-              class="secondary-button"
-              :disabled="directionSavingKey !== null"
-              @click="toggleAddAliasForm"
-            >
-              {{ showAddAliasForm ? 'Cancel' : 'Add Alias' }}
-            </button>
-            <button
-              v-if="canOpenEntityEdit && !isEditing && !entityPendingProposal"
-              type="button"
-              class="secondary-button"
-              :disabled="directionSavingKey !== null"
-              @click="startEdit"
-            >
-              Edit
-            </button>
-            <button
-              v-if="auth.isAdmin.value && !isEditing && !entityPendingProposal"
-              type="button"
-              class="danger-button"
-              :disabled="directionSavingKey !== null"
-              @click="confirmDeleteEntity"
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-
         <ProposalBanner
           v-if="entityPendingProposal"
           :proposal="entityPendingProposal"
           :is-admin="auth.isAdmin.value"
           :is-author="isProposalAuthor(entityPendingProposal)"
-          :busy="proposalActionBusy || directionSavingKey !== null"
+          :busy="proposalActionBusy || directionSavingKey !== null || isEditing"
           :error-message="proposalActionError"
           @accept="acceptPendingProposal(entityPendingProposal)"
           @reject="rejectPendingProposal(entityPendingProposal)"
           @revoke="revokePendingProposal(entityPendingProposal)"
         />
-
-        <div v-if="aliases.length > 0" class="aliases-section">
-          <p class="aliases-list"><em>Aliases: {{ aliases.map(a => a.alias).join(', ') }}</em></p>
-        </div>
+        <p v-if="entityPendingProposal && isProposalAuthor(entityPendingProposal)" class="field-hint">
+          You can continue editing this proposal until the DM reviews it. Restoring all fields to their accepted values withdraws it.
+        </p>
 
         <form v-if="showAddAliasForm" class="entity-form" @submit.prevent="submitAddAlias">
           <div class="form-row">
@@ -1092,9 +1149,21 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
           <p v-if="aliasFormError" class="status-card error">{{ aliasFormError }}</p>
         </form>
 
-        <form v-if="isEditing" class="entity-form" @submit.prevent="saveEdit">
-          <div v-for="field in fieldsForRole(editFields)" :key="field.name" class="form-row">
-            <label :for="`edit-field-${field.name}`">
+        <div class="entity-overview">
+        <div class="entity-facts">
+        <div class="inline-edit-heading entity-section-heading">
+          <h3>Core data</h3>
+          <EditButton
+            v-if="canEditEntityCore && !isEditing"
+            label="Edit core data"
+            :disabled="entityEditorBusy"
+            @click="startEdit('core')"
+          />
+        </div>
+        <form v-if="editingEntitySection === 'core'" class="entity-form" @submit.prevent="saveEdit">
+          <fieldset class="inline-editor-fields" :disabled="saving">
+          <div v-for="field in editFields" :key="field.name" class="form-row">
+            <label v-if="field.type !== 'loreDate'" :for="`edit-field-${field.name}`">
               {{ prettyFieldName(field.name) }}
               <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
             </label>
@@ -1135,16 +1204,10 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               :required="field.required"
               :readonly="field.primary"
             />
-            <textarea
-              v-else-if="isLongTextField(field)"
-              :id="`edit-field-${field.name}`"
-              v-model="editValues[field.name]"
-              rows="4"
-              :required="field.required"
-            ></textarea>
             <LoreDateInput
               v-else-if="field.type === 'loreDate'"
               v-model="editValues[field.name]"
+              :label="prettyFieldName(field.name)"
               :required="field.required"
             />
             <RealDateInput
@@ -1161,20 +1224,19 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               :readonly="field.primary"
             />
           </div>
+          </fieldset>
 
           <div class="form-actions">
             <button class="primary-button" type="submit" :disabled="saving">
-              {{ saving ? (auth.isAdmin.value ? 'Saving...' : 'Submitting...') : (auth.isAdmin.value ? 'Save' : 'Submit Proposal') }}
+              {{ saving ? 'Saving...' : (auth.isAdmin.value ? 'Save' : (entityPendingProposal ? 'Update Proposal' : 'Submit Proposal')) }}
             </button>
             <button class="secondary-button" type="button" :disabled="saving" @click="cancelEdit">Cancel</button>
           </div>
 
-          <p v-if="saveError" class="status-card error">{{ saveError }}</p>
+          <p v-if="saveError" class="status-card error" role="alert">{{ saveError }}</p>
         </form>
-        <div v-else class="entity-overview">
           <FieldList
-            v-if="hasEntityFacts"
-            class="entity-facts"
+            v-else-if="hasEntityFacts"
             :data="entityFactsData"
             :fields="entityFactsFields"
             empty-message="No entity fields are available."
@@ -1212,10 +1274,45 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               </template>
             </template>
           </FieldList>
-          <div v-if="entityExpositoryFields.length > 0" class="entity-long-description">
+        </div>
+          <div v-if="entityExpositoryFields.length > 0 || canEditEntityExposition || editingEntitySection === 'exposition'" class="entity-long-description">
+            <div class="inline-edit-heading entity-section-heading">
+              <h3>Exposition</h3>
+              <EditButton
+                v-if="canEditEntityExposition && !isEditing"
+                label="Edit exposition"
+                :disabled="entityEditorBusy"
+                @click="startEdit('exposition')"
+              />
+            </div>
+            <form v-if="editingEntitySection === 'exposition'" class="entity-form entity-exposition-form" @submit.prevent="saveEdit">
+              <fieldset class="inline-editor-fields" :disabled="saving">
+                <div v-for="field in editFields" :key="field.name" class="form-row">
+                  <label :for="`edit-field-${field.name}`">
+                    {{ prettyFieldName(field.name) }}
+                    <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
+                  </label>
+                  <textarea
+                    :id="`edit-field-${field.name}`"
+                    v-model="editValues[field.name]"
+                    rows="4"
+                    :required="field.required"
+                  ></textarea>
+                </div>
+              </fieldset>
+              <div class="form-actions">
+                <button class="primary-button" type="submit" :disabled="saving">
+                  {{ saving ? 'Saving...' : (auth.isAdmin.value ? 'Save' : (entityPendingProposal ? 'Update Proposal' : 'Submit Proposal')) }}
+                </button>
+                <button class="secondary-button" type="button" :disabled="saving" @click="cancelEdit">Cancel</button>
+              </div>
+              <p v-if="saveError" class="status-card error" role="alert">{{ saveError }}</p>
+            </form>
             <template v-for="field in entityExpositoryFields" :key="field.name">
-              <h4>{{ prettyFieldName(field.name) }}</h4>
-              <p><LinkifiedText :text="field.value" /></p>
+              <template v-if="editingEntitySection !== 'exposition' || !editFields.some((entry) => entry.name === field.name)">
+                <h4>{{ prettyFieldName(field.name) }}</h4>
+                <p><LinkifiedText :text="field.value" /></p>
+              </template>
             </template>
           </div>
         </div>
@@ -1229,6 +1326,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
 
       </section>
 
+      <fieldset class="related-edit-lock" :disabled="isEditing">
       <p v-if="directionError" class="status-card error" role="alert">{{ directionError }}</p>
       <template v-for="group in relatedSectionGroups" :key="group.key">
       <div
@@ -1249,6 +1347,16 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
           New Related Entity
         </button>
       </div>
+
+      <section v-if="group.key === 'outgoing' && auth.isAdmin.value && missingRelationSections.length > 0 && showingNewRelatedPicker" class="article-section">
+        <AddRelatedEntityForm
+          :entity-route="entityRoute"
+          :id="id"
+          :options="missingRelationSections"
+          @created="onRelationCreated"
+          @cancel="showingNewRelatedPicker = false"
+        />
+      </section>
 
       <CollapseSection
         v-for="[relatedRoute, records] in group.sections"
@@ -1380,7 +1488,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 :key="field.name"
                 class="form-row"
               >
-                <label :for="`edit-relation-${group.key}-${relatedRoute}-${index}-${field.name}`">
+                <label v-if="field.type !== 'loreDate'" :for="`edit-relation-${group.key}-${relatedRoute}-${index}-${field.name}`">
                   {{ prettyFieldName(field.name) }}
                   <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
                 </label>
@@ -1419,6 +1527,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 <LoreDateInput
                   v-else-if="field.type === 'loreDate'"
                   v-model="relationEditValues[field.name]"
+                  :label="prettyFieldName(field.name)"
                   :required="field.required"
                 />
                 <RealDateInput
@@ -1506,7 +1615,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                     :key="field.name"
                     class="form-row"
                   >
-                    <label :for="`edit-history-${group.key}-${relatedRoute}-${index}-${historyIndex}-${field.name}`">
+                    <label v-if="field.type !== 'loreDate'" :for="`edit-history-${group.key}-${relatedRoute}-${index}-${historyIndex}-${field.name}`">
                       {{ prettyFieldName(field.name) }}
                       <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
                     </label>
@@ -1545,6 +1654,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                     <LoreDateInput
                       v-else-if="field.type === 'loreDate'"
                       v-model="historyEditValues[field.name]"
+                      :label="prettyFieldName(field.name)"
                       :required="field.required"
                     />
                     <RealDateInput
@@ -1667,16 +1777,8 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
         </div>
       </CollapseSection>
 
-      <section v-if="group.key === 'outgoing' && auth.isAdmin.value && missingRelationSections.length > 0 && showingNewRelatedPicker" class="article-section">
-        <AddRelatedEntityForm
-          :entity-route="entityRoute"
-          :id="id"
-          :options="missingRelationSections"
-          @created="onRelationCreated"
-          @cancel="showingNewRelatedPicker = false"
-        />
-      </section>
       </template>
+      </fieldset>
       </template>
     </article>
 

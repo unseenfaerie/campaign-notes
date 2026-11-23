@@ -219,7 +219,7 @@ watch(selectedRelatedRoute, () => {
       </div>
 
       <div v-for="field in selectedSchema.fields" :key="field.name" class="form-row">
-        <label :for="`add-relation-field-${field.name}`">
+        <label v-if="field.type !== 'loreDate'" :for="`add-relation-field-${field.name}`">
           {{ prettyFieldName(field.name) }}
           <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
         </label>
@@ -258,6 +258,7 @@ watch(selectedRelatedRoute, () => {
         <LoreDateInput
           v-else-if="field.type === 'loreDate'"
           v-model="formValues[field.name]"
+          :label="prettyFieldName(field.name)"
           :required="field.required"
         />
         <RealDateInput

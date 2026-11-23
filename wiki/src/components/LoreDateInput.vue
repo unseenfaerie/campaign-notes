@@ -11,6 +11,7 @@ import SearchableSelect from './SearchableSelect.vue'
 
 const props = defineProps<{
   modelValue: string
+  label: string
   required?: boolean
 }>()
 
@@ -156,35 +157,56 @@ watch(
 </script>
 
 <template>
-  <div v-if="!isDateSet" class="lore-date-input-empty">
-    <button type="button" class="secondary-button" :disabled="!dateSystem" @click="setDate">Set date</button>
-  </div>
-  <div v-else class="lore-date-input">
-    <div class="lore-date-field">
-      <label :for="`${inputId}-era`">Age</label>
-      <SearchableSelect v-model="eraId" :id="`${inputId}-era`" :options="eraOptions" :required="required" />
+  <fieldset class="lore-date-group">
+    <legend>
+      {{ label }}
+      <span v-if="required" class="required-marker" aria-hidden="true">*</span>
+    </legend>
+    <div v-if="!isDateSet" class="lore-date-input-empty">
+      <button type="button" class="secondary-button" :disabled="!dateSystem" @click="setDate">Set date</button>
     </div>
-    <div class="lore-date-field">
-      <label :for="`${inputId}-calendar`">Calendar</label>
-      <SearchableSelect v-model="calendarId" :id="`${inputId}-calendar`" :options="calendarOptions" :required="required" />
+    <div v-else class="lore-date-input">
+      <div class="lore-date-field">
+        <label :for="`${inputId}-era`">Age</label>
+        <SearchableSelect v-model="eraId" :id="`${inputId}-era`" :options="eraOptions" :required="required" />
+      </div>
+      <div class="lore-date-field">
+        <label :for="`${inputId}-calendar`">Calendar</label>
+        <SearchableSelect v-model="calendarId" :id="`${inputId}-calendar`" :options="calendarOptions" :required="required" />
+      </div>
+      <div class="lore-date-field">
+        <label :for="`${inputId}-year`">Year</label>
+        <input :id="`${inputId}-year`" v-model.number="year" type="number" min="1" max="99999" :required="required" />
+      </div>
+      <div class="lore-date-field">
+        <label :for="`${inputId}-month`">Month</label>
+        <SearchableSelect v-model="monthIndex" :id="`${inputId}-month`" :options="monthOptions" :required="required" />
+      </div>
+      <div class="lore-date-field">
+        <label :for="`${inputId}-day`">Day</label>
+        <input :id="`${inputId}-day`" v-model.number="day" type="number" min="1" :max="maxDayForMonth" :required="required" />
+      </div>
+      <button v-if="!required" type="button" class="secondary-button" @click="clearDate">Clear date</button>
     </div>
-    <div class="lore-date-field">
-      <label :for="`${inputId}-year`">Year</label>
-      <input :id="`${inputId}-year`" v-model.number="year" type="number" min="1" max="99999" :required="required" />
-    </div>
-    <div class="lore-date-field">
-      <label :for="`${inputId}-month`">Month</label>
-      <SearchableSelect v-model="monthIndex" :id="`${inputId}-month`" :options="monthOptions" :required="required" />
-    </div>
-    <div class="lore-date-field">
-      <label :for="`${inputId}-day`">Day</label>
-      <input :id="`${inputId}-day`" v-model.number="day" type="number" min="1" :max="maxDayForMonth" :required="required" />
-    </div>
-    <button v-if="!required" type="button" class="secondary-button" @click="clearDate">Clear date</button>
-  </div>
+  </fieldset>
 </template>
 
 <style scoped>
+.lore-date-group {
+  min-width: 0;
+  margin: 0;
+  padding: 0.6rem 0.75rem 0.75rem;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+}
+
+.lore-date-group legend {
+  padding: 0 0.25rem;
+  font-size: 0.88rem;
+  color: var(--ink-700);
+  font-weight: 700;
+}
+
 .lore-date-input {
   display: flex;
   flex-wrap: wrap;

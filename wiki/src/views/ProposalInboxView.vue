@@ -1,21 +1,18 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ApiError } from '../services/apiClient'
 import { listPendingProposals, type PendingProposalInboxItem } from '../services/domainService'
 
 const loading = ref(true)
-const errorMessage = ref('')
 const proposals = ref<PendingProposalInboxItem[]>([])
 
 async function loadProposals() {
   loading.value = true
-  errorMessage.value = ''
 
   try {
     proposals.value = await listPendingProposals()
-  } catch (error) {
-    errorMessage.value = error instanceof ApiError ? error.message : 'Could not load proposals.'
+  } catch {
+    proposals.value = []
   } finally {
     loading.value = false
   }
@@ -31,7 +28,6 @@ onMounted(loadProposals)
     </header>
 
     <p v-if="loading" class="status-card">Loading proposals...</p>
-    <p v-else-if="errorMessage" class="status-card error">{{ errorMessage }}</p>
     <p v-else-if="proposals.length === 0" class="status-card">No open proposals.</p>
 
     <ol v-else class="proposal-inbox-list">
