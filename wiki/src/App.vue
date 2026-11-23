@@ -4,8 +4,10 @@ import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { getEntitySchemas, type EntitySchema } from './services/metaService'
 import { listSelectableCharacters, type SelectableCharacter } from './services/authService'
 import { useAuthStore } from './stores/auth'
+import { useProposalStore } from './stores/proposals'
 
 const auth = useAuthStore()
+const proposals = useProposalStore()
 const route = useRoute()
 const router = useRouter()
 const entitySchemas = ref<EntitySchema[]>([])
@@ -13,6 +15,7 @@ const selectableCharacters = ref<SelectableCharacter[]>([])
 const navOpen = ref(true)
 const compactNavQuery = '(max-width: 980px)'
 let compactNavMediaQuery: MediaQueryList | null = null
+let proposalRefreshInterval: number | undefined
 
 const showShell = computed(() => auth.isAuthenticated.value && route.name !== 'login')
 const navigationEntities = computed(() => entitySchemas.value.filter((entity) => entity.navigation))
@@ -49,6 +52,23 @@ watch(() => auth.isAuthenticated.value, async (isAuthenticated) => {
   selectableCharacters.value = await listSelectableCharacters()
 }, { immediate: true })
 
+function refreshProposalStatus() {
+  if (auth.isAuthenticated.value && auth.isAdmin.value) {
+    void proposals.refresh()
+  }
+}
+
+watch(() => [auth.user.value?.id, auth.isAuthenticated.value, auth.isAdmin.value], () => {
+  proposals.reset()
+  refreshProposalStatus()
+}, { immediate: true })
+
+watch(() => route.fullPath, refreshProposalStatus)
+
+function refreshProposalStatusWhenVisible() {
+  if (!document.hidden) refreshProposalStatus()
+}
+
 async function handleLogout() {
   await auth.logout()
   await router.push({ name: 'login' })
@@ -66,10 +86,15 @@ onMounted(() => {
   compactNavMediaQuery = window.matchMedia(compactNavQuery)
   updateNavForLayout(compactNavMediaQuery)
   compactNavMediaQuery.addEventListener('change', updateNavForLayout)
+  document.addEventListener('visibilitychange', refreshProposalStatusWhenVisible)
+  proposalRefreshInterval = window.setInterval(refreshProposalStatusWhenVisible, 60_000)
 })
 
 onBeforeUnmount(() => {
   compactNavMediaQuery?.removeEventListener('change', updateNavForLayout)
+  document.removeEventListener('visibilitychange', refreshProposalStatusWhenVisible)
+  window.clearInterval(proposalRefreshInterval)
+  proposals.reset()
 })
 </script>
 
@@ -94,7 +119,12 @@ onBeforeUnmount(() => {
         </header>
 
         <details class="nav-panel" :open="navOpen" @toggle="handleNavToggle">
-          <summary>Navigation</summary>
+          <summary>
+            Navigation
+            <span v-if="auth.isAdmin.value && proposals.errorMessage.value" class="proposal-status-error">
+              Proposal status unavailable
+            </span>
+          </summary>
           <div class="nav-panel-body">
             <nav aria-label="Entity navigation" class="nav-links">
               <RouterLink to="/" class="nav-link">Home</RouterLink>
@@ -109,7 +139,15 @@ onBeforeUnmount(() => {
             </nav>
 
             <nav v-if="auth.isAdmin.value" aria-label="Admin navigation" class="nav-links admin-nav">
-              <RouterLink :to="{ name: 'proposal-inbox' }" class="nav-link">Proposal Inbox</RouterLink>
+              <RouterLink :to="{ name: 'proposal-inbox' }" class="nav-link">
+                Proposal Inbox
+                <span v-if="proposals.pendingCount.value" :aria-label="`${proposals.pendingCount.value} pending proposals`">
+                  ({{ proposals.pendingCount.value }})
+                </span>
+              </RouterLink>
+              <p v-if="proposals.errorMessage.value" class="proposal-status-error" role="status">
+                Proposal status unavailable: {{ proposals.errorMessage.value }}
+              </p>
               <RouterLink :to="{ name: 'admin-users' }" class="nav-link">Manage Users</RouterLink>
             </nav>
           </div>

@@ -122,6 +122,18 @@ export async function proposeEntityEdit(
     )
 }
 
+export async function amendEntityProposal(
+    entityRoute: string,
+    id: string,
+    proposalId: number,
+    changes: DomainEntity
+): Promise<PendingProposal | null> {
+    return requestJson<PendingProposal | null>(
+        `/${entityRoute}/${encodeURIComponent(id)}/propose`,
+        { method: 'PATCH', body: { proposalId, changes } }
+    )
+}
+
 export async function proposeRelationEdit(
     entityRoute: string,
     id: string,

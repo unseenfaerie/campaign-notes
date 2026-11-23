@@ -20,7 +20,8 @@ const domainRouter = require('../domainRouter');
 const app = express();
 app.use(express.json());
 app.use((req, _res, next) => {
-    req.auth = { userId: 'user', username: 'user', role: req.get('x-role') || 'dm' };
+    const userId = req.get('x-user') || 'user';
+    req.auth = { userId, username: userId, role: req.get('x-role') || 'dm' };
     next();
 });
 app.use('/api', domainRouter);
@@ -28,6 +29,7 @@ app.use('/api', domainRouter);
 beforeAll(async () => {
     for (const sql of buildAllCreateTableSql()) await runStatement(db, sql);
     await runStatement(db, 'CREATE TABLE users (id TEXT PRIMARY KEY)');
+    await runStatement(db, "INSERT INTO users (id) VALUES ('user'), ('another-player'), ('dm')");
     await proposalMigration.up(db);
 });
 
@@ -158,4 +160,72 @@ test('players cannot propose a direction change', async () => {
         .send({ visibility_direction: 'both' });
     expect(response.status).toBe(400);
     expect(response.body.error).toMatch(/not player-proposable/);
+});
+
+test('authors amend one entity proposal across sections and can revert individual changes', async () => {
+    const create = await request(app).post('/api/characters/hero/propose')
+        .set('x-role', 'player').send({ short_description: 'New description' });
+    expect({ status: create.status, body: create.body }).toEqual(expect.objectContaining({ status: 201 }));
+    const proposalId = create.body.id;
+
+    const amend = await request(app).patch('/api/characters/hero/propose')
+        .set('x-role', 'player').send({ proposalId, changes: { long_explanation: 'New history' } });
+    expect(amend.status).toBe(200);
+    expect(amend.body.proposedChanges).toEqual({
+        short_description: 'New description', long_explanation: 'New history',
+    });
+    expect((await manifestCrudService.getOne('Character', { id: 'hero' })).short_description).toBe('hero');
+    expect((await request(app).patch('/api/characters/hero').send({ name: 'Blocked' })).status).toBe(409);
+
+    const clear = await request(app).patch('/api/characters/hero/propose')
+        .set('x-role', 'player').send({ proposalId, changes: { long_explanation: null } });
+    expect(clear.body.proposedChanges).toEqual({ short_description: 'New description' });
+    await request(app).patch('/api/characters/hero/propose')
+        .set('x-role', 'player').send({ proposalId, changes: { long_explanation: 'New history' } });
+
+    const revert = await request(app).patch('/api/characters/hero/propose')
+        .set('x-role', 'player').send({ proposalId, changes: { short_description: 'hero' } });
+    expect(revert.body.proposedChanges).toEqual({ long_explanation: 'New history' });
+
+    const accept = await request(app).post(`/api/proposals/${proposalId}/accept`);
+    expect(accept.status).toBe(200);
+    const record = await manifestCrudService.getOne('Character', { id: 'hero' });
+    expect(record.short_description).toBe('hero');
+    expect(record.long_explanation).toBe('New history');
+    const stale = await request(app).patch('/api/characters/hero/propose')
+        .set('x-role', 'player').send({ proposalId, changes: { name: 'Too late' } });
+    expect(stale.status).toBe(409);
+});
+
+test('only the author can amend, and reverting the last change withdraws the proposal', async () => {
+    const create = await request(app).post('/api/characters/hero/propose')
+        .set('x-role', 'player').send({ short_description: 'Proposed' });
+    const proposalId = create.body.id;
+    const other = await request(app).patch('/api/characters/hero/propose')
+        .set('x-role', 'player').set('x-user', 'another-player')
+        .send({ proposalId, changes: { short_description: 'Other' } });
+    expect(other.status).toBe(403);
+    const forbiddenField = await request(app).patch('/api/characters/hero/propose')
+        .set('x-role', 'player').send({ proposalId, changes: { is_public: true } });
+    expect(forbiddenField.status).toBe(400);
+
+    const revert = await request(app).patch('/api/characters/hero/propose')
+        .set('x-role', 'player').send({ proposalId, changes: { short_description: 'hero' } });
+    expect(revert.status).toBe(200);
+    expect(revert.body).toBeNull();
+    expect((await request(app).patch('/api/characters/hero').send({ name: 'Unlocked' })).status).toBe(200);
+    expect((await request(app).patch('/api/characters/hero/propose')
+        .set('x-role', 'player').send({ proposalId, changes: { name: 'Stale' } })).status).toBe(409);
+});
+
+test('conditional amendments reject proposals changed or resolved since they were read', async () => {
+    const { getPendingProposalForTarget, amendPendingProposal, markRejected } = require('../../data/editProposalRepository');
+    await request(app).post('/api/characters/hero/propose')
+        .set('x-role', 'player').send({ short_description: 'Proposed' });
+    const original = await getPendingProposalForTarget('Character', { id: 'hero' });
+    const first = await amendPendingProposal(original, { short_description: 'Amended' });
+    expect(first.proposed_changes).toEqual({ short_description: 'Amended' });
+    expect(await amendPendingProposal(original, { short_description: 'Outdated' })).toBeNull();
+    await markRejected(first.id, { reviewedBy: 'dm', reviewedAt: new Date().toISOString() });
+    expect(await amendPendingProposal(first, { short_description: 'Too late' })).toBeNull();
 });

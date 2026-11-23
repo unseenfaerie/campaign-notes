@@ -10,6 +10,7 @@ const {
     getPendingProposals,
     getPendingProposalsForResource,
     getProposalById,
+    amendPendingProposal,
     markAccepted,
     markRejected,
 } = require('../data/editProposalRepository');
@@ -887,8 +888,8 @@ router.delete('/:entityRoute/:id', async (req, res) => {
     }
 });
 
-// propose a change to this entity (player-only; locks the record until a DM accepts/rejects)
-router.post('/:entityRoute/:id/propose', async (req, res) => {
+// A PATCH amends the author's existing proposal; a POST creates a new one.
+async function handleEntityProposal(req, res) {
     try {
         const authErr = ensurePlayerForProposal(req);
         if (authErr) {
@@ -923,10 +924,28 @@ router.post('/:entityRoute/:id/propose', async (req, res) => {
         }
 
         const targetKey = buildEntityTargetKey(idField, idValue);
-        await assertNoPendingProposal(entityName, targetKey);
+        const pending = await getPendingProposalForTarget(entityName, targetKey);
+        const isAmendment = req.method === 'PATCH';
+        if (isAmendment) {
+            if (!pending || pending.id !== req.body?.proposalId) {
+                return res.status(409).json({ error: 'Proposal is no longer pending; reload the page.' });
+            }
+            if (pending.proposed_by !== req.auth.userId) {
+                return res.status(403).json({ error: 'Only the proposal author can amend it' });
+            }
+        } else if (pending) {
+            return res.status(409).json({ error: 'A pending edit proposal exists for this record' });
+        }
 
-        const changes = filterProposableChanges(req.body, entityDef.fields);
-        const diff = diffAgainstCurrent(changes, record);
+        const changes = filterProposableChanges(isAmendment ? req.body.changes : req.body, entityDef.fields);
+        const diff = diffAgainstCurrent({ ...(pending?.proposed_changes || {}), ...changes }, record);
+        if (isAmendment) {
+            const updated = await amendPendingProposal(pending, diff);
+            if (!updated) {
+                return res.status(409).json({ error: 'Proposal changed or is no longer pending; reload the page.' });
+            }
+            return res.json(updated.status === 'pending' ? await toProposalView(updated) : null);
+        }
         if (Object.keys(diff).length === 0) {
             return res.status(400).json({ error: 'No proposed changes differ from the current record' });
         }
@@ -946,7 +965,9 @@ router.post('/:entityRoute/:id/propose', async (req, res) => {
         const httpErr = toHttpError(err);
         return res.status(httpErr.status).json({ error: httpErr.message });
     }
-});
+}
+router.post('/:entityRoute/:id/propose', handleEntityProposal);
+router.patch('/:entityRoute/:id/propose', handleEntityProposal);
 
 /* RELATIONAL ROUTES */
 // create relation between these two entities

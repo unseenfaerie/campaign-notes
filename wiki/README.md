@@ -12,8 +12,13 @@ Vue 3 + TypeScript frontend for browsing manifest-driven campaign data from the 
 - Access token storage in localStorage.
 - Automatic Bearer auth header on API content requests.
 - Left navigation for entity routes.
+- The DM's Proposal Inbox navigation shows a pending count, refreshed on navigation,
+  after review, when returning to the tab, and every minute while the tab is visible.
 - Generic entity list pages for each route.
 - Generic entity detail page using GET /api/:entityRoute/:id/full.
+- Edit entity core data or all exposition fields in place. Players can keep
+  amending their own pending entity proposal until it is reviewed; restoring all
+  proposed fields to their accepted values withdraws the proposal.
 - Collapsible relation sections with support for simple, relationship, and history relation payload shapes.
 - DMs can create and manage relations from either member's detail page, including incoming
   relations, and set visibility direction separately for each record or history entry.
