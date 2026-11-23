@@ -18,6 +18,9 @@ Vue 3 + TypeScript frontend for browsing manifest-driven campaign data from the 
 - DMs can create and manage relations from either member's detail page, including incoming
   relations, and set visibility direction separately for each record or history entry.
   New relations default to outward from the current page; migrated records start bidirectional.
+- Detail pages group outgoing and bidirectional connections under Related Data. DMs see
+  incoming-only connections separately under Incoming Related Data; players see only outgoing
+  connections.
 
 ## Environment
 
