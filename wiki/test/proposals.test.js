@@ -24,7 +24,7 @@ after(async () => {
     await server?.close()
 })
 
-test('reports pending proposals, empty inboxes, and request errors', async () => {
+test('reports pending proposals and treats failed requests as an empty inbox', async () => {
     proposals.reset()
     globalThis.fetch = async () => Response.json([{ id: 1 }, { id: 2 }])
     await proposals.refresh()
@@ -36,13 +36,17 @@ test('reports pending proposals, empty inboxes, and request errors', async () =>
 
     globalThis.fetch = async () => Response.json({ error: 'Unavailable' }, { status: 500 })
     await proposals.refresh()
-    assert.equal(proposals.pendingCount.value, null)
-    assert.equal(proposals.errorMessage.value, 'Unavailable')
+    assert.equal(proposals.pendingCount.value, 0)
+
+    globalThis.fetch = async () => {
+        throw new TypeError('NetworkError when attempting to fetch resource.')
+    }
+    await proposals.refresh()
+    assert.equal(proposals.pendingCount.value, 0)
 
     globalThis.fetch = async () => Response.json([{ id: 3 }])
     await proposals.refresh()
     assert.equal(proposals.pendingCount.value, 1)
-    assert.equal(proposals.errorMessage.value, '')
 })
 
 test('ignores outdated requests after a newer refresh or session reset', async () => {

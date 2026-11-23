@@ -119,12 +119,7 @@ onBeforeUnmount(() => {
         </header>
 
         <details class="nav-panel" :open="navOpen" @toggle="handleNavToggle">
-          <summary>
-            Navigation
-            <span v-if="auth.isAdmin.value && proposals.errorMessage.value" class="proposal-status-error">
-              Proposal status unavailable
-            </span>
-          </summary>
+          <summary>Navigation</summary>
           <div class="nav-panel-body">
             <nav aria-label="Entity navigation" class="nav-links">
               <RouterLink to="/" class="nav-link">Home</RouterLink>
@@ -145,9 +140,6 @@ onBeforeUnmount(() => {
                   ({{ proposals.pendingCount.value }})
                 </span>
               </RouterLink>
-              <p v-if="proposals.errorMessage.value" class="proposal-status-error" role="status">
-                Proposal status unavailable: {{ proposals.errorMessage.value }}
-              </p>
               <RouterLink :to="{ name: 'admin-users' }" class="nav-link">Manage Users</RouterLink>
             </nav>
           </div>
