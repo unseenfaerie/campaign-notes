@@ -2,6 +2,9 @@
 set -Eeuo pipefail
 
 archive="${1:?release archive path is required}"
+IFS= read -r smoke_url || { echo "A smoke test URL is required on stdin." >&2; exit 1; }
+[[ -n "$smoke_url" ]] || { echo "A smoke test URL is required." >&2; exit 1; }
+
 root=/opt/campaign-notes
 releases="$root/releases"
 incoming="$root/incoming"
@@ -9,6 +12,8 @@ current="$root/current"
 release="$releases/$(date -u +%Y%m%d%H%M%S)-${RANDOM}"
 
 mkdir -p "$releases" "$incoming"
+exec 9>"$root/deploy.lock"
+flock -n 9 || { echo "Another deployment is in progress." >&2; exit 1; }
 mkdir -p "$release"
 tar -xzf "$archive" -C "$release"
 
@@ -18,36 +23,69 @@ else
     previous=''
 fi
 
-cleanup() {
-    if [[ "$activated" != true && -n "$previous" ]]; then
-        ln -sfn "$previous" "$current"
-        systemctl restart campaign-notes.service || true
-    fi
-}
 activated=false
-trap cleanup ERR
+stopped=false
+snapshot_ready=false
+snapshot_dir=''
+cleanup() {
+    local status=$?
+    trap - EXIT
+    if [[ "$activated" != true && "$stopped" == true ]]; then
+        echo "Activation failed; rolling back." >&2
+        if ! systemctl stop campaign-notes.service; then
+            echo "Rollback failed: could not stop the service. Snapshot retained at $snapshot_dir" >&2
+            exit 1
+        fi
+        if [[ "$snapshot_ready" == true ]] && ! /usr/local/sbin/with-env.sh node "$release/api/scripts/deploymentDatabase.js" restore "$snapshot_dir"; then
+            echo "Rollback failed: database restore failed. Service remains stopped; snapshot retained at $snapshot_dir" >&2
+            exit 1
+        fi
+        if [[ -n "$previous" ]]; then
+            if ! ln -sfn "$previous" "$current" || ! systemctl start campaign-notes.service; then
+                echo "Rollback failed: could not restore the previous application. Snapshot retained at $snapshot_dir" >&2
+                exit 1
+            fi
+        else
+            rm -f "$current"
+        fi
+        echo "Rollback completed." >&2
+    fi
+    if [[ -n "$snapshot_dir" ]]; then
+        rm -rf "$snapshot_dir" || echo "Warning: could not remove snapshot directory $snapshot_dir" >&2
+    fi
+    exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 1' INT TERM
 
 chown -R campaign-notes:campaign-notes "$release"
 cd "$release"
-systemctl stop campaign-notes.service || true
-/usr/local/sbin/with-env.sh npm run --workspace api migrate -- latest
+stopped=true
+systemctl stop campaign-notes.service
+snapshot_dir=$(mktemp -d "$root/rollback.XXXXXXXX")
+/usr/local/sbin/with-env.sh node "$release/api/scripts/deploymentDatabase.js" snapshot "$snapshot_dir"
+snapshot_ready=true
+sudo -u campaign-notes /usr/local/sbin/with-env.sh npm run --workspace api migrate -- latest
 ln -sfn "$release" "$current"
 systemctl start campaign-notes.service
 
 for attempt in {1..30}; do
-    if curl --fail --silent --show-error http://127.0.0.1:3001/health >/dev/null; then
-        activated=true
+    if curl --fail --silent --show-error --max-time 2 http://127.0.0.1:3001/health >/dev/null; then
         break
+    fi
+    if [[ "$attempt" == 30 ]]; then
+        echo "Campaign Notes API did not become healthy within 30 attempts." >&2
+        exit 1
     fi
     sleep 1
 done
 
-if [[ "$activated" != true ]]; then
-    echo "Campaign Notes API did not become healthy within 30 seconds." >&2
-    exit 1
-fi
+SMOKE_BASE_URL="$smoke_url" node "$release/scripts/smoke-test.js"
+activated=true
 
-find "$releases" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' \
+if ! find "$releases" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' \
     | sort -rn | awk 'NR > 3 { $1=""; sub(/^ /, ""); print }' \
-    | xargs -r rm -rf
-rm -f "$archive"
+    | xargs -r rm -rf; then
+    echo "Warning: could not prune old releases." >&2
+fi
+rm -f "$archive" || echo "Warning: could not remove release archive $archive." >&2

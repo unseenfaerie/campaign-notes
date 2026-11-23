@@ -34,6 +34,8 @@ for (const file of files) {
 fs.cpSync(path.join(root, 'wiki', 'dist'), path.join(stagingDirectory, 'wiki', 'dist'), {
     recursive: true,
 });
+fs.mkdirSync(path.join(stagingDirectory, 'scripts'));
+fs.copyFileSync(path.join(root, 'scripts', 'smoke-test.js'), path.join(stagingDirectory, 'scripts', 'smoke-test.js'));
 
 // Install production deps (incl. compiling native modules like sqlite3) here, on the
 // packaging machine, so the release archive is self-contained and the target VPS never
