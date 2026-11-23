@@ -1070,8 +1070,29 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
 
 <template>
   <section>
-    <header class="view-header">
+    <header class="view-header entity-detail-header">
       <h1>{{ entityPageTitle }}</h1>
+      <div
+        v-if="fullData && !isEntityLocked && auth.isAdmin.value && !isEditing && !entityPendingProposal"
+        class="button-group"
+      >
+        <button
+          type="button"
+          class="secondary-button"
+          :disabled="directionSavingKey !== null"
+          @click="toggleAddAliasForm"
+        >
+          {{ showAddAliasForm ? 'Cancel' : 'Add Alias' }}
+        </button>
+        <button
+          type="button"
+          class="danger-button"
+          :disabled="directionSavingKey !== null"
+          @click="confirmDeleteEntity"
+        >
+          Delete
+        </button>
+      </div>
       <p v-if="!loading && !errorMessage && fullData && !isEntityLocked && aliases.length > 0" class="aliases-list">
         <em>A.K.A {{ aliases.map(a => a.alias).join(', ') }}</em>
       </p>
@@ -1091,25 +1112,6 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
       </section>
       <template v-else>
       <section class="core-data-section">
-        <div v-if="auth.isAdmin.value && !isEditing && !entityPendingProposal" class="button-group entity-actions">
-            <button
-              type="button"
-              class="secondary-button"
-              :disabled="directionSavingKey !== null"
-              @click="toggleAddAliasForm"
-            >
-              {{ showAddAliasForm ? 'Cancel' : 'Add Alias' }}
-            </button>
-            <button
-              type="button"
-              class="danger-button"
-              :disabled="directionSavingKey !== null"
-              @click="confirmDeleteEntity"
-            >
-              Delete
-            </button>
-        </div>
-
         <ProposalBanner
           v-if="entityPendingProposal"
           :proposal="entityPendingProposal"

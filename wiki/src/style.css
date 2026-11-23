@@ -206,6 +206,19 @@ a:hover {
     margin-bottom: 1rem;
 }
 
+.entity-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.entity-detail-header h1 {
+    flex: 1;
+    min-width: 12rem;
+}
+
 .view-header h1,
 .view-header h2 {
     margin: 0;
@@ -268,11 +281,6 @@ a:hover {
 }
 
 .entity-section-heading {
-    margin-bottom: 0.5rem;
-}
-
-.entity-actions {
-    justify-content: flex-end;
     margin-bottom: 0.5rem;
 }
 
@@ -1039,4 +1047,8 @@ a:hover {
 .view-header .aliases-list {
     margin: 0.2rem 0 0;
     font-size: 0.9rem;
+}
+
+.entity-detail-header .aliases-list {
+    flex-basis: 100%;
 }
