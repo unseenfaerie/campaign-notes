@@ -166,6 +166,8 @@ function mapFieldDefs(fieldsObj) {
         if (fieldDef.autoIncrement) field.autoIncrement = true;
         if (fieldDef.hidden) field.hidden = true;
         if (fieldDef.expository) field.expository = true;
+        if (fieldDef.label) field.label = fieldDef.label;
+        if (fieldDef.access?.dmOnly) field.dmOnly = true;
         if (!field.primary && !field.hidden && fieldDef.access?.playerProposable !== false) {
             field.proposable = true;
         }
@@ -180,6 +182,37 @@ function mapFieldDefs(fieldsObj) {
     }
 
     return fields;
+}
+
+function stripDmOnlyFields(value, manifest = domainManifest) {
+    const dmOnlyFieldNames = new Set();
+    for (const entity of Object.values(manifest.entities || {})) {
+        for (const [fieldName, field] of Object.entries(entity.fields || {})) {
+            if (field.access?.dmOnly) dmOnlyFieldNames.add(fieldName);
+        }
+    }
+    for (const relation of Object.values(manifest.relations || {})) {
+        for (const [fieldName, field] of Object.entries(relation.payload || {})) {
+            if (field.access?.dmOnly) dmOnlyFieldNames.add(fieldName);
+        }
+    }
+
+    function strip(valueToStrip) {
+        if (Array.isArray(valueToStrip)) {
+            return valueToStrip.map(strip);
+        }
+        if (!valueToStrip || typeof valueToStrip !== 'object') {
+            return valueToStrip;
+        }
+
+        return Object.fromEntries(
+            Object.entries(valueToStrip)
+                .filter(([fieldName]) => !dmOnlyFieldNames.has(fieldName))
+                .map(([fieldName, fieldValue]) => [fieldName, strip(fieldValue)])
+        );
+    }
+
+    return strip(value);
 }
 
 function orderEntityFields(fields, idField) {
@@ -304,6 +337,7 @@ module.exports = {
     getRelationByRoutes,
     getRelationContext,
     getRelatedIdForRow,
+    stripDmOnlyFields,
     conformObjectToEntity,
     buildEntityFormSchemas,
     getRelationsForEntityRoute,

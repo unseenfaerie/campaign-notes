@@ -60,6 +60,18 @@ jest.mock('../../utils/manifestHelpers', () => ({
         relatedMember: members[anchorMemberIndex === 0 ? 1 : 0],
     })),
     getRelationsForEntityRoute: jest.fn(),
+    stripDmOnlyFields: (value) => {
+        function strip(item) {
+            if (Array.isArray(item)) return item.map(strip);
+            if (!item || typeof item !== 'object') return item;
+            return Object.fromEntries(
+                Object.entries(item)
+                    .filter(([key]) => key !== 'secret_dm_notes')
+                    .map(([key, nested]) => [key, strip(nested)])
+            );
+        }
+        return strip(value);
+    },
     getRelatedIdForRow: jest.fn((row, members, sourceId, anchorMemberIndex) => {
         const anchorMember = members[anchorMemberIndex];
         const relatedMember = members[anchorMemberIndex === 0 ? 1 : 0];
@@ -93,7 +105,7 @@ jest.mock('../../../common/domainManifest', () => ({
             Character: {
                 idField: 'id',
                 route: 'characters',
-                fields: { id: { type: 'string' } },
+                fields: { id: { type: 'string' }, secret_dm_notes: { access: { dmOnly: true } } },
             },
             Item: {
                 idField: 'id',
@@ -305,6 +317,24 @@ beforeEach(() => {
 });
 
 describe('domainRouter isolated unit tests', () => {
+    it('omits secret DM notes from player responses and retains them for DMs', async () => {
+        manifestCrudService.getOne.mockResolvedValue({
+            id: 'char-1',
+            is_public: true,
+            secret_dm_notes: 'The secret is safe.',
+        });
+
+        const playerResponse = await request(app)
+            .get('/api/characters/char-1')
+            .set('x-test-role', 'player');
+        const dmResponse = await request(app).get('/api/characters/char-1');
+
+        expect(playerResponse.status).toBe(200);
+        expect(playerResponse.body).not.toHaveProperty('secret_dm_notes');
+        expect(dmResponse.status).toBe(200);
+        expect(dmResponse.body.secret_dm_notes).toBe('The secret is safe.');
+    });
+
     it('GET /proposals returns pending proposals with linkable entity targets for DMs', async () => {
         getPendingProposals.mockResolvedValueOnce([{
             id: 7,

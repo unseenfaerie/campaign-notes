@@ -95,6 +95,13 @@ describe('offline campaign export', () => {
         for (const match of html.matchAll(/href="#([^"]+)"/g)) expect(anchors).toContain(match[1]);
     });
 
+    it('omits secret DM notes from rendered exports', async () => {
+        const campaign = await loadCampaign(databasePath);
+        campaign.entities.Character[0].secret_dm_notes = 'Players must never see this.';
+
+        expect(createRenderer(campaign)).not.toContain('Players must never see this.');
+    });
+
     it('does not link ambiguous names and preserves dangling records', async () => {
         const campaign = await loadCampaign(databasePath);
         campaign.entities.Alias.push({ id: 2, entity_type: 'character', entity_id: 'second', alias: 'Hero' });

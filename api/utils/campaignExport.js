@@ -193,7 +193,7 @@ function createRenderer(campaign, { multiPage = false } = {}) {
 
     function fields(row, definitions) {
         const entries = Object.entries(definitions)
-            .filter(([name, field]) => !field.primary && !field.hidden && name !== 'name' && row[name] !== null && row[name] !== undefined && row[name] !== '');
+            .filter(([name, field]) => !field.primary && !field.hidden && !field.access?.dmOnly && name !== 'name' && row[name] !== null && row[name] !== undefined && row[name] !== '');
         if (!entries.length) return '';
         return `<dl>${entries.map(([name, field]) =>
             `<dt>${escapeHtml(label(name))}</dt><dd>${fieldValue(row[name], field)}</dd>`

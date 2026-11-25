@@ -5,6 +5,7 @@ import { ApiError } from '../services/apiClient'
 import { createEntity, listEntities, type DomainEntity } from '../services/domainService'
 import { getEntitySchema, type EntityFieldSchema, type EntitySchema } from '../services/metaService'
 import { prettyEnumValue, prettyFieldName } from '../utils/formatting'
+import { useAuthStore } from '../stores/auth'
 import LoreDateInput from '../components/LoreDateInput.vue'
 import RealDateInput from '../components/RealDateInput.vue'
 import SearchableSelect from '../components/SearchableSelect.vue'
@@ -14,6 +15,7 @@ const props = defineProps<{
 }>()
 
 const router = useRouter()
+const auth = useAuthStore()
 
 const loading = ref(true)
 const submitting = ref(false)
@@ -31,7 +33,9 @@ const singularLabel = computed(() => schema.value?.singularLabel ?? props.entity
 
 const visibleFields = computed(() => {
   const fields = schema.value?.fields ?? []
-  return fields.filter((field) => !(field.primary && field.autoIncrement))
+  return fields.filter((field) =>
+    !(field.primary && field.autoIncrement) && (!field.dmOnly || auth.isAdmin.value)
+  )
 })
 
 const slugField = computed(() => {
@@ -199,7 +203,7 @@ watch(
     <form v-else class="wiki-article entity-form" @submit.prevent="submitCreate">
       <div v-for="field in visibleFields" :key="field.name" class="form-row">
         <label v-if="field.type !== 'loreDate'" :for="`create-field-${field.name}`">
-          {{ prettyFieldName(field.name) }}
+          {{ field.label || prettyFieldName(field.name) }}
           <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
         </label>
 
@@ -247,7 +251,7 @@ watch(
         <LoreDateInput
           v-else-if="field.type === 'loreDate'"
           v-model="formValues[field.name]"
-          :label="prettyFieldName(field.name)"
+          :label="field.label || prettyFieldName(field.name)"
           :required="field.required"
         />
         <RealDateInput

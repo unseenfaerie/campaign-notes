@@ -875,10 +875,11 @@ function factsFields(fields?: EntityFieldSchema[]): EntityFieldSchema[] {
   return (fields || []).filter((field) => !field.expository)
 }
 
-function expositoryFieldEntries(data: DomainEntity, fields?: EntityFieldSchema[]): Array<{ name: string; value: string }> {
+function expositoryFieldEntries(data: DomainEntity, fields?: EntityFieldSchema[]): Array<{ name: string; label?: string; value: string }> {
   return (fields || []).flatMap((field) => {
     const value = data[field.name]
-    return field.expository && typeof value === 'string' && value.trim() ? [{ name: field.name, value }] : []
+    return field.expository && (!field.dmOnly || auth.isAdmin.value) &&
+      typeof value === 'string' && value.trim() ? [{ name: field.name, label: field.label, value }] : []
   })
 }
 
@@ -1164,7 +1165,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
           <fieldset class="inline-editor-fields" :disabled="saving">
           <div v-for="field in editFields" :key="field.name" class="form-row">
             <label v-if="field.type !== 'loreDate'" :for="`edit-field-${field.name}`">
-              {{ prettyFieldName(field.name) }}
+              {{ field.label || prettyFieldName(field.name) }}
               <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
             </label>
 
@@ -1207,7 +1208,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
             <LoreDateInput
               v-else-if="field.type === 'loreDate'"
               v-model="editValues[field.name]"
-              :label="prettyFieldName(field.name)"
+              :label="field.label || prettyFieldName(field.name)"
               :required="field.required"
             />
             <RealDateInput
@@ -1289,7 +1290,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               <fieldset class="inline-editor-fields" :disabled="saving">
                 <div v-for="field in editFields" :key="field.name" class="form-row">
                   <label :for="`edit-field-${field.name}`">
-                    {{ prettyFieldName(field.name) }}
+                    {{ field.label || prettyFieldName(field.name) }}
                     <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
                   </label>
                   <textarea
@@ -1310,7 +1311,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
             </form>
             <template v-for="field in entityExpositoryFields" :key="field.name">
               <template v-if="editingEntitySection !== 'exposition' || !editFields.some((entry) => entry.name === field.name)">
-                <h4>{{ prettyFieldName(field.name) }}</h4>
+                <h4>{{ field.label || prettyFieldName(field.name) }}</h4>
                 <p><LinkifiedText :text="field.value" /></p>
               </template>
             </template>
@@ -1489,7 +1490,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 class="form-row"
               >
                 <label v-if="field.type !== 'loreDate'" :for="`edit-relation-${group.key}-${relatedRoute}-${index}-${field.name}`">
-                  {{ prettyFieldName(field.name) }}
+                  {{ field.label || prettyFieldName(field.name) }}
                   <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
                 </label>
 
@@ -1527,7 +1528,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 <LoreDateInput
                   v-else-if="field.type === 'loreDate'"
                   v-model="relationEditValues[field.name]"
-                  :label="prettyFieldName(field.name)"
+                  :label="field.label || prettyFieldName(field.name)"
                   :required="field.required"
                 />
                 <RealDateInput
@@ -1577,7 +1578,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                     v-for="field in expositoryFieldEntries(relationDisplayPayloadForView(recordKey(group.key, relatedRoute, record, index), record), relationSchemaForRoute(relatedRoute)[0]?.fields)"
                     :key="field.name"
                   >
-                    <h4>{{ prettyFieldName(field.name) }}</h4>
+                    <h4>{{ field.label || prettyFieldName(field.name) }}</h4>
                     <p><LinkifiedText :text="field.value" /></p>
                   </template>
                 </div>
@@ -1616,7 +1617,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                     class="form-row"
                   >
                     <label v-if="field.type !== 'loreDate'" :for="`edit-history-${group.key}-${relatedRoute}-${index}-${historyIndex}-${field.name}`">
-                      {{ prettyFieldName(field.name) }}
+                      {{ field.label || prettyFieldName(field.name) }}
                       <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>
                     </label>
 
@@ -1654,7 +1655,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                     <LoreDateInput
                       v-else-if="field.type === 'loreDate'"
                       v-model="historyEditValues[field.name]"
-                      :label="prettyFieldName(field.name)"
+                      :label="field.label || prettyFieldName(field.name)"
                       :required="field.required"
                     />
                     <RealDateInput
@@ -1747,7 +1748,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                       v-for="field in expositoryFieldEntries(historyEntryForView(historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry), historyEntry), relationSchemaForRoute(relatedRoute)[0]?.fields)"
                       :key="field.name"
                     >
-                      <h4>{{ prettyFieldName(field.name) }}</h4>
+                      <h4>{{ field.label || prettyFieldName(field.name) }}</h4>
                       <p><LinkifiedText :text="field.value" /></p>
                     </template>
                   </div>
