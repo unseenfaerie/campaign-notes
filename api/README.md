@@ -48,6 +48,21 @@ compatible application version.
 
 ## Offline campaign export
 
+Create a multi-page offline wiki:
+
+```bash
+npm --workspace api run export:wiki -- /absolute/path/campaign-wiki
+```
+
+The destination must not already exist. Open `index.html` inside the generated
+folder and keep the entire folder together when transferring it. Category
+indexes are paginated and each entry and post has its own page, so the iPad
+does not have to load the entire campaign at once. All links and styling are
+local; no JavaScript, server, or internet connection is needed after export.
+The best way to open a folder of linked HTML files on iOS 9 depends on the
+installed apps: some document previews do not follow local links. Test the
+transferred folder in an app that can browse local HTML files.
+
 Create a self-contained HTML snapshot from the configured database:
 
 ```bash

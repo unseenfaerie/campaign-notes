@@ -1,4 +1,5 @@
 const sqlite3 = require('sqlite3');
+const { createHash } = require('crypto');
 const { domainManifest } = require('../../common/domainManifest');
 const { formatLoreDate, isValidLoreDate } = require('../../common/dateSystem');
 
@@ -72,7 +73,7 @@ function label(value) {
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
 }
 
-function createRenderer(campaign) {
+function createRenderer(campaign, { multiPage = false } = {}) {
     const entities = new Map();
     const aliases = new Map();
     const unresolved = [];
@@ -104,24 +105,67 @@ function createRenderer(campaign) {
             candidates.get(normalized).keys.add(entity.key);
         }
     }
-    const mentions = [...candidates.values()].sort((a, b) => b.text.length - a.text.length);
+    const mentionsByInitial = new Map();
+    const mentionsByWord = new Map();
+    const fallbackMentions = new Map();
+    const mergedMentions = new Map();
+    const contextSensitiveCase = /^(tr|az|lt)(-|$)/i.test(Intl.DateTimeFormat().resolvedOptions().locale);
+    function firstAsciiWord(text) {
+        const match = /^[A-Za-z0-9_]+(?=$|[^\p{L}\p{N}_])/u.exec(text);
+        if (match && contextSensitiveCase && /i/i.test(match[0])) return null;
+        return match ? match[0].toLocaleLowerCase() : null;
+    }
+    for (const candidate of [...candidates.values()].sort((a, b) => b.text.length - a.text.length)) {
+        candidate.normalized = candidate.text.toLocaleLowerCase();
+        const initial = candidate.text[0].toLocaleLowerCase();
+        if (!mentionsByInitial.has(initial)) mentionsByInitial.set(initial, []);
+        mentionsByInitial.get(initial).push(candidate);
+        const word = firstAsciiWord(candidate.text);
+        const groups = word ? mentionsByWord : fallbackMentions;
+        const key = word || initial;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(candidate);
+    }
+
+    function matchingCandidates(text, index) {
+        if (!isBoundary(text[index - 1])) return [];
+        const initial = text[index].toLocaleLowerCase();
+        if (!mentionsByInitial.has(initial)) return [];
+        const word = firstAsciiWord(text.slice(index));
+        if (!word) return mentionsByInitial.get(initial) || [];
+        const exact = mentionsByWord.get(word);
+        const fallback = fallbackMentions.get(initial);
+        if (!exact) return fallback || [];
+        if (!fallback) return exact;
+        if (!mergedMentions.has(word)) {
+            mergedMentions.set(word, [...exact, ...fallback].sort((a, b) => b.text.length - a.text.length));
+        }
+        return mergedMentions.get(word);
+    }
+
+    function entityFile(entity) {
+        return `entry-${createHash('sha256').update(entity.key).digest('hex')}.html`;
+    }
 
     function link(entity, text = entity.row.name) {
-        return `<a href="#${entity.key}">${escapeHtml(text)}</a>`;
+        const destination = multiPage ? entityFile(entity) : `#${entity.key}`;
+        return `<a href="${destination}">${escapeHtml(text)}</a>`;
     }
 
     function isBoundary(character) {
         return character === undefined || !/[\p{L}\p{N}_]/u.test(character);
     }
 
+    const proseCache = new Map();
     function prose(value) {
         const text = String(value);
+        if (proseCache.has(text)) return proseCache.get(text);
         let output = '';
         let index = 0;
         while (index < text.length) {
-            const match = mentions.find((candidate) =>
-                text.slice(index, index + candidate.text.length).toLocaleLowerCase() === candidate.text.toLocaleLowerCase() &&
-                isBoundary(text[index - 1]) && isBoundary(text[index + candidate.text.length])
+            const match = matchingCandidates(text, index).find((candidate) =>
+                text.slice(index, index + candidate.text.length).toLocaleLowerCase() === candidate.normalized &&
+                isBoundary(text[index + candidate.text.length])
             );
             if (match) {
                 const part = text.slice(index, index + match.text.length);
@@ -133,6 +177,7 @@ function createRenderer(campaign) {
                 index += 1;
             }
         }
+        proseCache.set(text, output);
         return output;
     }
 
@@ -195,6 +240,10 @@ function createRenderer(campaign) {
         }
     }
 
+    if (multiPage) {
+        return wikiPages();
+    }
+
     const sections = [];
     for (const [name, definition] of Object.entries(domainManifest.entities)) {
         if (name === 'Alias') continue;
@@ -240,6 +289,105 @@ function createRenderer(campaign) {
         '</ul></nav></header><main>' +
         sections.map((section) => `<section id="${escapeHtml(section.id)}"><h2>${escapeHtml(section.title)}</h2>${section.body}</section>`).join('') +
         '</main></body></html>\n';
+
+    function* wikiPages() {
+        const pageSize = 200;
+        const categories = Object.entries(domainManifest.entities)
+            .filter(([name]) => name !== 'Alias')
+            .map(([name, definition]) => ({
+                name,
+                definition,
+                entries: [...entities.values()].filter((entity) => entity.name === name)
+                    .sort((a, b) => String(a.row.name).localeCompare(String(b.row.name))),
+            }));
+        const categoryFile = (route, number = 1) => `category-${route}-${number}.html`;
+        const postFile = (post) => `post-${createHash('sha256').update(String(post.id)).digest('hex')}.html`;
+        const nav = '<a href="index.html">Home</a>' +
+            categories.map(({ definition }) =>
+                ` <a href="${categoryFile(definition.route)}">${escapeHtml(definition.ui.label)}</a>`
+            ).join('') +
+            (campaign.posts.length ? ' <a href="posts-1.html">Posts</a>' : '') +
+            (unresolved.length ? ' <a href="unresolved-1.html">Unresolved records</a>' : '');
+
+        function page(title, content, breadcrumb = '') {
+            return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8">' +
+                '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+                `<title>${escapeHtml(title)} - Campaign Notes</title><link rel="stylesheet" href="style.css">` +
+                `</head><body><header class="site-header"><a class="brand" href="index.html">Campaign Notes</a>` +
+                `<nav aria-label="Main navigation">${nav}</nav></header>` +
+                `<main><div class="breadcrumb"><a href="index.html">Home</a>${breadcrumb}</div>` +
+                `<h1>${escapeHtml(title)}</h1>${content}</main>` +
+                '<footer>Ashvanced Dungeons and Dragons</footer></body></html>\n';
+        }
+
+        function* lists(items, title, filename, renderItem) {
+            const count = Math.max(1, Math.ceil(items.length / pageSize));
+            for (let number = 1; number <= count; number += 1) {
+                const list = items.slice((number - 1) * pageSize, number * pageSize);
+                const pagination = count > 1 ?
+                    `<nav class="pagination" aria-label="Pages">${number > 1 ? `<a href="${filename(number - 1)}">Previous</a> ` : ''}` +
+                    `Page ${number} of ${count}${number < count ? ` <a href="${filename(number + 1)}">Next</a>` : ''}</nav>` : '';
+                yield {
+                    filename: filename(number), content: page(title,
+                        `<p>${items.length} ${items.length === 1 ? 'entry' : 'entries'}</p>${pagination}` +
+                        (list.length ? `<ul class="entry-list">${list.map(renderItem).join('')}</ul>` : '<p>No entries yet.</p>') + pagination)
+                };
+            }
+        }
+
+        const home = '<p>Browse your campaign by subject. Each entry opens as its own page, with links to related lore.</p>' +
+            '<h2>Explore the campaign</h2><ul class="entry-list">' +
+            categories.map(({ definition, entries }) =>
+                `<li><a href="${categoryFile(definition.route)}">${escapeHtml(definition.ui.label)}</a> <span class="muted">(${entries.length})</span></li>`
+            ).join('') +
+            (campaign.posts.length ? `<li><a href="posts-1.html">Posts</a> <span class="muted">(${campaign.posts.length})</span></li>` : '') +
+            (unresolved.length ? `<li><a href="unresolved-1.html">Unresolved records</a> <span class="muted">(${unresolved.length})</span></li>` : '') +
+            '</ul>';
+        yield { filename: 'index.html', content: page('Campaign Notes', home) };
+
+        for (const { definition, entries } of categories) {
+            const categoryName = definition.ui.label;
+            const file = (number) => categoryFile(definition.route, number);
+            yield* lists(entries, categoryName, file, (entity) => `<li>${link(entity)}</li>`);
+            for (const entity of entries) {
+                const entityAliases = aliases.get(entity.key) || [];
+                const facts = Object.fromEntries(Object.entries(definition.fields)
+                    .filter(([, field]) => !field.expository));
+                const descriptions = Object.entries(definition.fields)
+                    .filter(([name, field]) => field.expository && entity.row[name] !== null &&
+                        entity.row[name] !== undefined && entity.row[name] !== '');
+                const lead = descriptions.find(([name]) => name === 'short_description' || name === 'description');
+                const remaining = descriptions.filter(([name]) => !lead || name !== lead[0]);
+                const factsHtml = fields(entity.row, facts);
+                const related = connections.get(entity.key) || [];
+                const content = (factsHtml || entityAliases.length ?
+                    `<aside class="infobox"><h2>${escapeHtml(definition.ui.singularLabel)}</h2>` +
+                    (entityAliases.length ? `<p><strong>Aliases:</strong> ${entityAliases.map(escapeHtml).join(', ')}</p>` : '') +
+                    `${factsHtml}</aside>` : '') +
+                    (lead ? `<p class="lead prose">${prose(entity.row[lead[0]])}</p>` : '') +
+                    remaining.map(([name]) => `<section><h2>${escapeHtml(label(name))}</h2><p class="prose">${prose(entity.row[name])}</p></section>`).join('') +
+                    (related.length ? `<section class="connections"><h2>Connections</h2><ul>${related.join('')}</ul></section>` : '') +
+                    '<div class="clear"></div>';
+                yield {
+                    filename: entityFile(entity),
+                    content: page(entity.row.name, content,
+                        ` &rsaquo; <a href="${file(1)}">${escapeHtml(categoryName)}</a>`),
+                };
+            }
+        }
+        if (campaign.posts.length) {
+            yield* lists(campaign.posts, 'Posts', (number) => `posts-${number}.html`,
+                (post) => `<li><a href="${postFile(post)}">${escapeHtml(post.title)}</a></li>`);
+            for (const post of campaign.posts) {
+                const content = `<p class="muted">${escapeHtml(post.created_at)} &middot; by ${escapeHtml(post.author_username || 'Unknown author')}</p>` +
+                    `<p class="prose">${prose(post.body)}</p>`;
+                yield { filename: postFile(post), content: page(post.title, content, ' &rsaquo; <a href="posts-1.html">Posts</a>') };
+            }
+        }
+        if (unresolved.length) {
+            yield* lists(unresolved, 'Unresolved records', (number) => `unresolved-${number}.html`, (item) => item);
+        }
+    }
 }
 
 module.exports = { loadCampaign, createRenderer };

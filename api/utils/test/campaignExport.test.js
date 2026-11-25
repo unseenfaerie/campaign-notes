@@ -61,6 +61,8 @@ describe('offline campaign export', () => {
     });
 
     afterEach(() => {
+        const wiki = path.join(directory, 'wiki');
+        if (fs.existsSync(wiki)) fs.rmSync(wiki, { recursive: true });
         for (const filename of ['campaign.db', 'export.html', 'missing.html']) {
             const target = path.join(directory, filename);
             if (fs.existsSync(target)) fs.unlinkSync(target);
@@ -109,6 +111,25 @@ describe('offline campaign export', () => {
         expect(html).toContain('Alias Lost alias: missing character (missing)');
     });
 
+    it('links the longest unambiguous mention without matching inside words', async () => {
+        const campaign = await loadCampaign(databasePath);
+        campaign.entities.Place.push(
+            { id: 'the', name: 'The', short_description: 'A name.' },
+            { id: 'the-town', name: 'The Town', short_description: 'A longer name.' },
+            { id: 'kelvin', name: 'Kelvin', short_description: 'A name.' },
+        );
+        campaign.entities.Character[0].short_description = 'The Town; The; Township; Kelvin.';
+        const pages = [...createRenderer(campaign, { multiPage: true })];
+        const hero = pages.find((page) => page.content.includes('<h1>A &amp; B</h1>'));
+        const the = pages.find((page) => page.content.includes('<h1>The</h1>'));
+        const town = pages.find((page) => page.content.includes('<h1>The Town</h1>'));
+        const kelvin = pages.find((page) => page.content.includes('<h1>Kelvin</h1>'));
+        expect(hero.content).toContain(`<a href="${town.filename}">The Town</a>`);
+        expect(hero.content).toContain(`<a href="${the.filename}">The</a>`);
+        expect(hero.content).toContain('Township;');
+        expect(hero.content).toContain(`<a href="${kelvin.filename}">Kelvin</a>`);
+    });
+
     it('creates a private file, refuses overwrites and never creates a missing database', () => {
         const script = path.join(__dirname, '../../scripts/exportCampaign.js');
         const execute = (output, database) => spawnSync(process.execPath, [script, output, database], { encoding: 'utf8' });
@@ -127,5 +148,69 @@ describe('offline campaign export', () => {
         await run(database, 'UPDATE schema_migrations SET version = 1');
         await close(database);
         await expect(loadCampaign(databasePath)).rejects.toThrow('does not match expected version');
+    });
+
+    it('renders connected wiki pages with safe relative links and campaign history', async () => {
+        const campaign = await loadCampaign(databasePath);
+        campaign.relations.CharacterPlace.push({
+            character_id: 'missing', place_id: 'missing', arrived_date: '0300001003_age-of-light-default',
+            short_description: 'Lost history', visibility_direction: 'both',
+        });
+        const pages = [...createRenderer(campaign, { multiPage: true })];
+        const files = new Map(pages.map((page) => [page.filename, page.content]));
+        expect(files.size).toBe(pages.length);
+        expect(files.get('index.html')).toContain('category-characters-1.html');
+        const hero = pages.find((page) => page.content.includes('<h1>A &amp; B</h1>'));
+        const town = pages.find((page) => page.content.includes('<h1>Town</h1>'));
+        const district = pages.find((page) => page.content.includes('<h1>District</h1>'));
+        expect(hero.content).toContain(`href="${town.filename}">Town</a>`);
+        expect(hero.content).toContain('Aliases:</strong> Hero');
+        expect(hero.content).toContain('1 Vodardas, Year 1 AL');
+        expect(hero.content).toContain('2 Vodardas, Year 1 AL');
+        expect(hero.content).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+        expect(town.content).toContain(`href="${hero.filename}">A &amp; B</a>`);
+        expect(town.content).toContain(`href="${district.filename}">District</a>`);
+        expect(district.content).toContain(`href="${town.filename}">Town</a>`);
+        expect(files.get('unresolved-1.html')).toContain('Lost history');
+        const post = pages.find((page) => page.content.includes('<h1>News</h1>'));
+        expect(post.content).toContain(`href="${hero.filename}">Hero</a>`);
+        expect(post.content).toContain('Storyteller');
+        for (const { content } of pages) {
+            expect(content).not.toContain('<script>');
+            for (const match of content.matchAll(/(?:href|src)="([^"]+)"/g)) {
+                expect(match[1] === 'style.css' || files.has(match[1])).toBe(true);
+            }
+        }
+    });
+
+    it('paginates category indexes without duplicating or omitting entries', async () => {
+        const campaign = await loadCampaign(databasePath);
+        for (let index = 0; index < 201; index += 1) {
+            campaign.entities.Character.push({
+                id: `extra-${index}`, name: `Extra ${index}`, short_description: 'A traveler.',
+            });
+        }
+        const pages = [...createRenderer(campaign, { multiPage: true })];
+        const first = pages.find((page) => page.filename === 'category-characters-1.html').content;
+        const second = pages.find((page) => page.filename === 'category-characters-2.html').content;
+        expect(first).toContain('Page 1 of 2');
+        expect(first).toContain('href="category-characters-2.html">Next');
+        expect(second).toContain('href="category-characters-1.html">Previous');
+        const entryLinks = (html) => [...html.matchAll(/href="(entry-[^"]+\.html)"/g)].map((match) => match[1]);
+        const links = [...entryLinks(first), ...entryLinks(second)];
+        expect(links).toHaveLength(203);
+        expect(new Set(links).size).toBe(203);
+    });
+
+    it('writes a private wiki folder and refuses to overwrite an existing destination', () => {
+        const script = path.join(__dirname, '../../scripts/exportCampaign.js');
+        const wiki = path.join(directory, 'wiki');
+        const execute = () => spawnSync(process.execPath, [script, '--wiki', wiki, databasePath], { encoding: 'utf8' });
+        expect(execute().status).toBe(0);
+        expect(fs.statSync(wiki).mode & 0o777).toBe(0o700);
+        expect(fs.statSync(path.join(wiki, 'index.html')).mode & 0o777).toBe(0o600);
+        expect(fs.existsSync(path.join(wiki, 'style.css'))).toBe(true);
+        expect(execute().status).not.toBe(0);
+        expect(fs.readFileSync(path.join(wiki, 'index.html'), 'utf8')).toContain('Campaign Notes');
     });
 });
