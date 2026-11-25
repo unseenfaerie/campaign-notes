@@ -230,7 +230,9 @@ function createRenderer(campaign, { multiPage = false } = {}) {
                     `Missing ${escapeHtml(other.entity)} (${escapeHtml(row[other.key])})`;
                 const relationLabel = name === 'PlaceContainment'
                     ? (index === 0 ? 'Parent' : 'Child')
-                    : definition.members[index].route;
+                    : name === 'EventSequence'
+                        ? (index === 0 ? 'Next' : 'Previous')
+                        : definition.members[index].route;
                 addConnection(members[index].key, `<li><strong>${target}</strong> (${escapeHtml(relationLabel)}; ${direction})${fields(row, payload)}</li>`);
             }
         }

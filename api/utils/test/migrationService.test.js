@@ -5,6 +5,7 @@ const { buildAllCreateTableSql } = require('../../data/schemaBuilder');
 const directionMigration = require('../../migrations/006-relation-visibility-direction');
 const secretNotesMigration = require('../../migrations/007-secret-dm-notes');
 const containmentMigration = require('../../migrations/008-place-containment');
+const eventSequenceMigration = require('../../migrations/009-event-sequence');
 
 function run(database, sql, params = []) {
     return new Promise((resolve, reject) => {
@@ -156,5 +157,48 @@ describe('MigrationService', () => {
         await expect(service.applyLatest()).rejects.toThrow('cycle');
         await expect(get(database, `SELECT parent_id FROM places WHERE id = 'a'`)).resolves.toEqual({ parent_id: 'b' });
         await expect(get(database, `SELECT name FROM sqlite_master WHERE name = 'place_containment'`)).resolves.toBeNull();
+    });
+
+    it('merges reciprocal and one-sided legacy event links and preserves unrelated pending proposals', async () => {
+        await run(database, `CREATE TABLE events (id TEXT PRIMARY KEY, previous_event_id TEXT, next_event_id TEXT)`);
+        await run(database, `CREATE INDEX idx_events_previous_event_id ON events(previous_event_id)`);
+        await run(database, `CREATE INDEX idx_events_next_event_id ON events(next_event_id)`);
+        await run(database, `CREATE TABLE edit_proposals (id INTEGER PRIMARY KEY, resource_name TEXT, target_kind TEXT, status TEXT, proposed_changes TEXT, base_snapshot TEXT)`);
+        await run(database, `INSERT INTO events VALUES ('a', NULL, 'b'), ('b', 'a', NULL), ('c', 'a', NULL), ('d', NULL, 'b')`);
+        await run(database, `INSERT INTO edit_proposals VALUES (1, 'Event', 'entity', 'pending', '{"name":"new"}', '{"id":"b","previous_event_id":"a","next_event_id":null}')`);
+        const service = new MigrationService(database, { expectedVersion: 9, migrations: [eventSequenceMigration] });
+        await service.applyLatest();
+        await expect(get(database, `SELECT COUNT(*) AS count FROM event_sequence`)).resolves.toEqual({ count: 3 });
+        for (const [earlier, later] of [['a', 'b'], ['a', 'c'], ['d', 'b']]) {
+            await expect(get(database, `SELECT visibility_direction FROM event_sequence WHERE earlier_id = ? AND later_id = ?`, [earlier, later]))
+                .resolves.toEqual({ visibility_direction: 'both' });
+        }
+        await expect(get(database, `SELECT previous_event_id FROM events`)).rejects.toThrow();
+        await expect(get(database, `SELECT next_event_id FROM events`)).rejects.toThrow();
+        await expect(get(database, `SELECT base_snapshot FROM edit_proposals WHERE id = 1`)).resolves.toEqual({ base_snapshot: '{"id":"b"}' });
+    });
+
+    it.each([
+        ['a cycle', `INSERT INTO events VALUES ('a', NULL, 'b'), ('b', NULL, 'a')`, 'cycle'],
+        ['a missing event', `INSERT INTO events VALUES ('a', NULL, 'missing')`, 'Event does not exist'],
+        ['a self-link', `INSERT INTO events VALUES ('a', 'a', NULL)`, 'cycle'],
+    ])('rolls back event migration on %s', async (_label, insert, error) => {
+        await run(database, `CREATE TABLE events (id TEXT PRIMARY KEY, previous_event_id TEXT, next_event_id TEXT)`);
+        await run(database, `CREATE TABLE edit_proposals (id INTEGER PRIMARY KEY, resource_name TEXT, target_kind TEXT, status TEXT, proposed_changes TEXT, base_snapshot TEXT)`);
+        await run(database, insert);
+        const service = new MigrationService(database, { expectedVersion: 9, migrations: [eventSequenceMigration] });
+        await expect(service.applyLatest()).rejects.toThrow(error);
+        await expect(get(database, `SELECT name FROM sqlite_master WHERE name = 'event_sequence'`)).resolves.toBeNull();
+        await expect(get(database, `SELECT id FROM events WHERE id = 'a'`)).resolves.toEqual({ id: 'a' });
+    });
+
+    it.each(['previous_event_id', 'next_event_id'])('requires review of pending %s proposals', async (field) => {
+        await run(database, `CREATE TABLE events (id TEXT PRIMARY KEY, previous_event_id TEXT, next_event_id TEXT)`);
+        await run(database, `CREATE TABLE edit_proposals (id INTEGER PRIMARY KEY, resource_name TEXT, target_kind TEXT, status TEXT, proposed_changes TEXT, base_snapshot TEXT)`);
+        await run(database, `INSERT INTO edit_proposals VALUES (1, 'Event', 'entity', 'pending', ?, '{}')`,
+            [JSON.stringify({ [field]: 'a' })]);
+        const service = new MigrationService(database, { expectedVersion: 9, migrations: [eventSequenceMigration] });
+        await expect(service.applyLatest()).rejects.toThrow('Resolve pending Event order proposals');
+        await expect(get(database, `SELECT name FROM sqlite_master WHERE name = 'event_sequence'`)).resolves.toBeNull();
     });
 });

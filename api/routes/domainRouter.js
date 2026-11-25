@@ -150,7 +150,7 @@ async function loadAssociatedRecords(relationName, relationDef, sourceId, anchor
             if (!target) return null;
             if (lockedTargetIds.has(targetId)) {
                 const stub = buildLockedEntityStub(target, relatedRoute);
-                return relationName === 'PlaceContainment'
+                return ['PlaceContainment', 'EventSequence'].includes(relationName)
                     ? { ...stub, relationship: { relationAnchorIndex: row.relationAnchorIndex } }
                     : stub;
             }
@@ -378,7 +378,7 @@ function toHttpError(err) {
     }
 
     if (
-        /Invalid value|Invalid anchorMemberIndex|Invalid number value|Invalid boolean value|Unknown field for route|Unknown field for relation|Unknown query field for relation|Missing required query field|Cannot update primary key field|Primary key updates are not allowed|Data must be an object|Invalid slug id format for field|Missing history start date value for chronology validation|Invalid history date format for field|History end date must be after history start date|Parent place does not exist|A place cannot be its own parent|Parent assignment would create a cycle|Unknown field for proposal|Cannot propose changes to primary key field|Field is not player-proposable|No proposed changes differ from the current record|This relation type has no editable fields/i.test(
+        /Invalid value|Invalid anchorMemberIndex|Invalid number value|Invalid boolean value|Unknown field for route|Unknown field for relation|Unknown query field for relation|Missing required query field|Cannot update primary key field|Primary key updates are not allowed|Data must be an object|Invalid slug id format for field|Missing history start date value for chronology validation|Invalid history date format for field|History end date must be after history start date|Parent place does not exist|A place cannot be its own parent|Parent assignment would create a cycle|Event ordering would create a cycle|Unknown field for proposal|Cannot propose changes to primary key field|Field is not player-proposable|No proposed changes differ from the current record|This relation type has no editable fields/i.test(
             message
         )
     ) {

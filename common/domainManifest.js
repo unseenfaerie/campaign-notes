@@ -6,7 +6,7 @@
 const { getEnumValues } = require('./enums');
 
 const domainManifest = {
-    schemaVersion: 8,
+    schemaVersion: 9,
     entities: {
         Character: {
             table: 'characters',
@@ -64,8 +64,6 @@ const domainManifest = {
                 real_world_date: { type: 'realDate' },
                 in_game_time_start: { type: 'loreDate' },
                 in_game_time_end: { type: 'loreDate' },
-                previous_event_id: { type: 'string', ref: 'Event' },
-                next_event_id: { type: 'string', ref: 'Event' },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
                 secret_dm_notes: { type: 'string', expository: true, label: 'Secret DM Notes', access: { dmOnly: true, playerProposable: false } },
@@ -170,6 +168,16 @@ const domainManifest = {
     },
 
     relations: {
+        EventSequence: {
+            kind: 'simple',
+            table: 'event_sequence',
+            members: [
+                { entity: 'Event', key: 'earlier_id', route: 'events' },
+                { entity: 'Event', key: 'later_id', route: 'events' },
+            ],
+            keys: ['earlier_id', 'later_id'],
+            payload: {},
+        },
         PlaceContainment: {
             kind: 'simple',
             table: 'place_containment',

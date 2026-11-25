@@ -97,7 +97,7 @@ describe('metaRouter', () => {
         });
     });
 
-    it('exposes referenced entity routes for entity fields', async () => {
+    it('exposes place and event ordering as relations rather than fields', async () => {
         const res = await request(app)
             .get('/api/meta')
             .set('Authorization', bearerToken());
@@ -105,8 +105,11 @@ describe('metaRouter', () => {
         expect(res.status).toBe(200);
 
         const event = res.body.entities.find((entity) => entity.route === 'events');
-        const previousEventField = event.fields.find((field) => field.name === 'previous_event_id');
-        expect(previousEventField.ref).toBe('events');
+        expect(event.fields.find((field) => field.name === 'previous_event_id')).toBeUndefined();
+        expect(event.fields.find((field) => field.name === 'next_event_id')).toBeUndefined();
+        expect(res.body.relationsByEntityRoute.events).toContainEqual(expect.objectContaining({
+            relationName: 'EventSequence', relatedRoute: 'events', kind: 'simple',
+        }));
 
         const place = res.body.entities.find((entity) => entity.route === 'places');
         const parentField = place.fields.find((field) => field.name === 'parent_id');

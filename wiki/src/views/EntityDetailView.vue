@@ -161,10 +161,18 @@ const entityFactsData = computed(() =>
 )
 
 const hasEntityFacts = computed(() => Object.keys(entityFactsData.value).length > 0)
-const placeParents = computed(() => (fullData.value?.related.places ?? [])
-  .filter((record) => relationPayload(record).relationAnchorIndex === 0))
-const placeChildren = computed(() => (fullData.value?.related.places ?? [])
-  .filter((record) => relationPayload(record).relationAnchorIndex === 1))
+const orderedRelationGroups = computed(() => {
+  const roles = props.entityRoute === 'places'
+    ? [{ label: 'Parent', anchor: 0 }, { label: 'Children', anchor: 1 }]
+    : props.entityRoute === 'events'
+      ? [{ label: 'Previous Events', anchor: 1 }, { label: 'Next Events', anchor: 0 }]
+      : []
+  const records = fullData.value?.related[props.entityRoute] ?? []
+  return roles.map(({ label, anchor }) => ({
+    label,
+    records: records.filter((record) => relationPayload(record).relationAnchorIndex === anchor),
+  }))
+})
 
 const entityFactsFields = computed(() =>
   (entitySchema.value?.fields || []).filter(
@@ -1240,25 +1248,25 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
           <p v-if="saveError" class="status-card error" role="alert">{{ saveError }}</p>
         </form>
           <FieldList
-            v-else-if="hasEntityFacts"
+            v-else-if="hasEntityFacts || orderedRelationGroups.some((group) => group.records.length)"
             :data="entityFactsData"
             :fields="entityFactsFields"
             empty-message="No entity fields are available."
           >
             <template #after-fields>
-              <template v-for="group in [{ label: 'Parent', records: placeParents }, { label: 'Children', records: placeChildren }]" :key="group.label">
-                <template v-if="entityRoute === 'places' && group.records.length">
+              <template v-for="group in orderedRelationGroups" :key="group.label">
+                <template v-if="group.records.length">
                 <dt>{{ group.label }}</dt>
                 <dd>
-                  <template v-for="(place, index) in group.records" :key="String(place.id)">
+                  <template v-for="(record, index) in group.records" :key="String(record.id)">
                     <span v-if="index > 0">, </span>
                     <RouterLink
-                      v-if="relatedRecordId(place)"
-                      :to="{ name: 'entity-detail', params: { entityRoute: 'places', id: relatedRecordId(place) } }"
+                      v-if="relatedRecordId(record)"
+                      :to="{ name: 'entity-detail', params: { entityRoute, id: relatedRecordId(record) } }"
                     >
-                      {{ relatedRecordLabel(place) }}
+                      {{ relatedRecordLabel(record) }}
                     </RouterLink>
-                    <template v-else>{{ relatedRecordLabel(place) }}</template>
+                    <template v-else>{{ relatedRecordLabel(record) }}</template>
                   </template>
                 </dd>
                 </template>
@@ -1401,6 +1409,9 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 <template v-else>{{ relatedRecordLabel(record) }}</template>
                 <small v-if="entityRoute === 'places' && relatedRoute === 'places'">
                   ({{ relationPayload(record).relationAnchorIndex === 0 ? 'Parent' : 'Child' }})
+                </small>
+                <small v-else-if="entityRoute === 'events' && relatedRoute === 'events'">
+                  ({{ relationPayload(record).relationAnchorIndex === 0 ? 'Next' : 'Previous' }})
                 </small>
               </h4>
               <div v-if="!record.locked" class="row-actions-end">
