@@ -144,6 +144,16 @@ limit; detail pages show outgoing relations only when targets are visible or
 locked. Public entities remain independently visible. DMs can see and edit
 both directions. Direction cannot be proposed.
 
+Place containment is a simple self-relation with `child_id` as member 0 and
+`parent_id` as member 1. Create it from either place with
+`POST /api/places/:id/places?anchorMemberIndex=0` (the current place is the
+child) or `anchorMemberIndex=1` (the current place is the parent). A place has
+at most one parent, and containment cannot form a cycle. Core Data Parent and
+Children links come from visible containment relations. Migration 8 moves
+existing parent fields into bidirectional relations; review their visibility.
+Resolve pending Place parent proposals before migrating. Creating a place and
+assigning its parent are separate operations.
+
 For self-relations, expanded records include `relationAnchorIndex`. Pass it as
 `anchorMemberIndex` when operating on that record from the displayed page.
 History records have their own direction, and history operations require the

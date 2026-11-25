@@ -30,11 +30,14 @@ const selectedRelatedRoute = ref(
     : ''
 )
 const selectedTargetId = ref('')
+const containmentAnchor = ref('0')
 const formValues = ref<Record<string, any>>({})
 
 const selectedSchema = computed(() =>
   props.options.find((option) => option.relatedRoute === selectedRelatedRoute.value)
 )
+const isContainment = computed(() => selectedSchema.value?.relationName === 'PlaceContainment')
+const selectedAnchor = computed(() => isContainment.value ? Number(containmentAnchor.value) : (selectedSchema.value?.anchorMemberIndex ?? 0))
 
 function prettyFieldName(name: string): string {
   return name
@@ -106,7 +109,7 @@ function resetFormValues() {
   const initialValues: Record<string, any> = {}
   for (const field of selectedSchema.value?.fields ?? []) {
     initialValues[field.name] = field.name === 'visibility_direction'
-      ? directionOptions(selectedSchema.value?.anchorMemberIndex ?? 0)[0]!.value
+      ? directionOptions(selectedAnchor.value)[0]!.value
       : field.type === 'boolean' ? false : ''
   }
   formValues.value = initialValues
@@ -170,7 +173,7 @@ async function submit() {
     await createRelation(props.entityRoute, props.id, selectedSchema.value.relatedRoute, {
       id: selectedTargetId.value,
       ...payload,
-    })
+    }, isContainment.value ? { anchorMemberIndex: selectedAnchor.value } : undefined)
     emit('created')
   } catch (error) {
     if (error instanceof ApiError || error instanceof Error) {
@@ -189,9 +192,11 @@ onMounted(() => {
 })
 
 watch(selectedRelatedRoute, () => {
+  containmentAnchor.value = '0'
   resetFormValues()
   loadTargets()
 })
+watch(containmentAnchor, resetFormValues)
 </script>
 
 <template>
@@ -207,6 +212,13 @@ watch(selectedRelatedRoute, () => {
     </div>
 
     <template v-if="selectedSchema">
+      <div v-if="isContainment" class="form-row">
+        <label for="containment-role">Relationship</label>
+        <select id="containment-role" v-model="containmentAnchor">
+          <option value="0">This place is within the selected place</option>
+          <option value="1">The selected place is within this place</option>
+        </select>
+      </div>
       <div class="form-row">
         <label for="add-relation-target">{{ relatedEntityLabel() }}</label>
         <SearchableSelect
@@ -234,7 +246,7 @@ watch(selectedRelatedRoute, () => {
           v-else-if="field.enum"
           :id="`add-relation-field-${field.name}`"
           v-model="formValues[field.name]"
-          :options="field.name === 'visibility_direction' ? directionOptions(selectedSchema.anchorMemberIndex) : [
+          :options="field.name === 'visibility_direction' ? directionOptions(selectedAnchor) : [
             ...(field.required ? [] : [{ value: '', label: `No ${prettyFieldName(field.name).toLowerCase()}` }]),
             ...field.enum.map((value) => ({ value, label: prettyEnumValue(value) })),
           ]"

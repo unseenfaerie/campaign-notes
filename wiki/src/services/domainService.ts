@@ -27,7 +27,6 @@ export type PendingProposalInboxItem = PendingProposal & {
 export type EntityFullResponse = {
     entity: DomainEntity & { pendingProposal?: PendingProposal | null }
     related: Record<string, DomainEntity[]>
-    children?: DomainEntity[]
 }
 
 type RelationSelector = { key?: string; value?: string; anchorMemberIndex?: number }
@@ -72,10 +71,11 @@ export async function createRelation(
     entityRoute: string,
     id: string,
     relatedRoute: string,
-    data: DomainEntity
+    data: DomainEntity,
+    selector?: RelationSelector,
 ): Promise<DomainEntity> {
     return requestJson<DomainEntity>(
-        `/${entityRoute}/${encodeURIComponent(id)}/${relatedRoute}`,
+        `/${entityRoute}/${encodeURIComponent(id)}/${relatedRoute}${relationQuery(selector)}`,
         { method: 'POST', body: data }
     )
 }

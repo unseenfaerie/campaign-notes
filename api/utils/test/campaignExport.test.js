@@ -43,10 +43,12 @@ describe('offline campaign export', () => {
             VALUES (?, 1, 0, ?, 0, ?)`, ['hero', 'A & B', 'Visits Town <script>alert(1)</script>.']);
         await run(database, `INSERT INTO characters (id, player_character, is_public, name, deceased, short_description)
             VALUES (?, 0, 1, ?, 0, ?)`, ['second', 'Another', 'A hero.']);
-        await run(database, `INSERT INTO places (id, is_public, name, type, parent_id, short_description)
-            VALUES (?, 1, ?, 'city', ?, ?)`, ['town', 'Town', null, 'A place.']);
-        await run(database, `INSERT INTO places (id, is_public, name, type, parent_id, short_description)
-            VALUES (?, 1, ?, 'city', ?, ?)`, ['child', 'District', 'town', 'A district.']);
+        await run(database, `INSERT INTO places (id, is_public, name, type, short_description)
+            VALUES (?, 1, ?, 'city', ?)`, ['town', 'Town', 'A place.']);
+        await run(database, `INSERT INTO places (id, is_public, name, type, short_description)
+            VALUES (?, 1, ?, 'city', ?)`, ['child', 'District', 'A district.']);
+        await run(database, `INSERT INTO place_containment (child_id, parent_id, visibility_direction)
+            VALUES ('child', 'town', 'both')`);
         await run(database, `INSERT INTO aliases (entity_type, entity_id, alias, is_public)
             VALUES ('character', 'hero', 'Hero', 0)`);
         await run(database, `INSERT INTO character_places
@@ -78,7 +80,8 @@ describe('offline campaign export', () => {
         expect(html).toContain(`id="${hero}"`);
         expect(html).toContain(`href="#${town}">Town</a>`);
         expect(html).toContain(`href="#${hero}">Hero</a>`);
-        expect(html).toContain(`href="#${district}">District</a> (Parent Id)`);
+        expect(html).toContain(`href="#${district}">District</a></strong> (Child; Bidirectional)`);
+        expect(html).toContain(`href="#${town}">Town</a></strong> (Parent; Bidirectional)`);
         expect(html).toContain('Aliases:</strong> Hero');
         expect(html).toContain('1 Vodardas, Year 1 AL');
         expect(html).toContain('2 Vodardas, Year 1 AL');

@@ -9,7 +9,8 @@ const ENUMS = {
         'city-state',
         'city',
         'town',
-        'site',
+        'establishment',
+        'site'
     ],
     organizationType: [
         'adventuring-party',
