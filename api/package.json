@@ -6,6 +6,8 @@
     "scripts": {
         "start": "node server.js",
         "backup": "node scripts/backup.js",
+        "export": "node scripts/exportCampaign.js",
+        "export:wiki": "node scripts/exportCampaign.js --wiki",
         "migrate": "node scripts/migrate.js",
         "test": "jest"
     },

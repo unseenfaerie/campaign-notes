@@ -1,509 +1,184 @@
 # Campaign Notes API
 
-Manifest-driven API for Campaign Notes. This package owns the backend runtime for both:
+Manifest-driven Express API backed by SQLite. The domain manifest,
+[../common/domainManifest.js](../common/domainManifest.js), defines entities,
+fields, and relationships used by both routers.
 
-- A generic manifest data router for entities and relation tables
-- A domain router that exposes entity-centric CRUD and related-record lookup flows
+## Install and run
 
-Definitions come from [../common/domainManifest.js](../common/domainManifest.js).
-
-## To Do
-
-[x] finish all CRUD routes in domain router for entities and relations (create, get all, get one, update, delete)
-[ ] enums for certain fields (character type)/more heavy duty validation
-[ ] sort out booleans in manifest. i want them
-
-## What This API Does
-
-- Initializes SQLite schema from the domain manifest
-- Exposes generic data routes for manifest resources
-- Exposes domain routes for entity CRUD and associated record loading
-- Validates and type-checks payloads and filters from manifest field definitions
-
-Core files:
-
-- [server.js](server.js): Express app and startup
-- [routes/dataRouter.js](routes/dataRouter.js): Generic data endpoints under `/api/data`
-- [routes/domainRouter.js](routes/domainRouter.js): Domain-oriented endpoints under `/api`
-- [data/genericCrudService.js](data/genericCrudService.js): Manifest-driven data layer
-- [data/db.js](data/db.js): DB connection and schema init orchestration
-- [data/schemaBuilder.js](data/schemaBuilder.js): SQL generation from manifest
-- [scripts/seed.js](scripts/seed.js): Example data seeding
-- [scripts/seedUsers.defaults.js](scripts/seedUsers.defaults.js): Default seeded auth users
-- [scripts/seedUsers.local.example.js](scripts/seedUsers.local.example.js): Local-only credentials template
-- [scripts/validateSeed.js](scripts/validateSeed.js): Seed row-value count validator
-
-## Install
-
-From workspace root:
+From the workspace root:
 
 ```bash
 npm install
-```
-
-Or from this folder only:
-
-```bash
-cd api
-npm install
-```
-
-## Run
-
-From workspace root:
-
-```bash
 npm --workspace api run start
 ```
 
-From this folder:
+From this directory, use `npm run start`. Run API tests with `npm run test`.
+The default port is `3001`.
 
-```bash
-npm run start
-```
+The database path is set by `DB_PATH` and defaults to `api/campaign.db`. Use
+persistent storage for deployed databases.
 
-Run tests:
+## Data and deployment
 
-```bash
-npm run test
-```
+From the API directory, validate seed data with `node scripts/validateSeed.js`.
+Run `node scripts/seed.js` only in non-production environments; production
+seeding requires `ALLOW_SEED=true`.
 
-Run seed validation script:
-
-```bash
-node scripts/validateSeed.js
-```
-
-Run seed script:
-
-```bash
-node scripts/seed.js
-```
-
-The database path is controlled by `DB_PATH` and defaults to `api/campaign.db`.
-Keep the configured database path on persistent storage in deployed environments.
-
-Create a consistent SQLite backup and prune backups older than
-`BACKUP_RETENTION_DAYS`:
+Create a consistent SQLite backup and prune old backups:
 
 ```bash
 npm run backup
 ```
 
-Copy backups to encrypted off-host storage and periodically verify that one can
-be opened as a separate SQLite database. Example seeding is blocked when
-`NODE_ENV=production` unless `ALLOW_SEED=true` is set intentionally.
+Copy backups to encrypted off-host storage and periodically verify they open as
+separate SQLite databases.
 
-Check the current schema migration status:
+Check or apply migrations:
 
 ```bash
 npm run migrate -- status
-```
-
-Apply pending forward-only migrations before starting the new application
-version:
-
-```bash
 npm run migrate -- latest
 ```
 
-Deployments should create a backup, stop or drain the old API process, apply
-migrations, start the new process, and then verify `/health`. Automatic
-rollback is not supported; restore a verified backup and deploy a compatible
-application version if recovery is required.
+Before deploying, back up the database, stop or drain the old API, apply
+migrations, start the new version, and verify `/health`. Migrations are
+forward-only; recovery requires restoring a verified backup and deploying a
+compatible application version.
 
-Optional local credential override (kept out of git):
+## Offline campaign export
 
-```bash
-cp scripts/seedUsers.local.example.js scripts/seedUsers.local.js
-```
-
-Then edit `scripts/seedUsers.local.js` with your local nonprod usernames/passwords.
-
-Default port: `3001`
-
-Health check:
+Create a multi-page offline wiki:
 
 ```bash
-curl http://localhost:3001/health
+npm --workspace api run export:wiki -- /absolute/path/campaign-wiki
 ```
 
-## Auth Configuration
+The destination must not already exist. Open `index.html` inside the generated
+folder and keep the entire folder together when transferring it. Category
+indexes are paginated and each entry and post has its own page, so the iPad
+does not have to load the entire campaign at once. All links and styling are
+local; no JavaScript, server, or internet connection is needed after export.
+The best way to open a folder of linked HTML files on iOS 9 depends on the
+installed apps: some document previews do not follow local links. Test the
+transferred folder in an app that can browse local HTML files.
 
-Checked-in template:
-
-- [api/.env.example](/home/faerie/Source/campaign-notes/api/.env.example)
-
-For local development, create `api/.env` from that template.
-
-Set these environment variables before running in non-local environments:
-
-- `JWT_ACCESS_SECRET` (required for production)
-- `JWT_REFRESH_SECRET` (required for production)
-- `ACCESS_TOKEN_TTL` (default: `15m`)
-- `REFRESH_TOKEN_TTL` (default: `30d`)
-- `COOKIE_SECURE` (`true` in production over HTTPS)
-- `COOKIE_SAMESITE` (default: `strict`)
-- `REQUEST_BODY_LIMIT` (default: `1mb`)
-- `AUTH_RATE_LIMIT_WINDOW_MS` / `AUTH_RATE_LIMIT_MAX_REQUESTS` (defaults: 15 minutes / 10)
-- `API_RATE_LIMIT_WINDOW_MS` / `API_RATE_LIMIT_MAX_REQUESTS` (defaults: 15 minutes / 300)
-- `SHUTDOWN_TIMEOUT_MS` (default: `30000`)
-
-The API uses `helmet` security headers, rejects request bodies larger than
-`REQUEST_BODY_LIMIT` with HTTP 413, and returns HTTP 429 with `Retry-After`
-when a rate limit is exceeded. Login/token requests have a stricter per-IP
-limit than ordinary API requests. The in-memory limiter is suitable for the
-single-process deployment; shared storage is required before running multiple
-API processes.
-
-The API handles `SIGTERM` and `SIGINT` by stopping new HTTP connections,
-waiting up to `SHUTDOWN_TIMEOUT_MS` for active requests, and then closing the
-SQLite connection. Configure the process manager to send `SIGTERM` during
-deploys and restarts.
-
-Seeded development users (from `scripts/seedUsers.defaults.js` unless overridden by `scripts/seedUsers.local.js`):
-
-- `dm-admin` / `change-me-dm-password`
-- `player-one` / `change-me-player-password`
-
-Change these passwords immediately in shared environments.
-
-## Router Overview
-
-- `GET /health`
-
-- `POST /api/auth/token`
-- `POST /api/auth/refresh`
-- `POST /api/auth/logout`
-- `GET /api/auth/me`
-
-- `PATCH /api/admin/me/username`
-- `PATCH /api/admin/me/password`
-- `GET /api/admin/users`
-- `POST /api/admin/users`
-- `PATCH /api/admin/users/:userId`
-- `DELETE /api/admin/users/:userId`
-- `GET /api/admin/anchors/characters`
-- `GET /api/admin/users/:userId/anchors/characters`
-- `PUT /api/admin/users/:userId/anchors/characters/:characterId`
-- `DELETE /api/admin/users/:userId/anchors/characters/:characterId`
-- `POST /api/admin/users/:userId/revoke-sessions`
-
-
-- `GET /api/data/resources`
-- `GET /api/data/:resource`
-
-- `POST /api/:entityRoute`
-- `GET /api/:entityRoute`
-- `GET /api/:entityRoute/:id`
-- `GET /api/:entityRoute/:id/:relatedRoute`
-- `PATCH /api/:entityRoute/:id`
-- `POST /api/:entityRoute/:id/propose`
-- `PATCH /api/:entityRoute/:id/propose`
-- `DELETE /api/:entityRoute/:id`
-
-## Generic Data Router (`/api/data`)
-
-Use this for table-shaped read operations against any manifest resource.
-
-`resource` is the manifest key (examples: `Item`, `Character`, `CharacterItem`, `EventPlace`).
-
-### `GET /api/data/resources`
-
-List all available manifest resource keys.
+Create a self-contained HTML snapshot from the configured database:
 
 ```bash
-curl http://localhost:3001/api/data/resources
+npm --workspace api run export -- /absolute/path/campaign.html
 ```
 
-### `GET /api/data/:resource`
-
-Query rows by field values (or omit query params to return all rows).
-
-```bash
-curl "http://localhost:3001/api/data/Item?id=fireball-wand"
-```
-
-## Domain Router (`/api`)
-
-Use this for domain-shaped access by entity route names from the manifest (examples: `characters`, `events`, `items`).
-
-Current capabilities:
-
-- Supports entity create/read/update/delete (`POST`, `GET`, `PATCH`, `DELETE`) endpoints
-- Supports related-entity expansion and creation from either member's relation route
-
-### Entity edit proposals
-
-A player can submit an entity proposal with `POST /api/:entityRoute/:id/propose`
-and amend their own pending proposal with `PATCH` to the same route, using
-`{ "proposalId": 123, "changes": { "field": "value" } }`. Amendments merge into
-the existing proposal; fields restored to their accepted values are removed. Restoring
-every field withdraws the proposal and releases the entity lock. Other users cannot
-edit the locked entity until the DM accepts or rejects the proposal or the author
-withdraws it. An amendment against a changed or resolved proposal returns HTTP 409.
-
-### Relation visibility
-
-Each relation record has a DM-controlled `visibility_direction`: `first_to_second`,
-`second_to_first`, or `both`, relative to the order of its `members` in the domain
-manifest. New records default to outward from the entity used in the create route;
-the request may explicitly specify any of the three values. Migration 6 initializes
-existing records to `both` for manual review.
-
-Players traverse only permitted directions, subject to their viewing character's
-intelligence-based hop limit. A relation appears on a player-visible detail page only
-when it is outgoing from that page and its target is visible or locked. Public
-entities remain independently visible. DMs can see incoming and outgoing relations
-and edit their direction; previewing a character uses that character's visibility.
-Direction is not player-proposable.
-
-History records have their own direction. For a self-relation, expanded results
-include `relationAnchorIndex` on each relation or history record. Supply that value
-as the `anchorMemberIndex` query parameter when reading, editing, deleting, or
-proposing changes to that particular record from the displayed page. This selects
-the correct stored orientation when both orientations exist. History operations
-also require the existing history-key selector where applicable.
-
-### `POST /api/:entityRoute`
-
-Create an entity record by entity route.
-
-```bash
-curl -X POST http://localhost:3001/api/items \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "ember-staff",
-    "name": "Ember Staff",
-    "short_description": "A scorched ashwood staff."
-  }'
-```
-
-### `GET /api/:entityRoute`
-
-Query all entity records.
-
-```bash
-curl "http://localhost:3001/api/characters
-```
-
-### `GET /api/:entityRoute/:id`
-
-Fetch a single entity record by id.
-
-```bash
-curl http://localhost:3001/api/characters/releas-neb
-```
-
-### `GET /api/:entityRoute/:id/:relatedRoute`
-
-Fetch associated target records for a source entity.
-
-```bash
-curl http://localhost:3001/api/characters/releas-neb/items
-```
-
-Note: direct domain mutation routes (`POST`, `PATCH`, `DELETE`) require a `dm` role access token. Players have read-only access.
-
-## Auth Router (`/api/auth`)
-
-### `POST /api/auth/token`
-
-Authenticate with username/password and receive an access token plus refresh cookie.
-
-```bash
-curl -X POST http://localhost:3001/api/auth/token \
-  -H "Content-Type: application/json" \
-  -d '{"username":"dm-admin","password":"change-me-dm-password"}'
-```
-
-### `POST /api/auth/refresh`
-
-Rotate refresh token and receive a new access token.
-
-```bash
-curl -X POST http://localhost:3001/api/auth/refresh \
-  --cookie "refresh_token=<refresh-token>"
-```
-
-### `POST /api/auth/logout`
-
-Revoke current refresh session and clear refresh cookie.
-
-```bash
-curl -X POST http://localhost:3001/api/auth/logout \
-  --cookie "refresh_token=<refresh-token>"
-```
-
-### `GET /api/auth/me`
-
-Load current authenticated principal.
-
-```bash
-curl http://localhost:3001/api/auth/me \
-  -H "Authorization: Bearer <access-token>"
-```
-
-## Admin Router (`/api/admin`)
-
-All `/api/admin` routes require `Authorization: Bearer <access-token>`.
-
-DM-only routes are marked below.
-
-### `PATCH /api/admin/me/username`
-
-Update your own username.
-
-```bash
-curl -X PATCH http://localhost:3001/api/admin/me/username \
-  -H "Authorization: Bearer <access-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"username":"new-handle"}'
-```
-
-### `PATCH /api/admin/me/password`
-
-Update your own password.
-
-```bash
-curl -X PATCH http://localhost:3001/api/admin/me/password \
-  -H "Authorization: Bearer <access-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"currentPassword":"old-password","newPassword":"new-password-123"}'
-```
-
-### `GET /api/admin/users` (dm only)
-
-List users.
-
-```bash
-curl http://localhost:3001/api/admin/users \
-  -H "Authorization: Bearer <dm-access-token>"
-```
-
-### `POST /api/admin/users` (dm only)
-
-Create user.
-
-```bash
-curl -X POST http://localhost:3001/api/admin/users \
-  -H "Authorization: Bearer <dm-access-token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "new-player",
-    "username": "new-player",
-    "password": "strong-pass-1",
-    "role": "player",
-    "disabled": false
-  }'
-```
-
-### `PATCH /api/admin/users/:userId` (dm only)
-
-Edit user fields (`username`, `role`, `disabled`, `password`).
-
-```bash
-curl -X PATCH http://localhost:3001/api/admin/users/player-one \
-  -H "Authorization: Bearer <dm-access-token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "player-one-updated",
-    "disabled": false,
-    "role": "player"
-  }'
-```
-
-### `DELETE /api/admin/users/:userId` (dm only)
-
-Delete user.
-
-```bash
-curl -X DELETE http://localhost:3001/api/admin/users/player-one \
-  -H "Authorization: Bearer <dm-access-token>"
-```
-
-### `GET /api/admin/anchors/characters` (dm only)
-
-List all character-user anchors.
-
-```bash
-curl http://localhost:3001/api/admin/anchors/characters \
-  -H "Authorization: Bearer <dm-access-token>"
-```
-
-### `GET /api/admin/users/:userId/anchors/characters` (dm only)
-
-List character anchors for one user.
-
-```bash
-curl http://localhost:3001/api/admin/users/player-one/anchors/characters \
-  -H "Authorization: Bearer <dm-access-token>"
-```
-
-### `PUT /api/admin/users/:userId/anchors/characters/:characterId` (dm only)
-
-Anchor a character to a user.
-
-```bash
-curl -X PUT http://localhost:3001/api/admin/users/player-one/anchors/characters/releas-neb \
-  -H "Authorization: Bearer <dm-access-token>"
-```
-
-### `DELETE /api/admin/users/:userId/anchors/characters/:characterId` (dm only)
-
-Remove a character anchor.
-
-```bash
-curl -X DELETE http://localhost:3001/api/admin/users/player-one/anchors/characters/releas-neb \
-  -H "Authorization: Bearer <dm-access-token>"
-```
-
-### `POST /api/admin/users/:userId/revoke-sessions` (dm only)
-
-Revoke all refresh sessions for a user.
-
-```bash
-curl -X POST http://localhost:3001/api/admin/users/player-one/revoke-sessions \
-  -H "Authorization: Bearer <dm-access-token>"
-```
-
-### `PATCH /api/:entityRoute/:id`
-
-Patch a single entity by route and id.
-
-```bash
-curl -X PATCH http://localhost:3001/api/characters/releas-neb \
-  -H "Content-Type: application/json" \
-  -d '{
-    "short_description": "Updated summary text."
-  }'
-```
-
-### `DELETE /api/:entityRoute/:id`
-
-Delete a single entity by route and id.
-
-```bash
-curl -X DELETE http://localhost:3001/api/deities/achiel
-```
-
-## Error Behavior
-
-Common route error mapping:
-
-- `400`: validation/type/shape errors
-- `404`: unknown route/resource or record not found
-- `409`: SQLite constraint conflicts
-- `500`: unexpected errors
-
-Error payload shape:
-
-```json
-{ "error": "message" }
-```
-
-## Notes
-
-- Data router field names and required fields are derived from the manifest; no resource-specific route files are needed.
-- Domain router route names are derived from each entity `route` value and relation member `route` values.
-- If you add or change resources in [../common/domainManifest.js](../common/domainManifest.js), both routers update accordingly.
+To select a database or backup, add its path after the output path. The source
+database must already use the current schema.
+
+The export includes campaign entities, aliases, relationships and history, and
+posts with author names. It excludes accounts, sessions, proposals, and audit
+records. It is a read-only snapshot, not a backup, and must be regenerated to
+include later changes.
+
+## Configuration and authentication
+
+For local development, create `.env` from the checked-in
+[`.env.example`](.env.example). Configure
+these variables before running outside local development:
+
+- `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` are required in production.
+- `ACCESS_TOKEN_TTL` defaults to `15m`; `REFRESH_TOKEN_TTL` to `30d`.
+- `COOKIE_SECURE` should be `true` in production over HTTPS;
+  `COOKIE_SAMESITE` defaults to `strict`.
+- `REQUEST_BODY_LIMIT` defaults to `1mb`.
+- `AUTH_RATE_LIMIT_WINDOW_MS` / `AUTH_RATE_LIMIT_MAX_REQUESTS` default to
+  15 minutes / 10; `API_RATE_LIMIT_WINDOW_MS` / `API_RATE_LIMIT_MAX_REQUESTS`
+  to 15 minutes / 300.
+- `SHUTDOWN_TIMEOUT_MS` defaults to `30000`.
+
+The API uses Helmet security headers, returns 413 for oversized request bodies,
+and returns 429 with `Retry-After` when rate limited. Authentication requests
+have a stricter per-IP limit. Rate limits are in-memory; multiple API processes
+need shared storage.
+
+On `SIGTERM` or `SIGINT`, the API stops accepting connections, waits up to
+`SHUTDOWN_TIMEOUT_MS` for active requests, then closes SQLite. Configure the
+process manager to send `SIGTERM` during deploys and restarts.
+
+Default development credentials are defined in `scripts/seedUsers.defaults.js`.
+Override them locally by copying `scripts/seedUsers.local.example.js` to
+`scripts/seedUsers.local.js`. Change seeded passwords before using shared
+environments.
+
+## Routes
+
+`GET /health` reports API health. Resource names and entity routes are derived
+from the domain manifest.
+
+### Generic data router
+
+- `GET /api/data/resources` lists manifest resource keys.
+- `GET /api/data/:resource` reads resource rows; query parameters filter by
+  field values. `resource` is a manifest key such as `Item` or `Character`.
+
+Use this router for table-shaped reads.
+
+### Domain router
+
+Entity routes support `POST /api/:entityRoute`, `GET /api/:entityRoute`,
+`GET /api/:entityRoute/:id`, `PATCH /api/:entityRoute/:id`, and
+`DELETE /api/:entityRoute/:id`. `GET /api/:entityRoute/:id/:relatedRoute`
+loads associated records.
+
+Entity creation, updates, and deletion require a DM access token. Players can
+read and submit or amend proposals.
+
+Players can submit a proposal with `POST /api/:entityRoute/:id/propose` and
+amend their pending proposal with `PATCH` to the same route. Amendments merge
+into the proposal; restoring every field withdraws it and releases the entity
+lock. A changed or resolved proposal returns 409.
+
+Relation records use a DM-controlled `visibility_direction` of
+`first_to_second`, `second_to_first`, or `both`, relative to manifest member
+order. New records default outward from the entity used to create them.
+Migration 6 sets existing records to `both` for review. Players traverse
+permitted directions within their viewing character's intelligence-based hop
+limit; detail pages show outgoing relations only when targets are visible or
+locked. Public entities remain independently visible. DMs can see and edit
+both directions. Direction cannot be proposed.
+
+For self-relations, expanded records include `relationAnchorIndex`. Pass it as
+`anchorMemberIndex` when operating on that record from the displayed page.
+History records have their own direction, and history operations require the
+applicable history-key selector.
+
+### Authentication and admin routers
+
+Authentication routes:
+
+- `POST /api/auth/token` authenticates and issues an access token and refresh
+  cookie.
+- `POST /api/auth/refresh` rotates the refresh token.
+- `POST /api/auth/logout` revokes the refresh session.
+- `GET /api/auth/me` returns the authenticated principal.
+
+Admin routes require an access token. Users can update their own username and
+password. DM-only routes manage users, character-user anchors, and refresh
+sessions:
+
+- `PATCH /api/admin/me/username` and `PATCH /api/admin/me/password` update the
+  current user.
+- `GET /api/admin/users`, `POST /api/admin/users`,
+  `PATCH /api/admin/users/:userId`, and `DELETE /api/admin/users/:userId`.
+- `GET /api/admin/anchors/characters`.
+- `GET /api/admin/users/:userId/anchors/characters`;
+  `PUT` and `DELETE /api/admin/users/:userId/anchors/characters/:characterId`.
+- `POST /api/admin/users/:userId/revoke-sessions`.
+
+## Errors and domain changes
+
+Common status codes: 400 for invalid input, 404 for unknown routes or records,
+409 for constraint conflicts, and 500 for unexpected errors. Error responses
+have the shape `{ "error": "message" }`.
+
+Data fields and required values come from the manifest, so resource-specific
+routes are not needed. Update
+[../common/domainManifest.js](../common/domainManifest.js) to change entities,
+fields, or relationships.

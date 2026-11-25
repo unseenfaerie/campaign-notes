@@ -1,0 +1,57 @@
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    color: #202122;
+    background: #eaecf0;
+    font: 16px/1.6 Arial, sans-serif;
+}
+a { color: #0645ad; text-decoration: none; }
+a:hover, a:focus { text-decoration: underline; }
+.site-header {
+    padding: 1em 2em;
+    background: #f8f9fa;
+    border-bottom: 1px solid #a2a9b1;
+}
+.brand { color: #202122; font: bold 1.5em Georgia, serif; }
+.site-header p { color: #54595d; font-size: .85em; margin: .25em 0; }
+.site-header nav { margin-top: .6em; }
+.site-header nav a { display: inline-block; margin: .15em 1em .15em 0; }
+main {
+    max-width: 70em;
+    min-height: 60vh;
+    margin: 1.5em auto;
+    padding: 1.5em 2em 3em;
+    background: white;
+    border: 1px solid #c8ccd1;
+}
+h1, h2 { font-family: Georgia, serif; font-weight: normal; border-bottom: 1px solid #a2a9b1; }
+h1 { margin: .2em 0 .6em; font-size: 2em; }
+h2 { clear: left; font-size: 1.4em; margin-top: 1.5em; }
+.breadcrumb, .muted, footer { color: #54595d; font-size: .9em; }
+.infobox {
+    float: right;
+    width: 20em;
+    max-width: 45%;
+    margin: .3em 0 1em 2em;
+    padding: .8em 1em;
+    background: #f8f9fa;
+    border: 1px solid #a2a9b1;
+}
+.infobox h2 { margin: 0 0 .5em; text-align: center; font-size: 1.2em; }
+dt { font-weight: bold; margin-top: .7em; }
+dd { margin-left: 1em; white-space: pre-wrap; overflow-wrap: break-word; }
+.infobox dt { margin-top: .4em; }
+.infobox dd { margin-left: 0; }
+.prose { white-space: pre-wrap; overflow-wrap: break-word; }
+.lead { font-size: 1.05em; }
+.connections li, .entry-list li { margin: .5em 0; }
+.connections dl { padding-left: 1em; border-left: 2px solid #c8ccd1; }
+.pagination { margin: 1em 0; }
+.pagination a { margin: 0 .5em; }
+.clear { clear: both; }
+footer { max-width: 70em; margin: 1em auto 2em; padding: 0 1em; }
+@media (max-width: 600px) {
+    .site-header { padding: .8em 1em; }
+    main { margin: 0; padding: 1em; border-width: 0; }
+    .infobox { float: none; width: auto; max-width: none; margin: 1em 0; }
+}
