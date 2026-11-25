@@ -21,7 +21,8 @@ const ENUMS = {
         'enterprise',
         'gang',
         'family',
-        'association'
+        'association',
+        'order'
     ],
     ancestry: [
         'human',
