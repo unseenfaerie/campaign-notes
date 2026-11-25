@@ -83,6 +83,37 @@ node scripts/seed.js
 The database path is controlled by `DB_PATH` and defaults to `api/campaign.db`.
 Keep the configured database path on persistent storage in deployed environments.
 
+## Offline campaign export
+
+Create a single, self-contained HTML snapshot:
+
+```bash
+npm --workspace api run export -- /absolute/path/campaign.html
+```
+
+The command reads `DB_PATH` (or `api/campaign.db` by default). To use a
+specific database or backup instead, supply its path after the output path:
+
+```bash
+npm --workspace api run export -- /absolute/path/campaign.html /absolute/path/campaign.db
+```
+
+The export contains all campaign entities, aliases, relationships and their
+history, and posts with author names, with links between entries. It excludes
+account records, sessions,
+proposals, and audit records. It is a read-only snapshot, not a database
+backup, and must be generated again after changes. The database is opened
+read-only and must already be on the current schema version.
+Records that refer to missing entries are retained and labeled in the export.
+
+**This is a full DM export, including private lore and spoilers**, not a
+player-filtered view. The output is created with owner-only permissions and
+the command refuses to overwrite an existing file. Store and transfer it
+securely, outside the repository and release directories. Open it in a browser
+on the iPad; iOS document previews may not
+support internal links, so check the app used to open it. The HTML does not
+require JavaScript, an internet connection, or the API once opened.
+
 Create a consistent SQLite backup and prune backups older than
 `BACKUP_RETENTION_DAYS`:
 
