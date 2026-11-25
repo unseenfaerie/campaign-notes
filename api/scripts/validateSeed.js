@@ -11,6 +11,7 @@ const tableColumns = {
   characters: 18,
   deities: 6,
   events: 8,
+  event_sequence: 3,
   items: 4,
   organizations: 5,
   places: 7,

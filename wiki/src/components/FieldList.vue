@@ -133,7 +133,7 @@ function descriptionFragments(key: string, value: unknown) {
 
 <template>
   <div>
-    <p v-if="entries.length === 0" class="status-card">{{ props.emptyMessage }}</p>
+    <p v-if="entries.length === 0 && !$slots['after-fields']" class="status-card">{{ props.emptyMessage }}</p>
     <dl v-else class="field-list">
       <template v-for="[key, value] in entries" :key="key">
         <dt>{{ fieldLabel(key) }}</dt>

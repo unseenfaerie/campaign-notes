@@ -154,6 +154,16 @@ existing parent fields into bidirectional relations; review their visibility.
 Resolve pending Place parent proposals before migrating. Creating a place and
 assigning its parent are separate operations.
 
+Event sequence is a simple self-relation with `earlier_id` as member 0 and
+`later_id` as member 1. Create it from either event with
+`POST /api/events/:id/events?anchorMemberIndex=0` (the current event is earlier)
+or `anchorMemberIndex=1` (the current event is later). Events can have multiple
+previous and next events, but sequences cannot form cycles. Core Data lists
+visible direct previous and next relations. Migration 9 merges existing previous
+and next fields into bidirectional relations; review their visibility. It rejects
+missing references or cycles and requires pending Event order proposals to be
+resolved first. Creating an event and linking its sequence are separate operations.
+
 For self-relations, expanded records include `relationAnchorIndex`. Pass it as
 `anchorMemberIndex` when operating on that record from the displayed page.
 History records have their own direction, and history operations require the

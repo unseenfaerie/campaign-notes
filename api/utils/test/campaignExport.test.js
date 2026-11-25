@@ -49,6 +49,10 @@ describe('offline campaign export', () => {
             VALUES (?, 1, ?, 'city', ?)`, ['child', 'District', 'A district.']);
         await run(database, `INSERT INTO place_containment (child_id, parent_id, visibility_direction)
             VALUES ('child', 'town', 'both')`);
+        await run(database, `INSERT INTO events (id, is_public, name, short_description)
+            VALUES ('first', 1, 'First Event', 'First.'), ('last', 1, 'Last Event', 'Last.')`);
+        await run(database, `INSERT INTO event_sequence (earlier_id, later_id, visibility_direction)
+            VALUES ('first', 'last', 'both')`);
         await run(database, `INSERT INTO aliases (entity_type, entity_id, alias, is_public)
             VALUES ('character', 'hero', 'Hero', 0)`);
         await run(database, `INSERT INTO character_places
@@ -82,6 +86,8 @@ describe('offline campaign export', () => {
         expect(html).toContain(`href="#${hero}">Hero</a>`);
         expect(html).toContain(`href="#${district}">District</a></strong> (Child; Bidirectional)`);
         expect(html).toContain(`href="#${town}">Town</a></strong> (Parent; Bidirectional)`);
+        expect(html).toContain(`href="#${id('Event', 'last')}">Last Event</a></strong> (Next; Bidirectional)`);
+        expect(html).toContain(`href="#${id('Event', 'first')}">First Event</a></strong> (Previous; Bidirectional)`);
         expect(html).toContain('Aliases:</strong> Hero');
         expect(html).toContain('1 Vodardas, Year 1 AL');
         expect(html).toContain('2 Vodardas, Year 1 AL');

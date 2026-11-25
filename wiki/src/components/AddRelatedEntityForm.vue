@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ApiError } from '../services/apiClient'
 import { createRelation, listEntities, type DomainEntity } from '../services/domainService'
 import type { EntityFieldSchema, RelationFormSchema } from '../services/metaService'
@@ -30,14 +30,16 @@ const selectedRelatedRoute = ref(
     : ''
 )
 const selectedTargetId = ref('')
-const containmentAnchor = ref('0')
+const roleAnchor = ref('0')
 const formValues = ref<Record<string, any>>({})
 
 const selectedSchema = computed(() =>
   props.options.find((option) => option.relatedRoute === selectedRelatedRoute.value)
 )
 const isContainment = computed(() => selectedSchema.value?.relationName === 'PlaceContainment')
-const selectedAnchor = computed(() => isContainment.value ? Number(containmentAnchor.value) : (selectedSchema.value?.anchorMemberIndex ?? 0))
+const isEventSequence = computed(() => selectedSchema.value?.relationName === 'EventSequence')
+const hasSemanticRoles = computed(() => isContainment.value || isEventSequence.value)
+const selectedAnchor = computed(() => hasSemanticRoles.value ? Number(roleAnchor.value) : (selectedSchema.value?.anchorMemberIndex ?? 0))
 
 function prettyFieldName(name: string): string {
   return name
@@ -173,7 +175,7 @@ async function submit() {
     await createRelation(props.entityRoute, props.id, selectedSchema.value.relatedRoute, {
       id: selectedTargetId.value,
       ...payload,
-    }, isContainment.value ? { anchorMemberIndex: selectedAnchor.value } : undefined)
+    }, hasSemanticRoles.value ? { anchorMemberIndex: selectedAnchor.value } : undefined)
     emit('created')
   } catch (error) {
     if (error instanceof ApiError || error instanceof Error) {
@@ -186,17 +188,12 @@ async function submit() {
   }
 }
 
-onMounted(() => {
-  resetFormValues()
-  loadTargets()
-})
-
 watch(selectedRelatedRoute, () => {
-  containmentAnchor.value = '0'
+  roleAnchor.value = '0'
   resetFormValues()
   loadTargets()
-})
-watch(containmentAnchor, resetFormValues)
+}, { immediate: true })
+watch(roleAnchor, resetFormValues)
 </script>
 
 <template>
@@ -212,11 +209,17 @@ watch(containmentAnchor, resetFormValues)
     </div>
 
     <template v-if="selectedSchema">
-      <div v-if="isContainment" class="form-row">
-        <label for="containment-role">Relationship</label>
-        <select id="containment-role" v-model="containmentAnchor">
-          <option value="0">This place is within the selected place</option>
-          <option value="1">The selected place is within this place</option>
+      <div v-if="hasSemanticRoles" class="form-row">
+        <label for="relation-role">Relationship</label>
+        <select id="relation-role" v-model="roleAnchor">
+          <template v-if="isContainment">
+            <option value="0">This place is within the selected place</option>
+            <option value="1">The selected place is within this place</option>
+          </template>
+          <template v-else>
+            <option value="0">This event is before the selected event</option>
+            <option value="1">This event is after the selected event</option>
+          </template>
         </select>
       </div>
       <div class="form-row">
