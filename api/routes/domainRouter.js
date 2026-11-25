@@ -148,7 +148,12 @@ async function loadAssociatedRecords(relationName, relationDef, sourceId, anchor
             const targetId = getRelatedIdForRow(row, members, sourceId, row.relationAnchorIndex);
             const target = targetById.get(targetId);
             if (!target) return null;
-            if (lockedTargetIds.has(targetId)) return buildLockedEntityStub(target, relatedRoute);
+            if (lockedTargetIds.has(targetId)) {
+                const stub = buildLockedEntityStub(target, relatedRoute);
+                return relationName === 'PlaceContainment'
+                    ? { ...stub, relationship: { relationAnchorIndex: row.relationAnchorIndex } }
+                    : stub;
+            }
             return { ...target, relationship: omitKeys(row, memberKeys) };
         }).filter(Boolean);
     }
@@ -393,37 +398,6 @@ function toHttpError(err) {
     }
 
     return { status: 500, message };
-}
-
-async function validatePlaceParent(parentId, placeId = null) {
-    if (parentId === undefined || parentId === null || parentId === '') {
-        return;
-    }
-
-    if (parentId === placeId) {
-        throw new Error('A place cannot be its own parent');
-    }
-
-    const visited = new Set();
-    let currentId = parentId;
-
-    while (currentId !== undefined && currentId !== null && currentId !== '') {
-        if (visited.has(currentId)) {
-            throw new Error('Parent assignment would create a cycle');
-        }
-        visited.add(currentId);
-
-        const parent = await manifestCrudService.getOne('Place', { id: currentId });
-        if (!parent) {
-            throw new Error(`Parent place does not exist: ${currentId}`);
-        }
-
-        if (parent.id === placeId) {
-            throw new Error('Parent assignment would create a cycle');
-        }
-
-        currentId = parent.parent_id;
-    }
 }
 
 async function ensureRecordExists(entityName, idField, idValue) {
@@ -715,9 +689,6 @@ router.post('/:entityRoute', async (req, res) => {
         const validated = conformObjectToEntity(req.body, entityDef, {
             enforcePrimaryIdFormat: true,
         });
-        if (entityName === 'Place') {
-            await validatePlaceParent(validated.parent_id, validated.id);
-        }
         const created = await manifestCrudService.insert(entityName, validated, { actorUsername: req.auth.username });
         res.status(201).json(created);
     } catch (err) {
@@ -857,9 +828,6 @@ router.patch('/:entityRoute/:id', async (req, res) => {
 
         const { entityName, entityDef, idField, idValue } = getEntityLookup(req.params);
         const updates = conformObjectToEntity(req.body, entityDef);
-        if (entityName === 'Place' && Object.prototype.hasOwnProperty.call(updates, 'parent_id')) {
-            await validatePlaceParent(updates.parent_id, idValue);
-        }
 
         await assertNoPendingProposal(entityName, buildEntityTargetKey(idField, idValue));
 
@@ -1090,9 +1058,6 @@ router.get('/:entityRoute/:id/full', async (req, res) => {
         const pendingProposal = await getPendingProposalForTarget(entityName, buildEntityTargetKey(idField, idValue));
 
         const related = {};
-        const children = entityName === 'Place'
-            ? await manifestCrudService.getMany('Place', { parent_id: idValue })
-            : undefined;
         const relations = getFullRelationsForEntityRoute(req.params.entityRoute);
 
         for (const relation of relations) {
@@ -1113,10 +1078,6 @@ router.get('/:entityRoute/:id/full', async (req, res) => {
             entity: { ...record, pendingProposal: await toProposalView(pendingProposal) },
             related,
         };
-
-        if (children) {
-            response.children = children;
-        }
 
         return res.json(response);
     } catch (err) {

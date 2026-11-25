@@ -6,7 +6,7 @@
 const { getEnumValues } = require('./enums');
 
 const domainManifest = {
-    schemaVersion: 7,
+    schemaVersion: 8,
     entities: {
         Character: {
             table: 'characters',
@@ -112,7 +112,6 @@ const domainManifest = {
                 is_public: { type: 'boolean', required: true, hidden: true, access: { playerProposable: false } },
                 name: { type: 'string', required: true },
                 type: { type: 'string', required: true, enum: 'placeType' },
-                parent_id: { type: 'string', ref: 'Place' },
                 short_description: { type: 'string', required: true, expository: true },
                 establishments: { type: 'string', expository: true },
                 long_explanation: { type: 'string', expository: true },
@@ -171,6 +170,16 @@ const domainManifest = {
     },
 
     relations: {
+        PlaceContainment: {
+            kind: 'simple',
+            table: 'place_containment',
+            members: [
+                { entity: 'Place', key: 'child_id', route: 'places' },
+                { entity: 'Place', key: 'parent_id', route: 'places' },
+            ],
+            keys: ['child_id', 'parent_id'],
+            payload: {},
+        },
         CharacterDeity: {
             kind: 'history',
             table: 'character_deities',

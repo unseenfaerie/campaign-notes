@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 
 const { requireAuth } = require('../../middleware/authMiddleware');
 const router = require('../metaRouter');
+const { domainManifest } = require('../../../common/domainManifest');
+const { getEnumValues } = require('../../../common/enums');
 
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'dev-access-secret-change-me';
 
@@ -108,7 +110,7 @@ describe('metaRouter', () => {
 
         const place = res.body.entities.find((entity) => entity.route === 'places');
         const parentField = place.fields.find((field) => field.name === 'parent_id');
-        expect(parentField.ref).toBe('places');
+        expect(parentField).toBeUndefined();
     });
 
     it('exposes all place type enum values', async () => {
@@ -120,18 +122,7 @@ describe('metaRouter', () => {
 
         const place = res.body.entities.find((entity) => entity.route === 'places');
         const typeField = place.fields.find((field) => field.name === 'type');
-        expect(typeField.enum).toEqual([
-            'universe',
-            'plane',
-            'planet',
-            'continent',
-            'country',
-            'region',
-            'city-state',
-            'city',
-            'town',
-            'site',
-        ]);
+        expect(typeField.enum).toEqual(getEnumValues(domainManifest.entities.Place.fields.type.enum));
     });
 
     it('marks autoIncrement primary keys so forms can skip them', async () => {
@@ -221,9 +212,8 @@ describe('metaRouter', () => {
         for (const route of ['characters', 'deities']) {
             const entity = res.body.entities.find((item) => item.route === route);
             const alignmentField = entity.fields.find((field) => field.name === 'alignment');
-            expect(alignmentField.enum).toHaveLength(9);
-            expect(alignmentField.enum).toContain('lawful-good');
-            expect(alignmentField.enum).toContain('chaotic-evil');
+            const entityDef = Object.values(domainManifest.entities).find((item) => item.route === route);
+            expect(alignmentField.enum).toEqual(getEnumValues(entityDef.fields.alignment.enum));
         }
     });
 

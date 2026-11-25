@@ -228,7 +228,10 @@ function createRenderer(campaign, { multiPage = false } = {}) {
                 const other = definition.members[1 - index];
                 const target = members[1 - index] ? link(members[1 - index]) :
                     `Missing ${escapeHtml(other.entity)} (${escapeHtml(row[other.key])})`;
-                addConnection(members[index].key, `<li><strong>${target}</strong> (${escapeHtml(definition.members[index].route)}; ${direction})${fields(row, payload)}</li>`);
+                const relationLabel = name === 'PlaceContainment'
+                    ? (index === 0 ? 'Parent' : 'Child')
+                    : definition.members[index].route;
+                addConnection(members[index].key, `<li><strong>${target}</strong> (${escapeHtml(relationLabel)}; ${direction})${fields(row, payload)}</li>`);
             }
         }
     }

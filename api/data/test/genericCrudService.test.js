@@ -14,6 +14,7 @@ jest.mock('../db', () => ({
 
 const { createManifestCrudService } = require('../genericCrudService');
 const { buildAllCreateTableSql } = require('../schemaBuilder');
+const { getEnumValues } = require('../../../common/enums');
 
 const testManifest = {
     entities: {
@@ -176,13 +177,17 @@ describe('genericCrudService with isolated manifest and in-memory db', () => {
     });
 
     it('resolves named enums when persisting records', async () => {
+        const values = getEnumValues(testManifest.entities.Place.fields.type.enum);
+        let invalid = '__invalid_enum_value__';
+        while (values.includes(invalid)) invalid += '_';
+
         await expect(
             service.insert('Place', { id: 'the-site', name: 'The Site', type: 'site' })
         ).resolves.toEqual({ id: 'the-site', name: 'The Site', type: 'site', last_edited_by: null, last_edited_at: null });
 
         await expect(
-            service.insert('Place', { id: 'the-village', name: 'The Village', type: 'village' })
-        ).rejects.toThrow('Invalid value for type: expected one of universe, plane, planet, continent, country, region, city-state, city, town, site');
+            service.insert('Place', { id: 'invalid-place', name: 'Invalid Place', type: invalid })
+        ).rejects.toThrow(`Invalid value for type: expected one of ${values.join(', ')}`);
     });
 
     it('prevents primary key updates but allows non-key updates', async () => {

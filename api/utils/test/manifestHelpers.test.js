@@ -6,9 +6,11 @@ const {
     conformObjectToEntity,
     validateDomainManifest,
     stripDmOnlyFields,
+    buildEntityFormSchemas,
+    buildRelationFormSchemas,
 } = require('../manifestHelpers');
 const { domainManifest } = require('../../../common/domainManifest');
-const { getEnumValues } = require('../../../common/enums');
+const { ENUMS, getEnumValues } = require('../../../common/enums');
 
 describe('manifestHelpers isolated unit tests', () => {
     describe('stripDmOnlyFields', () => {
@@ -75,27 +77,57 @@ describe('manifestHelpers isolated unit tests', () => {
             );
         });
 
-        it('resolves named enums from the shared registry', () => {
-            const placeTypes = getEnumValues(domainManifest.entities.Place.fields.type.enum);
+        it.each(Object.keys(ENUMS))('resolves the named enum %s from the shared registry', (name) => {
+            expect(getEnumValues(name)).toEqual(ENUMS[name]);
+        });
 
-            expect(placeTypes).toEqual([
-                'universe',
-                'plane',
-                'planet',
-                'continent',
-                'country',
-                'region',
-                'city-state',
-                'city',
-                'town',
-                'site',
-            ]);
-            expect(
-                conformObjectToEntity({ type: 'city-state' }, domainManifest.entities.Place)
-            ).toEqual({ type: 'city-state' });
-            expect(() => conformObjectToEntity({ type: 'village' }, domainManifest.entities.Place)).toThrow(
-                'Invalid value: expected one of universe, plane, planet, continent, country, region, city-state, city, town, site'
-            );
+        it('rejects unknown enum names', () => {
+            let name = '__unknown_enum__';
+            while (Object.hasOwn(ENUMS, name)) name += '_';
+            expect(() => getEnumValues(name)).toThrow(`Unknown enum: ${name}`);
+        });
+    });
+
+    describe('manifest enum fields', () => {
+        const entitySchemas = buildEntityFormSchemas();
+        const relationSchemas = buildRelationFormSchemas();
+
+        it.each(
+            Object.entries(domainManifest.entities).flatMap(([entityName, entity]) =>
+                Object.entries(entity.fields)
+                    .filter(([, field]) => field.enum)
+                    .map(([fieldName, field]) => [entityName, fieldName, entity, field])
+            )
+        )('exposes and validates enum field %s.%s', (entityName, fieldName, entity, field) => {
+            const values = Array.isArray(field.enum) ? field.enum : ENUMS[field.enum];
+            const schema = entitySchemas.entities.find((item) => item.name === entityName);
+            expect(schema.fields.find((item) => item.name === fieldName).enum).toEqual(values);
+
+            if (field.type === 'string') {
+                for (const value of values) {
+                    expect(conformObjectToEntity({ [fieldName]: value }, entity)).toEqual({ [fieldName]: value });
+                }
+                let invalid = '__invalid_enum_value__';
+                while (values.includes(invalid)) invalid += '_';
+                expect(() => conformObjectToEntity({ [fieldName]: invalid }, entity)).toThrow(
+                    `Invalid value: expected one of ${values.join(', ')}`
+                );
+            }
+        });
+
+        it.each(
+            Object.entries(domainManifest.relations).flatMap(([relationName, relation]) =>
+                Object.entries(relation.payload || {})
+                    .filter(([, field]) => field.enum)
+                    .map(([fieldName, field]) => [relationName, fieldName, field])
+            )
+        )('exposes enum field %s.%s in relation forms', (relationName, fieldName, field) => {
+            const values = Array.isArray(field.enum) ? field.enum : ENUMS[field.enum];
+            const schemas = Object.values(relationSchemas).flat().filter((item) => item.relationName === relationName);
+            expect(schemas.length).toBeGreaterThan(0);
+            for (const schema of schemas) {
+                expect(schema.fields.find((item) => item.name === fieldName).enum).toEqual(values);
+            }
         });
     });
 

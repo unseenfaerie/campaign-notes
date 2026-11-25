@@ -51,7 +51,6 @@ import { formatLoreDate, isCanonicalLoreDate, type DateSystem } from '../utils/l
 type FullState = {
   entity: DomainEntity
   related: Record<string, DomainEntity[]>
-  children?: DomainEntity[]
 }
 
 const props = defineProps<{
@@ -162,6 +161,10 @@ const entityFactsData = computed(() =>
 )
 
 const hasEntityFacts = computed(() => Object.keys(entityFactsData.value).length > 0)
+const placeParents = computed(() => (fullData.value?.related.places ?? [])
+  .filter((record) => relationPayload(record).relationAnchorIndex === 0))
+const placeChildren = computed(() => (fullData.value?.related.places ?? [])
+  .filter((record) => relationPayload(record).relationAnchorIndex === 1))
 
 const entityFactsFields = computed(() =>
   (entitySchema.value?.fields || []).filter(
@@ -1242,36 +1245,23 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
             :fields="entityFactsFields"
             empty-message="No entity fields are available."
           >
-            <template #after-field="{ fieldKey }">
-              <template v-if="entityRoute === 'places' && fieldKey === 'parent_id' && fullData.children?.length">
-                <dt>Children</dt>
-                <dd>
-                  <template v-for="(child, index) in fullData.children" :key="String(child.id)">
-                    <span v-if="index > 0">, </span>
-                    <RouterLink
-                      v-if="child.id !== undefined && child.id !== null && child.id !== ''"
-                      :to="{ name: 'entity-detail', params: { entityRoute: 'places', id: String(child.id) } }"
-                    >
-                      {{ relatedRecordLabel(child) }}
-                    </RouterLink>
-                  </template>
-                </dd>
-              </template>
-            </template>
             <template #after-fields>
-              <template v-if="entityRoute === 'places' && !entityDisplayData.parent_id && fullData.children?.length">
-                <dt>Children</dt>
+              <template v-for="group in [{ label: 'Parent', records: placeParents }, { label: 'Children', records: placeChildren }]" :key="group.label">
+                <template v-if="entityRoute === 'places' && group.records.length">
+                <dt>{{ group.label }}</dt>
                 <dd>
-                  <template v-for="(child, index) in fullData.children" :key="String(child.id)">
+                  <template v-for="(place, index) in group.records" :key="String(place.id)">
                     <span v-if="index > 0">, </span>
                     <RouterLink
-                      v-if="child.id !== undefined && child.id !== null && child.id !== ''"
-                      :to="{ name: 'entity-detail', params: { entityRoute: 'places', id: String(child.id) } }"
+                      v-if="relatedRecordId(place)"
+                      :to="{ name: 'entity-detail', params: { entityRoute: 'places', id: relatedRecordId(place) } }"
                     >
-                      {{ relatedRecordLabel(child) }}
+                      {{ relatedRecordLabel(place) }}
                     </RouterLink>
+                    <template v-else>{{ relatedRecordLabel(place) }}</template>
                   </template>
                 </dd>
+                </template>
               </template>
             </template>
           </FieldList>
@@ -1409,6 +1399,9 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                   {{ relatedRecordLabel(record) }}
                 </RouterLink>
                 <template v-else>{{ relatedRecordLabel(record) }}</template>
+                <small v-if="entityRoute === 'places' && relatedRoute === 'places'">
+                  ({{ relationPayload(record).relationAnchorIndex === 0 ? 'Parent' : 'Child' }})
+                </small>
               </h4>
               <div v-if="!record.locked" class="row-actions-end">
                 <DirectionSelect

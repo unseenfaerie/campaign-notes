@@ -123,17 +123,29 @@ async function main() {
     ('adventurers-guild', false, 'The Adventurer''s Guild', 'guild', NULL, NULL, 'A guild for adventurers in Novafell and Wavethorn.', NULL);
   `);
 
-  await runSql(`Inserting places...`, `INSERT OR IGNORE INTO places (id, is_public, name, type, parent_id, short_description, establishments, long_explanation) VALUES
-    ('the-universe', false, 'The Universe', 'universe', NULL, 'Everything in existence.', NULL, NULL),
-    ('material-plane', false, 'The Material Plane', 'plane', 'the-universe', 'The plane of standard physical existence.', NULL, NULL),
-    ('the-world', true, 'The World', 'planet', 'material-plane', 'The world of mists.', NULL, NULL),
-    ('othlorin', true, 'Othlorin', 'continent', 'the-world', 'The old land of the elves, now a rapidly burgeoning human territory.', NULL, NULL),
-    ('wavethorn', true, 'Wavethorn', 'city-state', 'othlorin', 'A city-state on the coast.', NULL, NULL),
-    ('itholis', true, 'Itholis', 'country', 'othlorin', 'The largest country in Othlorin, composed of 6 Counties.', NULL, NULL),
-    ('weinmere', true, 'Weinmere', 'region', 'itholis', 'A county in Itholis. Ruled over by Count Jirakby', NULL, NULL),
-    ('tempusfen', true, 'Tempusfen', 'region', 'itholis', 'A former county in Itholis. Composed of swamps and misty forests.', NULL, NULL),
-    ('anash', false, 'Anash', 'city', 'weinmere', 'A city in the Weinmere.', NULL, NULL),
-    ('lundgren', false, 'Lundgren', 'town', 'tempusfen', 'A quiet logging town settled on the edge of the Misty Marsh.', '*The Sneaking Squirrel*\nRun by Angeline and Martin Acorn, this is the only inn Lundgren has to offer.', NULL);
+  await runSql(`Inserting places...`, `INSERT OR IGNORE INTO places (id, is_public, name, type, short_description, establishments, long_explanation) VALUES
+    ('the-universe', false, 'The Universe', 'universe', 'Everything in existence.', NULL, NULL),
+    ('material-plane', false, 'The Material Plane', 'plane', 'The plane of standard physical existence.', NULL, NULL),
+    ('the-world', true, 'The World', 'planet', 'The world of mists.', NULL, NULL),
+    ('othlorin', true, 'Othlorin', 'continent', 'The old land of the elves, now a rapidly burgeoning human territory.', NULL, NULL),
+    ('wavethorn', true, 'Wavethorn', 'city-state', 'A city-state on the coast.', NULL, NULL),
+    ('itholis', true, 'Itholis', 'country', 'The largest country in Othlorin, composed of 6 Counties.', NULL, NULL),
+    ('weinmere', true, 'Weinmere', 'region', 'A county in Itholis. Ruled over by Count Jirakby', NULL, NULL),
+    ('tempusfen', true, 'Tempusfen', 'region', 'A former county in Itholis. Composed of swamps and misty forests.', NULL, NULL),
+    ('anash', false, 'Anash', 'city', 'A city in the Weinmere.', NULL, NULL),
+    ('lundgren', false, 'Lundgren', 'town', 'A quiet logging town settled on the edge of the Misty Marsh.', '*The Sneaking Squirrel*\nRun by Angeline and Martin Acorn, this is the only inn Lundgren has to offer.', NULL);
+  `);
+
+  await runSql(`Inserting place containment...`, `INSERT OR IGNORE INTO place_containment (child_id, parent_id, visibility_direction) VALUES
+    ('material-plane', 'the-universe', 'both'),
+    ('the-world', 'material-plane', 'both'),
+    ('othlorin', 'the-world', 'both'),
+    ('wavethorn', 'othlorin', 'both'),
+    ('itholis', 'othlorin', 'both'),
+    ('weinmere', 'itholis', 'both'),
+    ('tempusfen', 'itholis', 'both'),
+    ('anash', 'weinmere', 'both'),
+    ('lundgren', 'tempusfen', 'both');
   `);
 
   await runSql(`Inserting spells...`, `INSERT OR IGNORE INTO spells (id, is_public, type, name, level, school, casting_time, range, components, materials, duration, description) VALUES
