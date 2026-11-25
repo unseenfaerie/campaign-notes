@@ -12,6 +12,7 @@ const {
   listAnchoredCharacterIdsByUserId,
 } = require('../data/authRepository');
 const { manifestCrudService } = require('../data/genericCrudService');
+const { stripDmOnlyFields } = require('../utils/manifestHelpers');
 const { requireAuth } = require('../middleware/authMiddleware');
 const {
   jwtAccessSecret: ACCESS_SECRET,
@@ -259,7 +260,7 @@ router.get('/me/characters', requireAuth, async (req, res) => {
           characters.push(character);
         }
       }
-      return res.json(characters);
+      return res.json(stripDmOnlyFields(characters));
     }
 
     if (req.auth.role === 'dm') {

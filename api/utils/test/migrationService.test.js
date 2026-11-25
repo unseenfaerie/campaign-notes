@@ -3,6 +3,7 @@ const { MigrationService } = require('../migrationService');
 const { domainManifest } = require('../../../common/domainManifest');
 const { buildAllCreateTableSql } = require('../../data/schemaBuilder');
 const directionMigration = require('../../migrations/006-relation-visibility-direction');
+const secretNotesMigration = require('../../migrations/007-secret-dm-notes');
 
 function run(database, sql, params = []) {
     return new Promise((resolve, reject) => {
@@ -95,5 +96,23 @@ describe('MigrationService', () => {
         for (const sql of buildAllCreateTableSql()) await run(database, sql);
         await expect(directionMigration.up(database)).resolves.toBeUndefined();
         await expect(directionMigration.up(database)).resolves.toBeUndefined();
+    });
+
+    it('adds secret DM note columns to the seven eligible entity tables without losing rows', async () => {
+        const entities = Object.values(domainManifest.entities)
+            .filter((entity) => entity.fields.secret_dm_notes?.access?.dmOnly);
+
+        for (const entity of entities) {
+            await run(database, `CREATE TABLE ${entity.table} (id TEXT PRIMARY KEY)`);
+            await run(database, `INSERT INTO ${entity.table} (id) VALUES ('existing')`);
+        }
+
+        await secretNotesMigration.up(database);
+        await secretNotesMigration.up(database);
+
+        for (const entity of entities) {
+            await expect(get(database, `SELECT id, secret_dm_notes FROM ${entity.table}`))
+                .resolves.toEqual({ id: 'existing', secret_dm_notes: null });
+        }
     });
 });

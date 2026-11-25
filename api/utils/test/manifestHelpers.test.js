@@ -5,11 +5,45 @@ const {
     getRelationByRoutes,
     conformObjectToEntity,
     validateDomainManifest,
+    stripDmOnlyFields,
 } = require('../manifestHelpers');
 const { domainManifest } = require('../../../common/domainManifest');
 const { getEnumValues } = require('../../../common/enums');
 
 describe('manifestHelpers isolated unit tests', () => {
+    describe('stripDmOnlyFields', () => {
+        it('removes DM-only fields recursively while preserving other data', () => {
+            const response = {
+                entity: { id: 'hero', secret_dm_notes: 'Hidden', name: 'Hero' },
+                related: [{ relationship: { secret_dm_notes: 'Also hidden', short_description: 'Known' } }],
+                pendingProposal: {
+                    baseSnapshot: { secret_dm_notes: 'Snapshot hidden', id: 'hero' },
+                    proposedChanges: { long_explanation: 'Public change' },
+                },
+            };
+
+            expect(stripDmOnlyFields(response)).toEqual({
+                entity: { id: 'hero', name: 'Hero' },
+                related: [{ relationship: { short_description: 'Known' } }],
+                pendingProposal: {
+                    baseSnapshot: { id: 'hero' },
+                    proposedChanges: { long_explanation: 'Public change' },
+                },
+            });
+        });
+
+        it('marks secret DM notes as restricted on all seven requested entities', () => {
+            const entitiesWithSecretNotes = Object.values(domainManifest.entities)
+                .filter((entity) => entity.fields.secret_dm_notes?.access?.dmOnly);
+
+            expect(entitiesWithSecretNotes).toHaveLength(7);
+            expect(entitiesWithSecretNotes.every((entity) =>
+                entity.fields.secret_dm_notes.expository &&
+                entity.fields.secret_dm_notes.access.playerProposable === false
+            )).toBe(true);
+        });
+    });
+
     describe('coerceValueByType', () => {
         it('returns nullish values unchanged', () => {
             expect(coerceValueByType('string', undefined)).toBeUndefined();

@@ -26,6 +26,7 @@ const {
     getRelationContext,
     getRelatedIdForRow,
     getRelationsForEntityRoute,
+    stripDmOnlyFields,
 } = require('../utils/manifestHelpers');
 const {
     getRelatedMemberInfo,
@@ -53,6 +54,12 @@ const {
 } = require('../utils/visibilityHelpers');
 
 const router = express.Router();
+
+router.use((req, res, next) => {
+    const sendJson = res.json.bind(res);
+    res.json = (body) => sendJson(req.auth && req.auth.role === 'dm' ? body : stripDmOnlyFields(body));
+    next();
+});
 
 function getRequestedRelation(req) {
     const result = getRelationByRoutes(req.params.entityRoute, req.params.relatedRoute);

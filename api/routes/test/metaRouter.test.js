@@ -187,6 +187,30 @@ describe('metaRouter', () => {
         expect(longExplanation.expository).toBe(true);
     });
 
+    it('exposes secret DM notes only in DM schemas and marks them non-proposable', async () => {
+        const dmResponse = await request(app)
+            .get('/api/meta')
+            .set('Authorization', bearerToken('dm'));
+        const playerResponse = await request(app)
+            .get('/api/meta')
+            .set('Authorization', bearerToken('player'));
+
+        for (const route of ['characters', 'deities', 'events', 'items', 'organizations', 'places', 'spells']) {
+            const dmField = dmResponse.body.entities.find((entity) => entity.route === route)
+                .fields.find((field) => field.name === 'secret_dm_notes');
+            expect(dmField).toMatchObject({
+                type: 'string',
+                expository: true,
+                label: 'Secret DM Notes',
+                dmOnly: true,
+            });
+            expect(dmField.proposable).toBeUndefined();
+
+            const playerFields = playerResponse.body.entities.find((entity) => entity.route === route).fields;
+            expect(playerFields.some((field) => field.name === 'secret_dm_notes')).toBe(false);
+        }
+    });
+
     it('exposes alignment enum values for character and deity forms', async () => {
         const res = await request(app)
             .get('/api/meta')

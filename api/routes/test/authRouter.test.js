@@ -401,7 +401,12 @@ describe('authRouter', () => {
         listAnchoredCharacterIdsByUserId.mockResolvedValueOnce(['char-1', 'char-2']);
         manifestCrudService.getOne.mockImplementation((_entityName, where) => {
             if (where.id === 'char-1') {
-                return Promise.resolve({ id: 'char-1', name: 'Anchor One', player_character: true });
+                return Promise.resolve({
+                    id: 'char-1',
+                    name: 'Anchor One',
+                    player_character: true,
+                    secret_dm_notes: 'Not for the player.',
+                });
             }
             if (where.id === 'char-2') {
                 return Promise.resolve({ id: 'char-2', name: 'Anchor Two', player_character: true });

@@ -6,7 +6,7 @@
 const { getEnumValues } = require('./enums');
 
 const domainManifest = {
-    schemaVersion: 6,
+    schemaVersion: 7,
     entities: {
         Character: {
             table: 'characters',
@@ -34,6 +34,7 @@ const domainManifest = {
                 deceased: { type: 'boolean', required: true },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
+                secret_dm_notes: { type: 'string', expository: true, label: 'Secret DM Notes', access: { dmOnly: true, playerProposable: false } },
             },
         },
         Deity: {
@@ -48,6 +49,7 @@ const domainManifest = {
                 alignment: { type: 'string', enum: 'alignment' },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
+                secret_dm_notes: { type: 'string', expository: true, label: 'Secret DM Notes', access: { dmOnly: true, playerProposable: false } },
             },
         },
         Event: {
@@ -66,6 +68,7 @@ const domainManifest = {
                 next_event_id: { type: 'string', ref: 'Event' },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
+                secret_dm_notes: { type: 'string', expository: true, label: 'Secret DM Notes', access: { dmOnly: true, playerProposable: false } },
             },
         },
         Item: {
@@ -79,6 +82,7 @@ const domainManifest = {
                 name: { type: 'string', required: true },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
+                secret_dm_notes: { type: 'string', expository: true, label: 'Secret DM Notes', access: { dmOnly: true, playerProposable: false } },
             },
         },
         Organization: {
@@ -95,6 +99,7 @@ const domainManifest = {
                 disbanded: { type: 'loreDate' },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
+                secret_dm_notes: { type: 'string', expository: true, label: 'Secret DM Notes', access: { dmOnly: true, playerProposable: false } },
             },
         },
         Place: {
@@ -111,6 +116,7 @@ const domainManifest = {
                 short_description: { type: 'string', required: true, expository: true },
                 establishments: { type: 'string', expository: true },
                 long_explanation: { type: 'string', expository: true },
+                secret_dm_notes: { type: 'string', expository: true, label: 'Secret DM Notes', access: { dmOnly: true, playerProposable: false } },
             },
         },
         Spell: {
@@ -131,6 +137,7 @@ const domainManifest = {
                 materials: { type: 'string' },
                 duration: { type: 'string' },
                 description: { type: 'string', required: true, expository: true },
+                secret_dm_notes: { type: 'string', expository: true, label: 'Secret DM Notes', access: { dmOnly: true, playerProposable: false } },
             },
         },
         Sphere: {
