@@ -7,6 +7,7 @@ import { createServer } from 'vite'
 
 let server
 let LoreDateInput
+let SearchableSelect
 
 before(async () => {
     server = await createServer({
@@ -16,6 +17,7 @@ before(async () => {
         appType: 'custom',
     })
     LoreDateInput = (await server.ssrLoadModule('/src/components/LoreDateInput.vue')).default
+    SearchableSelect = (await server.ssrLoadModule('/src/components/SearchableSelect.vue')).default
 })
 
 after(async () => {
@@ -29,9 +31,10 @@ test('groups date inputs under their field name', async () => {
 
     assert.match(html, /<fieldset[^>]*>[\s\S]*<legend[^>]*>\s*Birthday/)
     for (const label of ['Age', 'Calendar', 'Year', 'Month', 'Day']) {
-        assert.match(html, new RegExp(`<label[^>]*>${label}</label>`))
+        assert.match(html, new RegExp(`<label[^>]*class="lore-date-visually-hidden"[^>]*>${label}</label>`))
+        assert.match(html, new RegExp(`placeholder="${label}"`))
     }
-    assert.match(html, /Clear date[\s\S]*<\/fieldset>/)
+    assert.match(html, /Delete[\s\S]*<\/fieldset>/)
 })
 
 test('keeps an unset optional date within its named group', async () => {
@@ -44,11 +47,15 @@ test('keeps an unset optional date within its named group', async () => {
 
 test('can open an unset optional date directly', async () => {
     const html = await renderToString(createSSRApp({
-        render: () => h(LoreDateInput, { label: 'Date', modelValue: '', initiallyOpen: true }),
+        render: () => h(LoreDateInput, { label: 'Date', modelValue: '', initiallyOpen: true }, {
+            actions: () => h('button', { type: 'button', class: 'lore-date-action' }, 'Save'),
+        }),
     }))
 
     assert.match(html, /<label[^>]*>Age<\/label>/)
-    assert.match(html, /Clear date/)
+    assert.match(html, /placeholder="Day"[^>]*>[\s\S]*>Save<\/button>[\s\S]*>Delete<\/button>/)
+    assert.match(html, /placeholder="Year"[^>]*required/)
+    assert.match(html, /placeholder="Day"[^>]*required/)
     assert.doesNotMatch(html, /Set date/)
 })
 
@@ -61,6 +68,7 @@ test('reports incomplete and invalid dates without emitting them as values', asy
             calendars: [{ id: 'cal', eraId: 'age', name: 'Calendar', months: [{ name: 'Spring', days: 30 }] }],
         },
     })
+
     const renderer = createRenderer({
         createComment: () => ({}),
         insert: () => {},
@@ -84,6 +92,11 @@ test('reports incomplete and invalid dates without emitting them as values', asy
         await nextTick()
         editor.monthIndex = 0
         await nextTick()
+        assert.equal(validity.at(-1), false)
+        assert.equal(values.length, 0)
+        editor.year = 1
+        editor.day = 1
+        await nextTick()
         assert.equal(validity.at(-1), true)
         assert.equal(values.at(-1), '0100001001_cal')
         const count = values.length
@@ -95,8 +108,45 @@ test('reports incomplete and invalid dates without emitting them as values', asy
         await nextTick()
         assert.equal(validity.at(-1), false)
         assert.equal(values.length, count)
+        editor.year = 1
+        editor.day = ''
+        await nextTick()
+        assert.equal(validity.at(-1), false)
+        assert.equal(values.length, count)
     } finally {
         app.unmount()
         globalThis.fetch = originalFetch
+    }
+})
+
+test('reopening a date dropdown shows all options while typing still filters them', async () => {
+    const originalDocument = globalThis.document
+    globalThis.document = { addEventListener() {}, removeEventListener() {} }
+    const renderer = createRenderer({
+        createComment: () => ({}),
+        insert: () => {},
+        remove: () => {},
+        parentNode: () => null,
+        nextSibling: () => null,
+    })
+    const options = [{ value: 'one', label: 'First' }, { value: 'two', label: 'Second' }]
+    const app = renderer.createApp({ ...SearchableSelect, render: () => null }, {
+        modelValue: 'one', options, openOnClick: true,
+    })
+    app.provide(ssrContextKey, { modules: new Set() })
+    try {
+        const select = app.mount({}).$.setupState
+        select.openOptions()
+        assert.deepEqual(select.filteredOptions, options)
+        select.searchText = 'Sec'
+        select.searchOptions()
+        assert.deepEqual(select.filteredOptions, [options[1]])
+        select.selectOption(options[1])
+        assert.equal(select.isOpen, false)
+        select.openOptions()
+        assert.deepEqual(select.filteredOptions, options)
+    } finally {
+        app.unmount()
+        globalThis.document = originalDocument
     }
 })

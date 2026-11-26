@@ -155,6 +155,26 @@ test('existing entries start compact with edit controls for descriptions and dat
     assert.doesNotMatch(html, /<textarea|class="lore-date-group"/)
 })
 
+test('places the timeline date save and delete actions inside the picker', async () => {
+    const component = {
+        ...RelationTimeline,
+        setup(props, context) {
+            const state = RelationTimeline.setup(props, context)
+            state.startEditing()
+            state.editDate('one')
+            return state
+        },
+    }
+    const html = await renderToString(createSSRApp({
+        render: () => h(component, {
+            entityRoute: 'characters', entityId: 'hero', relatedRoute: 'places', relatedId: 'town',
+            timeline: [{ id: 'one', description: 'First', date: null }],
+            editable: true, isAdmin: true, dateSystem: null,
+        }),
+    }))
+    assert.match(html, /class="[^"]*lore-date-single-line[^"]*"[\s\S]*class="lore-date-action" disabled>Save<\/button>[\s\S]*class="lore-date-action"[^>]*>Delete<\/button>[\s\S]*<\/fieldset>/)
+})
+
 test('new entries open their descriptions and removal clears editing state', async () => {
     const app = renderer.createApp({ ...RelationTimeline, render: () => null }, {
         entityRoute: 'characters', entityId: 'hero', relatedRoute: 'places', relatedId: 'town',

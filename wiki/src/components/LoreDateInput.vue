@@ -14,6 +14,7 @@ const props = defineProps<{
   label: string
   required?: boolean
   initiallyOpen?: boolean
+  singleLine?: boolean
 }>()
 
 const inputId = useId()
@@ -27,8 +28,8 @@ const dateSystem = ref<DateSystem | null>(null)
 const eraId = ref('')
 const calendarId = ref('')
 const monthIndex = ref<number | string>('')
-const day = ref(1)
-const year = ref(1)
+const day = ref<number | string>('')
+const year = ref<number | string>('')
 const isDateSet = ref(Boolean(props.required || props.modelValue || props.initiallyOpen))
 let preserveMonthOnCalendarChange = false
 
@@ -77,13 +78,14 @@ function initializeDefaults() {
   eraId.value = ''
   calendarId.value = ''
   monthIndex.value = ''
-  day.value = 1
-  year.value = 1
+  day.value = ''
+  year.value = ''
 }
 
 function encodedValue(): string | null {
   if (!isDateSet.value || !dateSystem.value || !calendarId.value || typeof monthIndex.value !== 'number' ||
-      !Number.isInteger(year.value) || year.value < 1 || year.value > 99999) {
+      typeof year.value !== 'number' || !Number.isInteger(year.value) || year.value < 1 || year.value > 99999 ||
+      typeof day.value !== 'number') {
     return null
   }
 
@@ -146,7 +148,7 @@ watch(calendarId, () => {
 })
 
 watch([eraId, calendarId, monthIndex, day, year], () => {
-  if (day.value > maxDayForMonth.value) {
+  if (typeof monthIndex.value === 'number' && typeof day.value === 'number' && day.value > maxDayForMonth.value) {
     day.value = maxDayForMonth.value
   }
   emitEncodedValue()
@@ -166,47 +168,56 @@ watch(
 </script>
 
 <template>
+  <div class="lore-date-container">
   <fieldset class="lore-date-group">
-    <legend>
+    <legend :class="{ 'lore-date-visually-hidden': initiallyOpen }">
       {{ label }}
       <span v-if="required" class="required-marker" aria-hidden="true">*</span>
     </legend>
     <div v-if="!isDateSet" class="lore-date-input-empty">
       <button type="button" class="secondary-button" :disabled="!dateSystem" @click="setDate">Set date</button>
     </div>
-    <div v-else class="lore-date-input">
+    <div v-else class="lore-date-input" :class="{ 'lore-date-single-line': singleLine }">
       <div class="lore-date-field">
-        <label :for="`${inputId}-era`">Age</label>
-        <SearchableSelect v-model="eraId" :id="`${inputId}-era`" :options="eraOptions" :required="required" />
+        <label class="lore-date-visually-hidden" :for="`${inputId}-era`">Age</label>
+        <SearchableSelect v-model="eraId" :id="`${inputId}-era`" :options="eraOptions" placeholder="Age" open-on-click required />
       </div>
       <div class="lore-date-field">
-        <label :for="`${inputId}-calendar`">Calendar</label>
-        <SearchableSelect v-model="calendarId" :id="`${inputId}-calendar`" :options="calendarOptions" :required="required" />
+        <label class="lore-date-visually-hidden" :for="`${inputId}-calendar`">Calendar</label>
+        <SearchableSelect v-model="calendarId" :id="`${inputId}-calendar`" :options="calendarOptions" placeholder="Calendar" open-on-click required />
       </div>
-      <div class="lore-date-field">
-        <label :for="`${inputId}-year`">Year</label>
-        <input :id="`${inputId}-year`" v-model.number="year" type="number" min="1" max="99999" :required="required" />
+      <div class="lore-date-field lore-date-number lore-date-year">
+        <label class="lore-date-visually-hidden" :for="`${inputId}-year`">Year</label>
+        <input :id="`${inputId}-year`" v-model.number="year" type="number" min="1" max="99999" placeholder="Year" required />
       </div>
-      <div class="lore-date-field">
-        <label :for="`${inputId}-month`">Month</label>
-        <SearchableSelect v-model="monthIndex" :id="`${inputId}-month`" :options="monthOptions" :required="required" />
+      <span class="lore-date-line-break" aria-hidden="true"></span>
+      <div class="lore-date-field lore-date-month">
+        <label class="lore-date-visually-hidden" :for="`${inputId}-month`">Month</label>
+        <SearchableSelect v-model="monthIndex" :id="`${inputId}-month`" :options="monthOptions" placeholder="Month" open-on-click required />
       </div>
-      <div class="lore-date-field">
-        <label :for="`${inputId}-day`">Day</label>
-        <input :id="`${inputId}-day`" v-model.number="day" type="number" min="1" :max="maxDayForMonth" :required="required" />
+      <div class="lore-date-field lore-date-number">
+        <label class="lore-date-visually-hidden" :for="`${inputId}-day`">Day</label>
+        <input :id="`${inputId}-day`" v-model.number="day" type="number" min="1" :max="maxDayForMonth" placeholder="Day" required />
       </div>
-      <button v-if="!required" type="button" class="secondary-button" @click="clearDate">Clear date</button>
+      <slot name="actions" />
+      <button v-if="!required" type="button" class="lore-date-action" @click="clearDate">Delete</button>
     </div>
   </fieldset>
+  </div>
 </template>
 
 <style scoped>
+.lore-date-container {
+  width: 100%;
+  min-width: 0;
+  container-type: inline-size;
+}
+
 .lore-date-group {
   min-width: 0;
   margin: 0;
-  padding: 0.6rem 0.75rem 0.75rem;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-sm);
+  padding: 0;
+  border: 0;
 }
 
 .lore-date-group legend {
@@ -218,24 +229,132 @@ watch(
 
 .lore-date-input {
   display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 0.5rem;
+  align-items: stretch;
+  width: 100%;
 }
 
 .lore-date-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.36rem;
+  flex: 1 1 8rem;
+  min-width: 0;
 }
 
-.lore-date-field label {
-  font-size: 0.88rem;
-  color: var(--ink-700);
-  font-weight: 700;
+.lore-date-field.lore-date-number {
+  flex: 0 1 5rem;
 }
 
-.lore-date-input input[type='number'] {
-  width: 6rem;
+.lore-date-line-break {
+  display: none;
+}
+
+.lore-date-field :deep(input),
+.lore-date-input :deep(.lore-date-action) {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink-900);
+  font: inherit;
+  padding: 0.62rem 0.72rem;
+}
+
+.lore-date-field :deep(.searchable-select input) {
+  padding-right: 1.4rem;
+  cursor: pointer;
+}
+
+.lore-date-field :deep(.searchable-select input:focus) {
+  cursor: text;
+}
+
+.lore-date-field :deep(.searchable-select input:hover) {
+  background: var(--paper-soft);
+}
+
+.lore-date-field :deep(.searchable-select-toggle) {
+  width: 1.25rem;
+  padding: 0;
+  border-left: 0;
+}
+
+.lore-date-field :deep(.searchable-select-chevron) {
+  width: 0.4rem;
+  height: 0.4rem;
+}
+
+.lore-date-field:not(:first-child) :deep(input),
+.lore-date-input :deep(.lore-date-action) {
+  border-left: 0;
+}
+
+.lore-date-field:first-child :deep(input) {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.lore-date-field:last-child :deep(input) {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.lore-date-input :deep(.lore-date-action) {
+  width: auto;
+  flex: 0 0 auto;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.lore-date-input :deep(.lore-date-action:last-child) {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.lore-date-input :deep(.lore-date-action:hover:not(:disabled)) {
+  background: var(--paper-soft);
+}
+
+.lore-date-input :deep(.lore-date-action:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lore-date-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@container (max-width: 38rem) {
+  .lore-date-input:not(.lore-date-single-line) {
+    flex-wrap: wrap;
+  }
+
+  .lore-date-input:not(.lore-date-single-line) .lore-date-field:not(.lore-date-number) {
+    flex-basis: 1px;
+  }
+
+  .lore-date-input:not(.lore-date-single-line) .lore-date-line-break {
+    display: block;
+    flex-basis: 100%;
+  }
+
+  .lore-date-input:not(.lore-date-single-line) .lore-date-year :deep(input) {
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  }
+
+  .lore-date-input:not(.lore-date-single-line) .lore-date-month,
+  .lore-date-input:not(.lore-date-single-line) .lore-date-month ~ .lore-date-field,
+  .lore-date-input:not(.lore-date-single-line) :deep(.lore-date-action) {
+    margin-top: 0.25rem;
+  }
+
+  .lore-date-input:not(.lore-date-single-line) .lore-date-month :deep(input) {
+    border-left: 1px solid var(--line);
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  }
 }
 </style>

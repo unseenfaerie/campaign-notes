@@ -283,8 +283,11 @@ onBeforeUnmount(stopDrag)
             <EditButton class="timeline-description-pencil" :label="`Edit description for entry ${index + 1}`" @click="editDescription(entry.id)" />
           </div>
           <div v-if="openDates.has(entry.id)" class="timeline-entry-editor">
-            <LoreDateInput :model-value="entry.date || ''" label="Date" initially-open @update:model-value="updateDate(entry, $event)" @validity-change="updateDateValidity(entry.id, $event)" />
-            <button type="button" class="timeline-text-action" :disabled="incompleteDates.has(entry.id)" @click="finishDate(entry.id)">Done</button>
+            <LoreDateInput :model-value="entry.date || ''" label="Date" initially-open single-line @update:model-value="updateDate(entry, $event)" @validity-change="updateDateValidity(entry.id, $event)">
+              <template #actions>
+                <button type="button" class="lore-date-action" :disabled="incompleteDates.has(entry.id)" @click="finishDate(entry.id)">Save</button>
+              </template>
+            </LoreDateInput>
           </div>
           <div v-else-if="entry.date" class="timeline-entry-date">
             <strong>{{ displayDate(entry.date) }}</strong>

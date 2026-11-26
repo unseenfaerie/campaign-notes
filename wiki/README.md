@@ -25,7 +25,8 @@ Vue 3 + TypeScript frontend for browsing manifest-driven campaign data from the 
   required historical dates now have an optional timeline. DMs can add,
   reorder and remove entries and add or change dates later. Players can propose
   the same timeline edits for DM review. Use Add Date to open an optional date
-  picker, use the pencils to edit existing descriptions and dates, and drag entry
+  picker and Save or Delete to finish editing that date. Use the pencils to edit
+  existing descriptions and dates, and drag entry
   handles (or use the arrow keys) to reorder. Entries appear as
   nodes on a vertical timeline, with dates shown when present. Character-to-character
   relationships are independent and always run from their origin to their target.
