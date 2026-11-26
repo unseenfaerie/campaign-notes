@@ -168,9 +168,78 @@ test('creates an undated connection and edits, reorders and clears its timeline'
         { id: 'first', description: 'Invalid', date: 'not-a-date' },
     ] })).status).toBe(400);
     expect((await request(app).patch(url).send({ timeline: [entries[0], entries[0]] })).status).toBe(400);
-    expect((await request(app).post(`${url}/propose`).set('x-role', 'player').send({ timeline: [] })).status).toBe(400);
     const cleared = await request(app).patch(url).send({ timeline: [] });
     expect(cleared.body.record.timeline).toEqual([]);
+});
+
+test('players propose timeline replacements for review without changing the accepted timeline', async () => {
+    const url = '/api/characters/hero/places/village';
+    const original = [
+        { id: 'first', description: 'Arrived', date: null },
+        { id: 'second', description: 'Returned', date: null },
+    ];
+    await request(app).post('/api/characters/hero/places').send({
+        id: 'village', short_description: 'Visits the village', timeline: original,
+    });
+
+    const unchanged = await request(app).post(`${url}/propose`).set('x-role', 'player')
+        .send({ timeline: original.map(({ id, description, date }) => ({ date, description, id })) });
+    expect(unchanged.status).toBe(400);
+    expect(unchanged.body.error).toMatch(/No proposed changes/);
+    expect((await request(app).post(`${url}/propose`).set('x-role', 'player')
+        .send({ timeline: [original[0], original[0]] })).status).toBe(400);
+
+    const proposed = [original[1], { id: 'third', description: 'Left', date: null }];
+    const response = await request(app).post(`${url}/propose`).set('x-role', 'player')
+        .send({ timeline: proposed });
+    expect(response.status).toBe(201);
+    expect(response.body.proposedChanges).toEqual({ timeline: proposed });
+    const detail = await request(app).get('/api/characters/hero/full').set('x-role', 'player');
+    expect(detail.body.related.places[0].relationship).toMatchObject({
+        timeline: original, pendingProposal: { proposedChanges: { timeline: proposed } },
+    });
+    expect((await request(app).patch(url).send({ timeline: [] })).status).toBe(409);
+    expect((await request(app).post(`/api/proposals/${response.body.id}/accept`)).status).toBe(200);
+    expect((await request(app).get('/api/characters/hero/full')).body.related.places[0].relationship.timeline)
+        .toEqual(proposed);
+
+    const clear = await request(app).post(`${url}/propose`).set('x-role', 'player').send({ timeline: [] });
+    expect(clear.status).toBe(201);
+    expect((await request(app).post(`/api/proposals/${clear.body.id}/reject`)).status).toBe(200);
+    expect((await request(app).get('/api/characters/hero/full')).body.related.places[0].relationship.timeline)
+        .toEqual(proposed);
+    const clearAgain = await request(app).post(`${url}/propose`).set('x-role', 'player').send({ timeline: [] });
+    expect(clearAgain.status).toBe(201);
+    expect((await request(app).post(`/api/proposals/${clearAgain.body.id}/accept`)).status).toBe(200);
+    expect((await request(app).get('/api/characters/hero/full')).body.related.places[0].relationship.timeline)
+        .toEqual([]);
+});
+
+test('timeline proposals respect character perspective and player access', async () => {
+    await manifestCrudService.update('Character', { id: 'third' }, { player_character: false });
+    await request(app).post('/api/characters/hero/characters').send({
+        id: 'third', relationship_type: 'friend', short_description: 'Friends',
+    });
+    await request(app).post('/api/characters/third/characters').send({
+        id: 'hero', relationship_type: 'rival', short_description: 'Rivals',
+    });
+    const entries = [{ id: 'meeting', description: 'Met', date: null }];
+    const response = await request(app)
+        .post('/api/characters/hero/characters/third/propose?anchorMemberIndex=0')
+        .set('x-role', 'player').send({ timeline: entries });
+    expect(response.status).toBe(201);
+    expect((await request(app).post(`/api/proposals/${response.body.id}/accept`)).status).toBe(200);
+    expect((await manifestCrudService.getOne('CharacterRelationship', {
+        character_id: 'hero', related_id: 'third',
+    })).timeline).toEqual(entries);
+    expect((await manifestCrudService.getOne('CharacterRelationship', {
+        character_id: 'third', related_id: 'hero',
+    })).timeline).toEqual([]);
+    expect((await request(app).post('/api/characters/hero/characters/third/propose?anchorMemberIndex=1')
+        .set('x-role', 'player').send({ timeline: entries })).status).toBe(404);
+    await manifestCrudService.update('Character', { id: 'third' }, { player_character: true });
+    expect((await request(app).post('/api/characters/hero/characters/third/propose?anchorMemberIndex=0')
+        .set('x-role', 'player').send({ timeline: [] })).status).toBe(403);
 });
 
 test('keeps timelines separate between character perspectives', async () => {
@@ -203,6 +272,8 @@ test('does not expose relation details from a locked source or target', async ()
     const detail = await request(app).get('/api/characters/hero/full').set('x-role', 'player');
     expect(detail.body.related.places).toEqual([{ id: 'village', name: 'Village', locked: true }]);
     expect(JSON.stringify(detail.body)).not.toContain('Hidden timeline detail');
+    expect((await request(app).post('/api/characters/hero/places/village/propose').set('x-role', 'player')
+        .send({ timeline: [] })).status).toBe(404);
 });
 
 test('creates and edits a simple relation from its second member', async () => {

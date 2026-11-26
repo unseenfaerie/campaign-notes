@@ -258,7 +258,8 @@ a:hover {
     min-width: 260px;
 }
 
-.entity-long-description h4 {
+.entity-long-description h4,
+.relation-timeline h4 {
     margin: 0 0 0.35rem;
     font-family: var(--font-display);
     font-size: 1rem;
@@ -293,12 +294,13 @@ a:hover {
     padding: 0.3rem;
     border: 0;
     background: transparent;
-    color: var(--link);
+    color: #56739e;
     cursor: pointer;
 }
 
 .inline-edit-button:hover {
     background: var(--paper-muted);
+    color: var(--link);
 }
 
 .inline-edit-button:disabled {
@@ -307,8 +309,8 @@ a:hover {
 }
 
 .inline-edit-button svg {
-    width: 100%;
-    height: 100%;
+    width: 0.9rem;
+    height: 0.9rem;
 }
 
 .related-edit-lock {
@@ -569,6 +571,10 @@ a:hover {
     font-family: var(--font-display);
     font-size: 1.06rem;
     font-weight: 600;
+}
+
+.related-record .inline-edit-heading h4 {
+    margin: 0;
 }
 
 .history-record {

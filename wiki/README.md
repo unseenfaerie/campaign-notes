@@ -20,9 +20,11 @@ Vue 3 + TypeScript frontend for browsing manifest-driven campaign data from the 
   amending their own pending entity proposal until it is reviewed; restoring all
   proposed fields to their accepted values withdraws the proposal.
 - Collapsible relation sections with support for simple and metadata-bearing connections.
+- Relation details and timelines use pencil controls next to their headings for editing.
 - Character, deity, item, organization and place connections that previously
   required historical dates now have an optional timeline. DMs can add,
-  reorder and remove entries and add or change dates later. Entries appear as
+  reorder and remove entries and add or change dates later. Players can propose
+  the same timeline edits for DM review. Entries appear as
   nodes on a vertical timeline, with dates shown when present. Character-to-character
   relationships are independent and always run from their origin to their target.
 - DMs can create and manage relations from either member's detail page, including incoming

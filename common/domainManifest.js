@@ -357,7 +357,6 @@ for (const relation of Object.values(domainManifest.relations)) {
         relation.payload.timeline = {
             type: 'timeline',
             hidden: true,
-            access: { playerProposable: false },
         };
     }
     relation.payload.visibility_direction = {

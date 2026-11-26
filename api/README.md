@@ -173,8 +173,9 @@ character/character connections have optional ordered timelines. A connection
 requires no dates; its `timeline` is an array of `{ id, description, date }`
 entries, where `date` is a canonical lore date or null. Array order is the
 display order, regardless of dates. DMs can replace the timeline with a PATCH
-to the relation endpoint; timeline edits cannot be proposed by players. A
-timeline inherits its connection's visibility direction.
+to the relation endpoint; players can propose timeline replacements with POST
+to the relation's `/propose` endpoint for DM review. A timeline inherits its
+connection's visibility direction and proposal restrictions.
 
 There is one connection per pair for the first four types. Character/character
 connections are ordered: A's perspective on B and B's perspective on A are

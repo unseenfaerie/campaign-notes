@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import EditButton from './EditButton.vue'
 import LoreDateInput from './LoreDateInput.vue'
 import LinkifiedText from './LinkifiedText.vue'
-import { updateRelation } from '../services/domainService'
+import { proposeRelationEdit, updateRelation } from '../services/domainService'
 import { formatLoreDate, isCanonicalLoreDate, type DateSystem } from '../utils/loreDate'
 
 type TimelineEntry = { id: string; description: string; date: string | null }
@@ -16,6 +17,7 @@ const props = defineProps<{
   timeline: unknown
   dateSystem: DateSystem | null
   editable: boolean
+  isAdmin: boolean
 }>()
 const emit = defineEmits<{ updated: [] }>()
 const editing = ref(false)
@@ -66,7 +68,8 @@ async function save() {
   error.value = ''
   try {
     if (draft.value.some(entry => !entry.description.trim())) throw new Error('Each timeline entry needs a description.')
-    await updateRelation(props.entityRoute, props.entityId, props.relatedRoute, props.relatedId,
+    const saveRelation = props.isAdmin ? updateRelation : proposeRelationEdit
+    await saveRelation(props.entityRoute, props.entityId, props.relatedRoute, props.relatedId,
       { timeline: draft.value.map(entry => ({ ...entry, date: entry.date || null })) },
       props.anchorMemberIndex === undefined ? undefined : { anchorMemberIndex: props.anchorMemberIndex })
     editing.value = false
@@ -85,19 +88,20 @@ function displayDate(date: string): string {
 watch(() => [props.entityRoute, props.entityId, props.relatedRoute, props.relatedId, props.anchorMemberIndex], () => {
   editing.value = false
 })
+watch(() => props.editable, (editable) => {
+  if (!editable) editing.value = false
+})
 </script>
 
 <template>
-  <button
-    v-if="!entries.length && !editing && editable"
-    type="button"
-    class="secondary-button"
-    @click="startEditing"
-  >Add timeline</button>
-  <section v-else-if="entries.length || editing" class="relation-timeline">
-    <div class="section-heading-row">
+  <section v-if="entries.length || editing || editable" class="relation-timeline">
+    <div class="inline-edit-heading">
       <h4>Timeline</h4>
-      <button v-if="editable && !editing" type="button" class="secondary-button" @click="startEditing">Edit timeline</button>
+      <EditButton
+        v-if="editable && !editing"
+        :label="entries.length ? 'Edit timeline' : 'Add timeline'"
+        @click="startEditing"
+      />
     </div>
     <form v-if="editing" class="entity-form" @submit.prevent="save">
       <fieldset class="inline-editor-fields" :disabled="saving">
@@ -116,13 +120,13 @@ watch(() => [props.entityRoute, props.entityId, props.relatedRoute, props.relate
       <p v-if="datesOutOfOrder" class="status-card">Some dates are out of order. The timeline will keep your chosen order.</p>
       <div class="form-actions">
         <button type="button" class="secondary-button" @click="addEntry">Add entry</button>
-        <button type="submit" class="primary-button" :disabled="saving">{{ saving ? 'Saving...' : 'Save timeline' }}</button>
+        <button type="submit" class="primary-button" :disabled="saving">{{ saving ? (isAdmin ? 'Saving...' : 'Submitting...') : (isAdmin ? 'Save timeline' : 'Submit proposal') }}</button>
         <button type="button" class="secondary-button" :disabled="saving" @click="editing = false">Cancel</button>
       </div>
       <p v-if="error" class="status-card error">{{ error }}</p>
       </fieldset>
     </form>
-    <ol v-else class="relation-timeline-list" role="list">
+    <ol v-else-if="entries.length" class="relation-timeline-list" role="list">
       <li v-for="entry in entries" :key="entry.id">
         <strong v-if="entry.date">{{ displayDate(entry.date) }}: </strong>
         <LinkifiedText :text="entry.description" />

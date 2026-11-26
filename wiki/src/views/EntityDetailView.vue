@@ -1386,35 +1386,43 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
 
           <article v-for="(record, index) in records" :key="recordKey(group.key, relatedRoute, record, index)" class="related-record">
             <div class="section-heading-row">
-              <h4>
-                <button
-                  v-if="hasCollapsibleRecordBody(relatedRoute) && !record.locked"
-                  type="button"
-                  class="record-collapse-toggle"
-                  :class="{ 'is-expanded': !isRecordCollapsed(recordKey(group.key, relatedRoute, record, index)) }"
-                  :aria-expanded="!isRecordCollapsed(recordKey(group.key, relatedRoute, record, index))"
-                  :aria-label="isRecordCollapsed(recordKey(group.key, relatedRoute, record, index)) ? 'Expand details' : 'Collapse details'"
-                  @click="toggleRecordCollapse(recordKey(group.key, relatedRoute, record, index))"
-                >
-                  ▸
-                </button>
-                <RouterLink
-                  v-if="relatedRecordId(record)"
-                  :to="{
-                    name: 'entity-detail',
-                    params: { entityRoute: relatedRoute, id: relatedRecordId(record) },
-                  }"
-                >
-                  {{ relatedRecordLabel(record) }}
-                </RouterLink>
-                <template v-else>{{ relatedRecordLabel(record) }}</template>
-                <small v-if="entityRoute === 'places' && relatedRoute === 'places'">
-                  ({{ relationPayload(record).relationAnchorIndex === 0 ? 'Parent' : 'Child' }})
-                </small>
-                <small v-else-if="entityRoute === 'events' && relatedRoute === 'events'">
-                  ({{ relationPayload(record).relationAnchorIndex === 0 ? 'Next' : 'Previous' }})
-                </small>
-              </h4>
+              <div class="inline-edit-heading">
+                <h4>
+                  <button
+                    v-if="hasCollapsibleRecordBody(relatedRoute) && !record.locked"
+                    type="button"
+                    class="record-collapse-toggle"
+                    :class="{ 'is-expanded': !isRecordCollapsed(recordKey(group.key, relatedRoute, record, index)) }"
+                    :aria-expanded="!isRecordCollapsed(recordKey(group.key, relatedRoute, record, index))"
+                    :aria-label="isRecordCollapsed(recordKey(group.key, relatedRoute, record, index)) ? 'Expand details' : 'Collapse details'"
+                    @click="toggleRecordCollapse(recordKey(group.key, relatedRoute, record, index))"
+                  >
+                    ▸
+                  </button>
+                  <RouterLink
+                    v-if="relatedRecordId(record)"
+                    :to="{
+                      name: 'entity-detail',
+                      params: { entityRoute: relatedRoute, id: relatedRecordId(record) },
+                    }"
+                  >
+                    {{ relatedRecordLabel(record) }}
+                  </RouterLink>
+                  <template v-else>{{ relatedRecordLabel(record) }}</template>
+                  <small v-if="entityRoute === 'places' && relatedRoute === 'places'">
+                    ({{ relationPayload(record).relationAnchorIndex === 0 ? 'Parent' : 'Child' }})
+                  </small>
+                  <small v-else-if="entityRoute === 'events' && relatedRoute === 'events'">
+                    ({{ relationPayload(record).relationAnchorIndex === 0 ? 'Next' : 'Previous' }})
+                  </small>
+                </h4>
+                <EditButton
+                  v-if="!record.locked && (isRelationshipKind(relatedRoute) || (isSimpleRelation(relatedRoute) && auth.isAdmin.value)) && canOpenRelationEdit(relatedRoute) && editingRelationKey !== recordKey(group.key, relatedRoute, record, index) && !pendingProposalOf(relationPayload(record))"
+                  :label="`Edit ${relatedRecordLabel(record)} relation`"
+                  :disabled="directionSavingKey !== null"
+                  @click="startEditRelation(relatedRoute, record, recordKey(group.key, relatedRoute, record, index))"
+                />
+              </div>
               <div v-if="!record.locked" class="row-actions-end">
                 <DirectionSelect
                   v-if="auth.isAdmin.value && !isHistoryKind(relatedRoute) && !findRelationSchema(relatedRoute)?.fields.find(field => field.name === 'visibility_direction')?.hidden && !pendingProposalOf(relationPayload(record))"
@@ -1425,15 +1433,6 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                   :saving="directionSavingKey === recordKey(group.key, relatedRoute, record, index)"
                   @change="changeRelationDirection(relatedRoute, record, relationPayload(record), recordKey(group.key, relatedRoute, record, index), false, $event)"
                 />
-                <button
-                  v-if="(isRelationshipKind(relatedRoute) || (isSimpleRelation(relatedRoute) && auth.isAdmin.value)) && canOpenRelationEdit(relatedRoute) && editingRelationKey !== recordKey(group.key, relatedRoute, record, index) && !pendingProposalOf(relationPayload(record))"
-                  type="button"
-                  class="secondary-button"
-                  :disabled="directionSavingKey !== null"
-                  @click="startEditRelation(relatedRoute, record, recordKey(group.key, relatedRoute, record, index))"
-                >
-                  Edit
-                </button>
                 <button
                   v-if="auth.isAdmin.value && !isHistoryKind(relatedRoute) && editingRelationKey !== recordKey(group.key, relatedRoute, record, index) && !pendingProposalOf(relationPayload(record))"
                   type="button"
@@ -1588,13 +1587,13 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                   </template>
                 </div>
               </div>
-              <ProposalViewToggle
-                v-if="pendingProposalOf(relationPayload(record))"
-                :model-value="getViewMode(recordKey(group.key, relatedRoute, record, index))"
-                @update:model-value="(mode) => setViewMode(recordKey(group.key, relatedRoute, record, index), mode)"
-              />
             </template>
 
+            <ProposalViewToggle
+              v-if="pendingProposalOf(relationPayload(record))"
+              :model-value="getViewMode(recordKey(group.key, relatedRoute, record, index))"
+              @update:model-value="(mode) => setViewMode(recordKey(group.key, relatedRoute, record, index), mode)"
+            />
             <RelationTimeline
               v-if="findRelationSchema(relatedRoute)?.timeline"
               :entity-route="entityRoute"
@@ -1602,9 +1601,10 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               :related-route="relatedRoute"
               :related-id="relatedRecordId(record)"
               :anchor-member-index="relatedRoute === entityRoute ? relationAnchor(relatedRoute, relationPayload(record)) : undefined"
-              :timeline="relationPayload(record).timeline"
+              :timeline="relationDisplayPayloadForView(recordKey(group.key, relatedRoute, record, index), record).timeline"
               :date-system="dateSystem"
-              :editable="auth.isAdmin.value && !pendingProposalOf(relationPayload(record))"
+              :editable="auth.isAuthenticated.value && !pendingProposalOf(relationPayload(record))"
+              :is-admin="auth.isAdmin.value"
               @updated="loadDetail({ silent: true })"
             />
 
