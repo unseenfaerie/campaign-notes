@@ -1588,10 +1588,6 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                   </template>
                 </div>
               </div>
-              <LastEditedStamp
-                :by="(relationPayload(record) as any).last_edited_by"
-                :at="(relationPayload(record) as any).last_edited_at"
-              />
               <ProposalViewToggle
                 v-if="pendingProposalOf(relationPayload(record))"
                 :model-value="getViewMode(recordKey(group.key, relatedRoute, record, index))"
@@ -1770,12 +1766,12 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                       <p><LinkifiedText :text="field.value" /></p>
                     </template>
                   </div>
-                  <LastEditedStamp :by="(historyEntry as any).last_edited_by" :at="(historyEntry as any).last_edited_at" />
                   <ProposalViewToggle
                     v-if="pendingProposalOf(historyEntry)"
                     :model-value="getViewMode(historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry))"
                     @update:model-value="(mode) => setViewMode(historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry), mode)"
                   />
+                  <LastEditedStamp :by="(historyEntry as any).last_edited_by" :at="(historyEntry as any).last_edited_at" />
                 </div>
               </article>
             </template>
@@ -1791,6 +1787,11 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
             >
               No relationship metadata or history records for this entry.
             </p>
+            <LastEditedStamp
+              v-if="!isHistoryKind(relatedRoute)"
+              :by="(relationPayload(record) as any).last_edited_by"
+              :at="(relationPayload(record) as any).last_edited_at"
+            />
             </div>
           </article>
         </div>

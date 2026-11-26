@@ -78,8 +78,8 @@ async function save() {
   }
 }
 
-function displayDate(date: string | null): string {
-  return date && props.dateSystem && isCanonicalLoreDate(date) ? formatLoreDate(props.dateSystem, date) : (date || 'Undated')
+function displayDate(date: string): string {
+  return props.dateSystem && isCanonicalLoreDate(date) ? formatLoreDate(props.dateSystem, date) : date
 }
 
 watch(() => [props.entityRoute, props.entityId, props.relatedRoute, props.relatedId, props.anchorMemberIndex], () => {
@@ -122,9 +122,9 @@ watch(() => [props.entityRoute, props.entityId, props.relatedRoute, props.relate
       <p v-if="error" class="status-card error">{{ error }}</p>
       </fieldset>
     </form>
-    <ol v-else>
+    <ol v-else class="relation-timeline-list" role="list">
       <li v-for="entry in entries" :key="entry.id">
-        <strong>{{ displayDate(entry.date) }}</strong>:
+        <strong v-if="entry.date">{{ displayDate(entry.date) }}: </strong>
         <LinkifiedText :text="entry.description" />
       </li>
     </ol>

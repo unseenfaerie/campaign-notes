@@ -49,3 +49,14 @@ test('shows populated timelines to readers and offers editing to DMs', async () 
     assert.doesNotMatch(readOnly, /Edit timeline/)
     assert.match(await renderTimeline(entries, true), /Edit timeline/)
 })
+
+test('renders dated and undated entries in timeline order', async () => {
+    const entries = [
+        { id: 'one', description: 'Met in town', date: '1234-01-02' },
+        { id: 'two', description: 'Traveled together', date: null },
+    ]
+    const html = await renderTimeline(entries, false)
+    assert.match(html, /<ol class="relation-timeline-list" role="list">/)
+    assert.match(html, /<li><strong>1234-01-02: <\/strong>.*Met in town.*<\/li>.*<li>.*Traveled together.*<\/li>/s)
+    assert.doesNotMatch(html, /Undated/)
+})

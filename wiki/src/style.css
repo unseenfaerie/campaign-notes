@@ -577,6 +577,44 @@ a:hover {
     border-left: 2px solid var(--line-soft);
 }
 
+.relation-timeline-list {
+    margin: 0.4rem 0;
+    padding: 0;
+    list-style: none;
+}
+
+.relation-timeline-list li {
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.relation-timeline-list li:not(:last-child) {
+    padding-bottom: 0.8rem;
+}
+
+.relation-timeline-list li:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    top: 0.775em;
+    bottom: -0.775em;
+    left: calc(0.3rem - 1px);
+    width: 2px;
+    background: var(--line);
+}
+
+.relation-timeline-list li::after {
+    content: '';
+    position: absolute;
+    top: 0.775em;
+    left: 0.3rem;
+    width: 0.65rem;
+    height: 0.65rem;
+    border: 2px solid var(--ink-700);
+    border-radius: 50%;
+    background: var(--paper);
+    transform: translate(-50%, -50%);
+}
+
 .login-card {
     width: min(460px, 92vw);
     border: 1px solid var(--line);
