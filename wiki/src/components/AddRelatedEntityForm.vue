@@ -109,7 +109,7 @@ async function loadTargets() {
 
 function resetFormValues() {
   const initialValues: Record<string, any> = {}
-  for (const field of selectedSchema.value?.fields ?? []) {
+  for (const field of selectedSchema.value?.fields.filter(field => !field.hidden) ?? []) {
     initialValues[field.name] = field.name === 'visibility_direction'
       ? directionOptions(selectedAnchor.value)[0]!.value
       : field.type === 'boolean' ? false : ''
@@ -120,7 +120,7 @@ function resetFormValues() {
 function buildPayload(): Record<string, unknown> {
   const payload: Record<string, unknown> = {}
 
-  for (const field of selectedSchema.value?.fields ?? []) {
+  for (const field of selectedSchema.value?.fields.filter(field => !field.hidden) ?? []) {
     const rawValue = formValues.value[field.name]
 
     if (field.type === 'boolean') {
@@ -233,7 +233,7 @@ watch(roleAnchor, resetFormValues)
         />
       </div>
 
-      <div v-for="field in selectedSchema.fields" :key="field.name" class="form-row">
+      <div v-for="field in selectedSchema.fields.filter(field => !field.hidden)" :key="field.name" class="form-row">
         <label v-if="field.type !== 'loreDate'" :for="`add-relation-field-${field.name}`">
           {{ prettyFieldName(field.name) }}
           <span v-if="field.required" class="required-marker" aria-hidden="true">*</span>

@@ -6,6 +6,8 @@ const directionMigration = require('../../migrations/006-relation-visibility-dir
 const secretNotesMigration = require('../../migrations/007-secret-dm-notes');
 const containmentMigration = require('../../migrations/008-place-containment');
 const eventSequenceMigration = require('../../migrations/009-event-sequence');
+const timelineMigration = require('../../migrations/010-relation-timelines');
+const characterDirectionMigration = require('../../migrations/011-character-relationship-direction');
 
 function run(database, sql, params = []) {
     return new Promise((resolve, reject) => {
@@ -98,6 +100,79 @@ describe('MigrationService', () => {
         for (const sql of buildAllCreateTableSql()) await run(database, sql);
         await expect(directionMigration.up(database)).resolves.toBeUndefined();
         await expect(directionMigration.up(database)).resolves.toBeUndefined();
+    });
+
+    it('merges dated records into ordered timeline entries and keeps opposite perspectives', async () => {
+        for (const sql of buildAllCreateTableSql()) await run(database, sql);
+        await run(database, `CREATE TABLE edit_proposals (id INTEGER, resource_name TEXT, target_kind TEXT, status TEXT)`);
+        await run(database, 'DROP TABLE character_relationships');
+        await run(database, `CREATE TABLE character_relationships (
+            character_id TEXT, related_id TEXT, established_date TEXT, dissolution_date TEXT,
+            relationship_type TEXT, short_description TEXT, long_explanation TEXT,
+            visibility_direction TEXT, last_edited_by TEXT, last_edited_at TEXT,
+            PRIMARY KEY (character_id, related_id, established_date))`);
+        await run(database, `INSERT INTO character_relationships VALUES
+            ('a', 'b', '0200200001_age-of-descent-default', '0200200003_age-of-descent-default', 'friend', 'Old', 'More', 'first_to_second', 'dm', 'old'),
+            ('a', 'b', '0200200004_age-of-descent-default', NULL, 'enemy', 'New', NULL, 'first_to_second', 'dm', 'new'),
+            ('b', 'a', '0200200002_age-of-descent-default', NULL, 'friend', 'Other side', NULL, 'first_to_second', 'dm', 'other')`);
+        const service = new MigrationService(database, { expectedVersion: 10, migrations: [timelineMigration] });
+        await service.applyLatest();
+        const forward = await get(database, `SELECT * FROM character_relationships WHERE character_id = 'a'`);
+        expect(forward.relationship_type).toBe('enemy');
+        expect(forward.short_description).toBe('New');
+        expect(JSON.parse(forward.timeline).map(entry => [entry.date, entry.description])).toEqual([
+            ['0200200001_age-of-descent-default', 'Established: Old\n\nMore'],
+            ['0200200003_age-of-descent-default', 'Dissolved'],
+            ['0200200004_age-of-descent-default', 'Established: New'],
+        ]);
+        const reverse = await get(database, `SELECT * FROM character_relationships WHERE character_id = 'b'`);
+        expect(reverse.short_description).toBe('Other side');
+        expect(JSON.parse(reverse.timeline)).toHaveLength(1);
+        await expect(service.applyLatest()).resolves.toBe(10);
+    });
+
+    it('rolls back timeline migration when legacy visibility conflicts or proposals are pending', async () => {
+        for (const sql of buildAllCreateTableSql()) await run(database, sql);
+        await run(database, `CREATE TABLE edit_proposals (id INTEGER, resource_name TEXT, target_kind TEXT, status TEXT)`);
+        await run(database, 'DROP TABLE character_places');
+        await run(database, `CREATE TABLE character_places (
+            character_id TEXT, place_id TEXT, arrived_date TEXT, left_date TEXT, short_description TEXT,
+            long_explanation TEXT, visibility_direction TEXT, last_edited_by TEXT, last_edited_at TEXT)`);
+        await run(database, `INSERT INTO character_places VALUES
+            ('a', 'p', '0200200001_age-of-descent-default', NULL, 'One', NULL, 'first_to_second', NULL, NULL),
+            ('a', 'p', '0200200002_age-of-descent-default', NULL, 'Two', NULL, 'second_to_first', NULL, NULL)`);
+        const service = new MigrationService(database, { expectedVersion: 10, migrations: [timelineMigration] });
+        await expect(service.applyLatest()).rejects.toThrow('Conflicting visibility directions');
+        expect((await get(database, 'SELECT COUNT(*) AS count FROM character_places')).count).toBe(2);
+        await run(database, `INSERT INTO edit_proposals VALUES (1, 'CharacterPlace', 'relation', 'pending')`);
+        await expect(service.applyLatest()).rejects.toThrow('Resolve pending historical relation proposals');
+        expect((await get(database, 'SELECT COUNT(*) AS count FROM character_places')).count).toBe(2);
+    });
+
+    it('restricts bidirectional character relationships without changing their origin or timeline', async () => {
+        await run(database, `CREATE TABLE character_relationships (
+            character_id TEXT, related_id TEXT, visibility_direction TEXT, timeline TEXT)`);
+        await run(database, `INSERT INTO character_relationships VALUES
+            ('a', 'b', 'both', '[{"description":"met"}]'),
+            ('b', 'a', 'first_to_second', '[]')`);
+        const service = new MigrationService(database, { expectedVersion: 11, migrations: [characterDirectionMigration] });
+        await service.applyLatest();
+        await expect(get(database, `SELECT * FROM character_relationships WHERE character_id = 'a'`)).resolves.toEqual({
+            character_id: 'a', related_id: 'b', visibility_direction: 'first_to_second', timeline: '[{"description":"met"}]',
+        });
+        await expect(get(database, `SELECT visibility_direction FROM character_relationships WHERE character_id = 'b'`))
+            .resolves.toEqual({ visibility_direction: 'first_to_second' });
+    });
+
+    it('does not silently expose a reverse-only character relationship during migration', async () => {
+        await run(database, `CREATE TABLE character_relationships (
+            character_id TEXT, related_id TEXT, visibility_direction TEXT)`);
+        await run(database, `INSERT INTO character_relationships VALUES
+            ('a', 'b', 'both'), ('c', 'd', 'second_to_first')`);
+        const service = new MigrationService(database, { expectedVersion: 11, migrations: [characterDirectionMigration] });
+        await expect(service.applyLatest()).rejects.toThrow('Review character relationship c -> d');
+        await expect(get(database, `SELECT visibility_direction FROM character_relationships WHERE character_id = 'a'`))
+            .resolves.toEqual({ visibility_direction: 'both' });
     });
 
     it('adds secret DM note columns to the seven eligible entity tables without losing rows', async () => {

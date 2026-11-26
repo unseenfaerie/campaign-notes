@@ -78,8 +78,8 @@ test('containment participates in the visibility graph and identifies locked par
     await run(`INSERT INTO characters (id, name, player_character, is_public, deceased, intelligence, short_description)
         VALUES ('hero', 'Hero', 1, 0, 0, 3, 'Hero')`);
     await run(`INSERT INTO user_character_anchors VALUES ('hero', 'dm', 'now')`);
-    await run(`INSERT INTO character_places (character_id, place_id, arrived_date, short_description, visibility_direction)
-        VALUES ('hero', 'child', '0300001001_age-of-light-default', 'here', 'first_to_second')`);
+    await run(`INSERT INTO character_places (character_id, place_id, short_description, visibility_direction)
+        VALUES ('hero', 'child', 'here', 'first_to_second')`);
     await request(app).post('/api/places/child/places')
         .send({ id: 'secret', visibility_direction: 'first_to_second' });
     const response = await request(app).get('/api/places/child/full').set('x-role', 'player');

@@ -137,7 +137,8 @@ lock. A changed or resolved proposal returns 409.
 
 Relation records use a DM-controlled `visibility_direction` of
 `first_to_second`, `second_to_first`, or `both`, relative to manifest member
-order. New records default outward from the entity used to create them.
+order, except character/character relationships, which always run from the
+origin to the target. Other new records default outward from the entity used to create them.
 Migration 6 sets existing records to `both` for review. Players traverse
 permitted directions within their viewing character's intelligence-based hop
 limit; detail pages show outgoing relations only when targets are visible or
@@ -166,8 +167,33 @@ resolved first. Creating an event and linking its sequence are separate operatio
 
 For self-relations, expanded records include `relationAnchorIndex`. Pass it as
 `anchorMemberIndex` when operating on that record from the displayed page.
-History records have their own direction, and history operations require the
-applicable history-key selector.
+
+Character/deity, character/item, character/organization, character/place and
+character/character connections have optional ordered timelines. A connection
+requires no dates; its `timeline` is an array of `{ id, description, date }`
+entries, where `date` is a canonical lore date or null. Array order is the
+display order, regardless of dates. DMs can replace the timeline with a PATCH
+to the relation endpoint; timeline edits cannot be proposed by players. A
+timeline inherits its connection's visibility direction.
+
+There is one connection per pair for the first four types. Character/character
+connections are ordered: A's perspective on B and B's perspective on A are
+independent records. `anchorMemberIndex` selects which record is being edited
+when both are visible from a character page. A relationship only grants player
+visibility from its origin; DMs can view the incoming relationship at its target.
+
+Migration 10 merges existing historical rows by pair (and by perspective for
+characters), choosing the latest start record's top-level metadata. It converts
+start and end dates into separate timeline entries and retains each start
+record's description and explanation. Resolve pending historical relation
+proposals before migrating. Migration stops if a pair's historical rows have
+different visibility directions: review and align them before retrying so
+previously hidden history is not exposed.
+
+Migration 11 changes bidirectional character relationships to origin-to-target.
+It stops for reverse-only or invalid visibility directions; review those
+records before retrying, because automatically reversing their visibility could
+expose previously hidden information.
 
 ### Authentication and admin routers
 

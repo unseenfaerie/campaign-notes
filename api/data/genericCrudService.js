@@ -1,6 +1,7 @@
 const { db } = require('./db');
 const { domainManifest } = require('../../common/domainManifest');
 const { getEnumValues } = require('../../common/enums');
+const { validateTimeline } = require('../../common/relationTimeline');
 
 // Present on every entity/relation table (added by schemaBuilder.js) but not declared per-entity
 // in domainManifest.js, so they're injected here rather than repeated as manifest boilerplate.
@@ -78,6 +79,10 @@ function toResourceDefinition(resourceName, manifest = domainManifest) {
 }
 
 function assertValidType(fieldName, value, type, enumValues) {
+  if (type === 'timeline') {
+    validateTimeline(value);
+    return;
+  }
   if (value === null || value === undefined) return;
 
   if (type === 'string' && typeof value !== 'string') {
@@ -159,6 +164,7 @@ function buildWhereClause(def, where) {
 
 // sqlite has no native boolean type, so booleans are stored as 0/1 integers here and nowhere else.
 function toSqliteValue(type, value) {
+  if (type === 'timeline') return JSON.stringify(validateTimeline(value));
   if (type === 'boolean' && typeof value === 'boolean') {
     return value ? 1 : 0;
   }
@@ -171,6 +177,9 @@ function fromSqliteRow(def, row) {
 
   const mapped = { ...row };
   for (const [fieldName, meta] of Object.entries(def.fields)) {
+    if (meta.type === 'timeline') {
+      mapped[fieldName] = mapped[fieldName] === null ? [] : validateTimeline(JSON.parse(mapped[fieldName]));
+    }
     if (meta.type === 'boolean' && mapped[fieldName] !== undefined && mapped[fieldName] !== null) {
       mapped[fieldName] = Boolean(mapped[fieldName]);
     }

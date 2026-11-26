@@ -58,13 +58,14 @@ afterAll(async () => {
 
 test('creates from both sides and filters relations by their own direction', async () => {
     const first = await request(app).post('/api/characters/hero/places').send({
-        id: 'village', arrived_date: '0200200001_age-of-descent-default', short_description: 'Hero visited',
+        id: 'village', short_description: 'Hero visited',
+        timeline: [{ id: 'private', description: 'Private timeline detail', date: null }],
     });
     expect({ status: first.status, body: first.body }).toEqual(expect.objectContaining({ status: 201 }));
     expect(first.body.visibility_direction).toBe('first_to_second');
 
     const second = await request(app).post('/api/places/village/characters').send({
-        id: 'other', arrived_date: '0200200001_age-of-descent-default', short_description: 'Other visited',
+        id: 'other', short_description: 'Other visited',
     });
     expect(second.status).toBe(201);
     expect(second.body.visibility_direction).toBe('second_to_first');
@@ -72,8 +73,9 @@ test('creates from both sides and filters relations by their own direction', asy
     const place = await request(app).get('/api/places/village/full').set('x-role', 'player');
     expect(place.status).toBe(200);
     expect(place.body.related.characters.map(record => record.id)).toEqual(['other']);
+    expect(JSON.stringify(place.body)).not.toContain('Private timeline detail');
     expect((await request(app).get('/api/characters/other').set('x-role', 'player')).status).toBe(200);
-    expect((await request(app).get('/api/places/village/characters/hero?arrived_date=0200200001_age-of-descent-default').set('x-role', 'player')).status).toBe(404);
+    expect((await request(app).get('/api/places/village/characters/hero').set('x-role', 'player')).status).toBe(404);
     const preview = await request(app).get('/api/places/village/full').set('x-viewing-character', 'hero');
     expect(preview.body.related.characters.map(record => record.id)).toEqual(['other']);
 
@@ -84,13 +86,13 @@ test('creates from both sides and filters relations by their own direction', asy
 
     const dmPlace = await request(app).get('/api/places/village/full');
     expect(dmPlace.body.related.characters.map(record => record.id).sort()).toEqual(['hero', 'other']);
-    const change = await request(app).patch('/api/places/village/characters/hero?arrived_date=0200200001_age-of-descent-default')
+    const change = await request(app).patch('/api/places/village/characters/hero')
         .send({ visibility_direction: 'both' });
     expect(change.status).toBe(200);
     const updated = await request(app).get('/api/places/village/full').set('x-role', 'player');
     expect(updated.body.related.characters.map(record => record.id).sort()).toEqual(['hero', 'other']);
 
-    const invalid = await request(app).patch('/api/places/village/characters/hero?arrived_date=0200200001_age-of-descent-default')
+    const invalid = await request(app).patch('/api/places/village/characters/hero')
         .send({ visibility_direction: 'sideways' });
     expect(invalid.status).toBe(400);
 });
@@ -98,40 +100,109 @@ test('creates from both sides and filters relations by their own direction', asy
 test('keeps opposite self-relation rows independently editable', async () => {
     for (const [source, target] of [['hero', 'third'], ['third', 'hero']]) {
         const response = await request(app).post(`/api/characters/${source}/characters`).send({
-            id: target, established_date: '0200200001_age-of-descent-default', relationship_type: 'friend', short_description: source,
+            id: target, relationship_type: source === 'hero' ? 'friend' : 'rival', short_description: source,
         });
         expect({ status: response.status, body: response.body }).toEqual(expect.objectContaining({ status: 201 }));
     }
     const detail = await request(app).get('/api/characters/hero/full');
-    const third = detail.body.related.characters.find(record => record.id === 'third');
-    expect(third.history.map(entry => entry.relationAnchorIndex).sort()).toEqual([0, 1]);
+    const third = detail.body.related.characters.filter(record => record.id === 'third');
+    expect(third.map(record => record.relationship.relationAnchorIndex).sort()).toEqual([0, 1]);
+    expect(third.map(record => record.relationship.relationship_type).sort()).toEqual(['friend', 'rival']);
     const response = await request(app)
-        .patch('/api/characters/hero/characters/third?established_date=0200200001_age-of-descent-default&anchorMemberIndex=1')
+        .patch('/api/characters/hero/characters/third?anchorMemberIndex=1')
         .send({ visibility_direction: 'both' });
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(400);
     const first = await manifestCrudService.getOne('CharacterRelationship', {
-        character_id: 'hero', related_id: 'third', established_date: '0200200001_age-of-descent-default',
+        character_id: 'hero', related_id: 'third',
     });
     const second = await manifestCrudService.getOne('CharacterRelationship', {
-        character_id: 'third', related_id: 'hero', established_date: '0200200001_age-of-descent-default',
+        character_id: 'third', related_id: 'hero',
     });
     expect(first.visibility_direction).toBe('first_to_second');
-    expect(second.visibility_direction).toBe('both');
+    expect(second.visibility_direction).toBe('first_to_second');
+
+    const playerDetail = await request(app).get('/api/characters/hero/full').set('x-role', 'player');
+    const visible = playerDetail.body.related.characters.filter(record => record.id === 'third');
+    expect(visible).toHaveLength(1);
+    expect(visible[0].relationship.relationship_type).toBe('friend');
+    expect(visible[0].relationship.relationAnchorIndex).toBe(0);
+});
+
+test('enforces origin-to-target visibility for character relationships', async () => {
+    const invalid = await request(app).post('/api/characters/hero/characters').send({
+        id: 'third', relationship_type: 'friend', short_description: 'Friends', visibility_direction: 'both',
+    });
+    expect(invalid.status).toBe(400);
+    const reverse = await request(app).post('/api/characters/hero/characters?anchorMemberIndex=1').send({
+        id: 'third', relationship_type: 'rival', short_description: 'A rival',
+    });
+    expect(reverse.status).toBe(201);
+    expect(reverse.body.character_id).toBe('third');
+    expect(reverse.body.related_id).toBe('hero');
+    expect(reverse.body.visibility_direction).toBe('first_to_second');
+    const otherDirection = await request(app)
+        .patch('/api/characters/hero/characters/third?anchorMemberIndex=1')
+        .send({ visibility_direction: 'second_to_first' });
+    expect(otherDirection.status).toBe(400);
+});
+
+test('creates an undated connection and edits, reorders and clears its timeline', async () => {
+    const created = await request(app).post('/api/characters/hero/places').send({
+        id: 'village', short_description: 'Visits the village',
+    });
+    expect(created.status).toBe(201);
+    expect(created.body.timeline).toEqual([]);
+    const entries = [
+        { id: 'first', description: 'Arrived', date: null },
+        { id: 'second', description: 'Returned', date: '0200200001_age-of-descent-default' },
+    ];
+    const url = '/api/characters/hero/places/village';
+    const saved = await request(app).patch(url).send({ timeline: entries });
+    expect(saved.status).toBe(200);
+    expect(saved.body.record.timeline).toEqual(entries);
+    const reordered = await request(app).patch(url).send({ timeline: entries.slice().reverse() });
+    expect(reordered.body.record.timeline.map(entry => entry.id)).toEqual(['second', 'first']);
+    const full = await request(app).get('/api/characters/hero/full').set('x-role', 'player');
+    expect(full.body.related.places[0].relationship.timeline).toEqual(entries.slice().reverse());
+    expect((await request(app).patch(url).send({ timeline: [
+        { id: 'first', description: 'Invalid', date: 'not-a-date' },
+    ] })).status).toBe(400);
+    expect((await request(app).patch(url).send({ timeline: [entries[0], entries[0]] })).status).toBe(400);
+    expect((await request(app).post(`${url}/propose`).set('x-role', 'player').send({ timeline: [] })).status).toBe(400);
+    const cleared = await request(app).patch(url).send({ timeline: [] });
+    expect(cleared.body.record.timeline).toEqual([]);
+});
+
+test('keeps timelines separate between character perspectives', async () => {
+    for (const [source, target] of [['hero', 'third'], ['third', 'hero']]) {
+        await request(app).post(`/api/characters/${source}/characters`).send({
+            id: target, relationship_type: 'friend', short_description: source,
+        });
+    }
+    await request(app).patch('/api/characters/hero/characters/third?anchorMemberIndex=0').send({
+        timeline: [{ id: 'meeting', description: 'A friendly meeting', date: null }],
+    });
+    const detail = await request(app).get('/api/characters/hero/full');
+    const rows = detail.body.related.characters.filter(record => record.id === 'third');
+    expect(rows.find(record => record.relationship.relationAnchorIndex === 0).relationship.timeline).toHaveLength(1);
+    expect(rows.find(record => record.relationship.relationAnchorIndex === 1).relationship.timeline).toEqual([]);
 });
 
 test('does not expose relation details from a locked source or target', async () => {
     await manifestCrudService.insert('CharacterPlace', {
-        character_id: 'hero', place_id: 'village', arrived_date: '0200200001_age-of-descent-default',
+        character_id: 'hero', place_id: 'village',
         short_description: 'Hero visited', visibility_direction: 'first_to_second',
+        timeline: [{ id: 'hidden', description: 'Hidden timeline detail', date: null }],
     });
     await manifestCrudService.update('Character', { id: 'hero' }, { intelligence: 1 });
     const list = await request(app).get('/api/places/village/characters').set('x-role', 'player');
     expect(list.status).toBe(404);
     const specific = await request(app)
-        .get('/api/characters/hero/places/village?arrived_date=0200200001_age-of-descent-default').set('x-role', 'player');
+        .get('/api/characters/hero/places/village').set('x-role', 'player');
     expect(specific.status).toBe(404);
     const detail = await request(app).get('/api/characters/hero/full').set('x-role', 'player');
     expect(detail.body.related.places).toEqual([{ id: 'village', name: 'Village', locked: true }]);
+    expect(JSON.stringify(detail.body)).not.toContain('Hidden timeline detail');
 });
 
 test('creates and edits a simple relation from its second member', async () => {
@@ -151,11 +222,11 @@ test('creates and edits a simple relation from its second member', async () => {
 
 test('players cannot propose a direction change', async () => {
     await manifestCrudService.insert('CharacterPlace', {
-        character_id: 'hero', place_id: 'village', arrived_date: '0200200001_age-of-descent-default',
+        character_id: 'hero', place_id: 'village',
         short_description: 'Hero visited', visibility_direction: 'first_to_second',
     });
     const response = await request(app)
-        .post('/api/characters/hero/places/village/propose?arrived_date=0200200001_age-of-descent-default')
+        .post('/api/characters/hero/places/village/propose')
         .set('x-role', 'player')
         .send({ visibility_direction: 'both' });
     expect(response.status).toBe(400);

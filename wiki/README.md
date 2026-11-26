@@ -19,11 +19,15 @@ Vue 3 + TypeScript frontend for browsing manifest-driven campaign data from the 
 - Edit entity core data or all exposition fields in place. Players can keep
   amending their own pending entity proposal until it is reviewed; restoring all
   proposed fields to their accepted values withdraws the proposal.
-- Collapsible relation sections with support for simple, relationship, and history relation payload shapes.
+- Collapsible relation sections with support for simple and metadata-bearing connections.
+- Character, deity, item, organization and place connections that previously
+  required historical dates now have an optional timeline. DMs can add,
+  reorder and remove entries and add or change dates later. Character-to-character
+  relationships are independent and always run from their origin to their target.
 - DMs can create and manage relations from either member's detail page, including incoming
-  relations, and set visibility direction separately for each record or history entry.
-  New relations default to outward from the current page; migrated records start bidirectional.
-- Detail pages group outgoing and bidirectional connections under Related Data. DMs see
+  relations, and set visibility direction for other connection types.
+  New relations default to outward from the current page.
+- Detail pages group outgoing and bidirectional connections under Outgoing Related Data. DMs see
   incoming-only connections separately under Incoming Related Data; players see only outgoing
   connections.
 

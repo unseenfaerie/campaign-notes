@@ -3,7 +3,7 @@ import type { DateSystem } from '../utils/loreDate'
 
 export type EntityFieldSchema = {
     name: string
-    type: 'string' | 'number' | 'boolean' | 'loreDate' | 'realDate'
+    type: 'string' | 'number' | 'boolean' | 'loreDate' | 'realDate' | 'timeline'
     required: boolean
     primary: boolean
     ref?: string
@@ -33,6 +33,7 @@ export type RelationFormSchema = {
     relationName: string
     anchorMemberIndex: number
     kind: 'simple' | 'relationship' | 'history'
+    timeline?: boolean
     relatedEntityRoute: string
     relatedEntityLabel: string
     historyKey?: string | null

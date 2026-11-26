@@ -10,6 +10,7 @@ import FieldList from '../components/FieldList.vue'
 import LastEditedStamp from '../components/LastEditedStamp.vue'
 import ProposalBanner from '../components/ProposalBanner.vue'
 import ProposalViewToggle from '../components/ProposalViewToggle.vue'
+import RelationTimeline from '../components/RelationTimeline.vue'
 import { ApiError } from '../services/apiClient'
 import {
   getEntityFull,
@@ -184,7 +185,7 @@ const entityFactsFields = computed(() =>
 )
 
 const relatedSectionGroups = computed(() => [
-  { key: 'outgoing', title: 'Related Data', sections: relatedSections.value.outgoing },
+  { key: 'outgoing', title: 'Outgoing Related Data', sections: relatedSections.value.outgoing },
   ...(auth.isAdmin.value
     ? [{ key: 'incoming', title: 'Incoming Related Data', sections: relatedSections.value.incoming }]
     : []),
@@ -224,7 +225,7 @@ function historyPayload(record: DomainEntity): DomainEntity[] {
 // Fields returned by the API that aren't manifest-declared display fields (audit stamp columns
 // live on every table, pendingProposal is attached per-request) and so need explicit stripping
 // here rather than relying on the schema-driven hidden/expository filters used elsewhere.
-const NON_DISPLAY_FIELDS = ['id', 'pendingProposal', 'last_edited_by', 'last_edited_at', 'relationAnchorIndex', 'visibility_direction']
+const NON_DISPLAY_FIELDS = ['id', 'pendingProposal', 'last_edited_by', 'last_edited_at', 'relationAnchorIndex', 'visibility_direction', 'timeline']
 
 function withoutIdField(record: DomainEntity): DomainEntity {
   return Object.fromEntries(Object.entries(record).filter(([key]) => !NON_DISPLAY_FIELDS.includes(key)))
@@ -545,7 +546,7 @@ function confirmDeleteHistoryEntry(relatedRoute: string, record: DomainEntity, h
 }
 
 function editableFields(fields: EntityFieldSchema[]): EntityFieldSchema[] {
-  return fields.filter((field) => !field.primary)
+  return fields.filter((field) => !field.primary && !field.hidden)
 }
 
 function proposableFields(fields: EntityFieldSchema[]): EntityFieldSchema[] {
@@ -1416,7 +1417,7 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
               </h4>
               <div v-if="!record.locked" class="row-actions-end">
                 <DirectionSelect
-                  v-if="auth.isAdmin.value && !isHistoryKind(relatedRoute) && !pendingProposalOf(relationPayload(record))"
+                  v-if="auth.isAdmin.value && !isHistoryKind(relatedRoute) && !findRelationSchema(relatedRoute)?.fields.find(field => field.name === 'visibility_direction')?.hidden && !pendingProposalOf(relationPayload(record))"
                   :direction="relationPayload(record).visibility_direction"
                   :anchor-member-index="relationAnchor(relatedRoute, relationPayload(record))"
                   :subject="relatedRecordLabel(record)"
@@ -1597,6 +1598,19 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                 @update:model-value="(mode) => setViewMode(recordKey(group.key, relatedRoute, record, index), mode)"
               />
             </template>
+
+            <RelationTimeline
+              v-if="findRelationSchema(relatedRoute)?.timeline"
+              :entity-route="entityRoute"
+              :entity-id="id"
+              :related-route="relatedRoute"
+              :related-id="relatedRecordId(record)"
+              :anchor-member-index="relatedRoute === entityRoute ? relationAnchor(relatedRoute, relationPayload(record)) : undefined"
+              :timeline="relationPayload(record).timeline"
+              :date-system="dateSystem"
+              :editable="auth.isAdmin.value && !pendingProposalOf(relationPayload(record))"
+              @updated="loadDetail({ silent: true })"
+            />
 
             <template v-if="historyDisplayPayload(record).length > 0">
               <p class="meta-title">History records</p>

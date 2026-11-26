@@ -2,6 +2,7 @@ const sqlite3 = require('sqlite3');
 const { createHash } = require('crypto');
 const { domainManifest } = require('../../common/domainManifest');
 const { formatLoreDate, isValidLoreDate } = require('../../common/dateSystem');
+const { validateTimeline } = require('../../common/relationTimeline');
 
 function openDatabase(path) {
     return new Promise((resolve, reject) => {
@@ -200,6 +201,15 @@ function createRenderer(campaign, { multiPage = false } = {}) {
         ).join('')}</dl>`;
     }
 
+    function timeline(row, definition) {
+        if (!definition.timeline || !row.timeline) return '';
+        const entries = validateTimeline(typeof row.timeline === 'string' ? JSON.parse(row.timeline) : row.timeline);
+        if (!entries.length) return '';
+        return `<h4>Timeline</h4><ol>${entries.map(entry =>
+            `<li><strong>${entry.date ? escapeHtml(formatLoreDate(entry.date)) : 'Undated'}</strong>: ${prose(entry.description)}</li>`
+        ).join('')}</ol>`;
+    }
+
     const connections = new Map();
     function addConnection(key, html) {
         if (!connections.has(key)) connections.set(key, []);
@@ -217,7 +227,7 @@ function createRenderer(campaign, { multiPage = false } = {}) {
                 const missing = definition.members.map((member) =>
                     `missing ${escapeHtml(member.entity)} (${escapeHtml(row[member.key])})`
                 ).join(' and ');
-                unresolved.push(`<li>${escapeHtml(name)}: ${missing} (${escapeHtml(row.visibility_direction)})${fields(row, payload)}</li>`);
+                unresolved.push(`<li>${escapeHtml(name)}: ${missing} (${escapeHtml(row.visibility_direction)})${fields(row, payload)}${timeline(row, definition)}</li>`);
                 continue;
             }
             for (const index of [0, 1]) {
@@ -233,7 +243,7 @@ function createRenderer(campaign, { multiPage = false } = {}) {
                     : name === 'EventSequence'
                         ? (index === 0 ? 'Next' : 'Previous')
                         : definition.members[index].route;
-                addConnection(members[index].key, `<li><strong>${target}</strong> (${escapeHtml(relationLabel)}; ${direction})${fields(row, payload)}</li>`);
+                addConnection(members[index].key, `<li><strong>${target}</strong> (${escapeHtml(relationLabel)}; ${direction})${fields(row, payload)}${timeline(row, definition)}</li>`);
             }
         }
     }

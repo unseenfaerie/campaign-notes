@@ -1,12 +1,10 @@
 // relationship types:
 // simple - no metadata, just association between two entities
 // relationship - association between two entities with metadata
-// history - association between two entities with metadata and a date key, 
-// meaning that there may be many records for a given pair
 const { getEnumValues } = require('./enums');
 
 const domainManifest = {
-    schemaVersion: 9,
+    schemaVersion: 11,
     entities: {
         Character: {
             table: 'characters',
@@ -189,87 +187,73 @@ const domainManifest = {
             payload: {},
         },
         CharacterDeity: {
-            kind: 'history',
+            kind: 'relationship',
+            timeline: true,
             table: 'character_deities',
             members: [
                 { entity: 'Character', key: 'character_id', route: 'deities' },
                 { entity: 'Deity', key: 'deity_id', route: 'characters' },
             ],
-            historyKey: 'adopted_date',
-            historyEndKey: 'dissolution_date',
-            keys: ['character_id', 'deity_id', 'adopted_date'],
+            keys: ['character_id', 'deity_id'],
             payload: {
-                adopted_date: { type: 'loreDate', required: true, access: { playerProposable: false } },
-                dissolution_date: { type: 'loreDate', access: { playerProposable: false } },
                 relationship_type: { type: 'string' },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
             },
         },
         CharacterItem: {
-            kind: 'history',
+            kind: 'relationship',
+            timeline: true,
             table: 'character_items',
             members: [
                 { entity: 'Character', key: 'character_id', route: 'items' },
                 { entity: 'Item', key: 'item_id', route: 'characters' },
             ],
-            historyKey: 'acquired_date',
-            historyEndKey: 'relinquished_date',
-            keys: ['character_id', 'item_id', 'acquired_date'],
+            keys: ['character_id', 'item_id'],
             payload: {
-                acquired_date: { type: 'loreDate', required: true, access: { playerProposable: false } },
-                relinquished_date: { type: 'loreDate', access: { playerProposable: false } },
                 short_description: { type: 'string', required: true, expository: true },
             },
         },
         CharacterOrganization: {
-            kind: 'history',
+            kind: 'relationship',
+            timeline: true,
             table: 'character_organizations',
             members: [
                 { entity: 'Character', key: 'character_id', route: 'organizations' },
                 { entity: 'Organization', key: 'organization_id', route: 'characters' },
             ],
-            historyKey: 'joined_date',
-            historyEndKey: 'left_date',
-            keys: ['character_id', 'organization_id', 'joined_date'],
+            keys: ['character_id', 'organization_id'],
             payload: {
-                joined_date: { type: 'loreDate', required: true, access: { playerProposable: false } },
-                left_date: { type: 'loreDate', access: { playerProposable: false } },
                 role: { type: 'string' },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
             },
         },
         CharacterPlace: {
-            kind: 'history',
+            kind: 'relationship',
+            timeline: true,
             table: 'character_places',
             members: [
                 { entity: 'Character', key: 'character_id', route: 'places' },
                 { entity: 'Place', key: 'place_id', route: 'characters' },
             ],
-            historyKey: 'arrived_date',
-            historyEndKey: 'left_date',
-            keys: ['character_id', 'place_id', 'arrived_date'],
+            keys: ['character_id', 'place_id'],
             payload: {
-                arrived_date: { type: 'loreDate', required: true, access: { playerProposable: false } },
-                left_date: { type: 'loreDate', access: { playerProposable: false } },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
             },
         },
         CharacterRelationship: {
-            kind: 'history',
+            kind: 'relationship',
+            timeline: true,
+            fixedVisibilityDirection: 'first_to_second',
             table: 'character_relationships',
             members: [
                 { entity: 'Character', key: 'character_id', route: 'characters' },
                 { entity: 'Character', key: 'related_id', route: 'characters' },
             ],
-            historyKey: 'established_date',
-            historyEndKey: 'dissolution_date',
-            keys: ['character_id', 'related_id', 'established_date'],
+            keys: ['character_id', 'related_id'],
             payload: {
-                established_date: { type: 'loreDate', required: true, access: { playerProposable: false } },
-                dissolution_date: { type: 'loreDate', access: { playerProposable: false } },
                 relationship_type: { type: 'string', required: true, enum: 'characterRelationship' },
                 short_description: { type: 'string', required: true, expository: true },
                 long_explanation: { type: 'string', expository: true },
@@ -369,11 +353,21 @@ const domainManifest = {
 
 // Direction is stored relative to the stable order of the relation's member keys.
 for (const relation of Object.values(domainManifest.relations)) {
+    if (relation.timeline) {
+        relation.payload.timeline = {
+            type: 'timeline',
+            hidden: true,
+            access: { playerProposable: false },
+        };
+    }
     relation.payload.visibility_direction = {
         type: 'string',
         required: true,
-        enum: ['first_to_second', 'second_to_first', 'both'],
-        default: 'both',
+        enum: relation.fixedVisibilityDirection
+            ? [relation.fixedVisibilityDirection]
+            : ['first_to_second', 'second_to_first', 'both'],
+        default: relation.fixedVisibilityDirection || 'both',
+        hidden: Boolean(relation.fixedVisibilityDirection),
         access: { playerProposable: false },
     };
 }
