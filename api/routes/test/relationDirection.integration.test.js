@@ -10,6 +10,7 @@ jest.mock('../../data/authRepository', () => ({
 }));
 
 const { db } = require('../../data/db');
+const { listAnchoredCharacterIdsByUserId } = require('../../data/authRepository');
 const { manifestCrudService } = require('../../data/genericCrudService');
 const { buildAllCreateTableSql } = require('../../data/schemaBuilder');
 const { domainManifest } = require('../../../common/domainManifest');
@@ -34,6 +35,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+    listAnchoredCharacterIdsByUserId.mockResolvedValue(['hero']);
     await runStatement(db, 'DELETE FROM edit_proposals');
     for (const relation of Object.values(domainManifest.relations)) {
         await runStatement(db, `DELETE FROM ${relation.table}`);
@@ -238,8 +240,72 @@ test('timeline proposals respect character perspective and player access', async
     expect((await request(app).post('/api/characters/hero/characters/third/propose?anchorMemberIndex=1')
         .set('x-role', 'player').send({ timeline: entries })).status).toBe(404);
     await manifestCrudService.update('Character', { id: 'third' }, { player_character: true });
-    expect((await request(app).post('/api/characters/hero/characters/third/propose?anchorMemberIndex=0')
-        .set('x-role', 'player').send({ timeline: [] })).status).toBe(403);
+    const clear = await request(app).post('/api/characters/hero/characters/third/propose?anchorMemberIndex=0')
+        .set('x-role', 'player').send({ timeline: [] });
+    expect(clear.status).toBe(201);
+    expect((await request(app).post(`/api/proposals/${clear.body.id}/accept`)).status).toBe(200);
+});
+
+test('players can propose article and timeline edits to their outgoing relationship with another player', async () => {
+    for (const [source, target] of [['hero', 'third'], ['third', 'hero'], ['third', 'other']]) {
+        expect((await request(app).post(`/api/characters/${source}/characters`).send({
+            id: target, relationship_type: 'friend', short_description: source,
+        })).status).toBe(201);
+    }
+
+    const url = '/api/characters/hero/characters/third/propose?anchorMemberIndex=0';
+    const article = await request(app).post(url).set('x-role', 'player')
+        .send({ short_description: 'Close friends', long_explanation: 'Their story' });
+    expect(article.status).toBe(201);
+    expect((await request(app).post(`/api/proposals/${article.body.id}/accept`)).status).toBe(200);
+
+    const timeline = [{ id: 'meeting', description: 'Met', date: null }];
+    const proposal = await request(app).post(url).set('x-role', 'player').send({ timeline });
+    expect(proposal.status).toBe(201);
+    expect((await request(app).post(`/api/proposals/${proposal.body.id}/accept`)).status).toBe(200);
+    expect(await manifestCrudService.getOne('CharacterRelationship', {
+        character_id: 'hero', related_id: 'third',
+    })).toMatchObject({ short_description: 'Close friends', long_explanation: 'Their story', timeline });
+    expect(await manifestCrudService.getOne('CharacterRelationship', {
+        character_id: 'third', related_id: 'hero',
+    })).toMatchObject({ short_description: 'third', timeline: [] });
+
+    expect((await request(app).post('/api/characters/hero/characters/third/propose?anchorMemberIndex=1')
+        .set('x-role', 'player').send({ long_explanation: 'Not mine' })).status).toBe(404);
+    expect((await request(app).post('/api/characters/third/characters/hero/propose')
+        .set('x-role', 'player').send({ long_explanation: 'Not mine' })).status).toBe(403);
+    expect((await request(app).post('/api/characters/third/characters/other/propose')
+        .set('x-role', 'player').send({ long_explanation: 'Not mine' })).status).toBe(403);
+    expect((await request(app).post('/api/characters/third/propose')
+        .set('x-role', 'player').send({ long_explanation: 'Not mine' })).status).toBe(403);
+    await request(app).post('/api/characters/third/places').send({
+        id: 'village', short_description: 'Visited',
+    });
+    expect((await request(app).post('/api/characters/third/places/village/propose')
+        .set('x-role', 'player').send({ long_explanation: 'Not mine' })).status).toBe(403);
+});
+
+test('owned outgoing relationships still require a fully visible target', async () => {
+    await request(app).post('/api/characters/hero/characters').send({
+        id: 'third', relationship_type: 'friend', short_description: 'Friends',
+    });
+    await manifestCrudService.update('Character', { id: 'hero' }, { intelligence: 1 });
+    const response = await request(app).post('/api/characters/hero/characters/third/propose')
+        .set('x-role', 'player').send({ timeline: [{ id: 'meeting', description: 'Met', date: null }] });
+    expect(response.status).toBe(404);
+});
+
+test('relationship ownership is independent of the selected viewing character', async () => {
+    listAnchoredCharacterIdsByUserId.mockResolvedValue(['hero', 'other']);
+    for (const [source, target] of [['hero', 'other'], ['other', 'third']]) {
+        expect((await request(app).post(`/api/characters/${source}/characters`).send({
+            id: target, relationship_type: 'friend', short_description: source,
+        })).status).toBe(201);
+    }
+    const proposal = await request(app).post('/api/characters/other/characters/third/propose')
+        .set('x-role', 'player').set('x-viewing-character', 'hero')
+        .send({ long_explanation: 'Other character perspective' });
+    expect(proposal.status).toBe(201);
 });
 
 test('keeps timelines separate between character perspectives', async () => {

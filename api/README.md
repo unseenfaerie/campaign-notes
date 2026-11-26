@@ -144,6 +144,10 @@ permitted directions within their viewing character's intelligence-based hop
 limit; detail pages show outgoing relations only when targets are visible or
 locked. Public entities remain independently visible. DMs can see and edit
 both directions. Direction cannot be proposed.
+Players can propose article and timeline edits to a visible outgoing
+character/character relationship originating from any of their own characters,
+including when its target belongs to another player. This does not grant edit
+access to the target character or its outgoing relationships.
 
 Place containment is a simple self-relation with `child_id` as member 0 and
 `parent_id` as member 1. Create it from either place with

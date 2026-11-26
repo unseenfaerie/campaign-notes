@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert'
 import { after, before, test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { createSSRApp, h } from 'vue'
+import { createRenderer, createSSRApp, h, nextTick, ssrContextKey } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 import { createServer } from 'vite'
 
@@ -40,4 +40,63 @@ test('keeps an unset optional date within its named group', async () => {
     }))
 
     assert.match(html, /<fieldset[^>]*>[\s\S]*<legend[^>]*>\s*Birthday[\s\S]*Set date[\s\S]*<\/fieldset>/)
+})
+
+test('can open an unset optional date directly', async () => {
+    const html = await renderToString(createSSRApp({
+        render: () => h(LoreDateInput, { label: 'Date', modelValue: '', initiallyOpen: true }),
+    }))
+
+    assert.match(html, /<label[^>]*>Age<\/label>/)
+    assert.match(html, /Clear date/)
+    assert.doesNotMatch(html, /Set date/)
+})
+
+test('reports incomplete and invalid dates without emitting them as values', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = async () => Response.json({
+        dateSystem: {
+            daysPerYear: 365,
+            eras: [{ id: 'age', order: 1, name: 'First Age', abbreviation: 'FA', durationYears: null }],
+            calendars: [{ id: 'cal', eraId: 'age', name: 'Calendar', months: [{ name: 'Spring', days: 30 }] }],
+        },
+    })
+    const renderer = createRenderer({
+        createComment: () => ({}),
+        insert: () => {},
+        remove: () => {},
+        parentNode: () => null,
+        nextSibling: () => null,
+    })
+    const validity = []
+    const values = []
+    const app = renderer.createApp({ ...LoreDateInput, render: () => null }, {
+        label: 'Date', modelValue: '', initiallyOpen: true,
+        onValidityChange: valid => validity.push(valid),
+        'onUpdate:modelValue': value => values.push(value),
+    })
+    app.provide(ssrContextKey, { modules: new Set() })
+    try {
+        const editor = app.mount({}).$.setupState
+        await new Promise(resolve => setImmediate(resolve))
+        assert.equal(validity.at(-1), false)
+        editor.eraId = 'age'
+        await nextTick()
+        editor.monthIndex = 0
+        await nextTick()
+        assert.equal(validity.at(-1), true)
+        assert.equal(values.at(-1), '0100001001_cal')
+        const count = values.length
+        editor.year = 0
+        await nextTick()
+        assert.equal(validity.at(-1), false)
+        assert.equal(values.length, count)
+        editor.year = 100000
+        await nextTick()
+        assert.equal(validity.at(-1), false)
+        assert.equal(values.length, count)
+    } finally {
+        app.unmount()
+        globalThis.fetch = originalFetch
+    }
 })

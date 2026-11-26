@@ -13,12 +13,14 @@ const props = defineProps<{
   modelValue: string
   label: string
   required?: boolean
+  initiallyOpen?: boolean
 }>()
 
 const inputId = useId()
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
+  'validity-change': [valid: boolean]
 }>()
 
 const dateSystem = ref<DateSystem | null>(null)
@@ -27,7 +29,7 @@ const calendarId = ref('')
 const monthIndex = ref<number | string>('')
 const day = ref(1)
 const year = ref(1)
-const isDateSet = ref(Boolean(props.required || props.modelValue))
+const isDateSet = ref(Boolean(props.required || props.modelValue || props.initiallyOpen))
 let preserveMonthOnCalendarChange = false
 
 const calendarsForEra = computed(() => (dateSystem.value ? getCalendarsForEra(dateSystem.value, eraId.value) : []))
@@ -79,23 +81,29 @@ function initializeDefaults() {
   year.value = 1
 }
 
-function emitEncodedValue() {
-  if (!isDateSet.value || !dateSystem.value || !calendarId.value || typeof monthIndex.value !== 'number') {
-    return
+function encodedValue(): string | null {
+  if (!isDateSet.value || !dateSystem.value || !calendarId.value || typeof monthIndex.value !== 'number' ||
+      !Number.isInteger(year.value) || year.value < 1 || year.value > 99999) {
+    return null
   }
 
   try {
-    const encoded = encodeLoreDate(dateSystem.value, {
+    return encodeLoreDate(dateSystem.value, {
       eraId: eraId.value,
       year: year.value,
       calendarId: calendarId.value,
       monthIndex: monthIndex.value,
       day: day.value,
     })
-    emit('update:modelValue', encoded)
   } catch {
-    // Incomplete/invalid selection; wait for the user to finish choosing.
+    return null
   }
+}
+
+function emitEncodedValue() {
+  const encoded = encodedValue()
+  emit('validity-change', Boolean(encoded))
+  if (encoded) emit('update:modelValue', encoded)
 }
 
 function setDate() {
@@ -118,6 +126,7 @@ onMounted(async () => {
     initializeDefaults()
     emitEncodedValue()
   }
+  emit('validity-change', Boolean(encodedValue()))
 })
 
 watch(eraId, () => {

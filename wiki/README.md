@@ -24,9 +24,13 @@ Vue 3 + TypeScript frontend for browsing manifest-driven campaign data from the 
 - Character, deity, item, organization and place connections that previously
   required historical dates now have an optional timeline. DMs can add,
   reorder and remove entries and add or change dates later. Players can propose
-  the same timeline edits for DM review. Entries appear as
+  the same timeline edits for DM review. Use Add Date to open an optional date
+  picker, use the pencils to edit existing descriptions and dates, and drag entry
+  handles (or use the arrow keys) to reorder. Entries appear as
   nodes on a vertical timeline, with dates shown when present. Character-to-character
   relationships are independent and always run from their origin to their target.
+  Players can propose article and timeline edits to their own outgoing character
+  relationships, including those targeting another player's character.
 - DMs can create and manage relations from either member's detail page, including incoming
   relations, and set visibility direction for other connection types.
   New relations default to outward from the current page.

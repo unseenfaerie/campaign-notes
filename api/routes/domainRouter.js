@@ -1,7 +1,7 @@
 const express = require('express');
 const { domainManifest } = require('../../common/domainManifest');
 const { manifestCrudService } = require('../data/genericCrudService');
-const { findUserById } = require('../data/authRepository');
+const { findUserById, listAnchoredCharacterIdsByUserId } = require('../data/authRepository');
 const { resolveViewingCharacterId, getVisibilityAuth } = require('../utils/viewingCharacterHelpers');
 const { canTraverseRelation, outwardDirection } = require('../utils/relationDirection');
 const {
@@ -442,8 +442,7 @@ function ensurePlayerForProposal(req) {
     return null;
 }
 
-// Players may propose edits to anything they can see except other players' character
-// records (and, transitively, relations that directly involve one of those characters).
+// Players may not propose edits to another player's character record.
 function isForeignPlayerCharacter(entityName, record, anchoredCharacterIds) {
     return Boolean(
         entityName === 'Character' && record && record.player_character && !anchoredCharacterIds.includes(record.id)
@@ -1444,10 +1443,12 @@ router.post('/:entityRoute/:id/:relatedRoute/:relatedId/propose', async (req, re
             return res.status(404).json({ error: 'Record not found' });
         }
 
-        if (
+        const ownedOutgoingRelationship = relationName === 'CharacterRelationship' && anchorMemberIndex === 0 &&
+            (await listAnchoredCharacterIdsByUserId(req.auth.userId)).includes(sourceId);
+        if (!ownedOutgoingRelationship && (
             isForeignPlayerCharacter(entityName, sourceEntity, viewingCharacterIds) ||
             isForeignPlayerCharacter(relatedMember.entity, relatedEntity, viewingCharacterIds)
-        ) {
+        )) {
             return res.status(403).json({ error: "Cannot propose edits to another player's character" });
         }
 
