@@ -99,6 +99,23 @@ Writes accepted by the new service before a failed health check are lost on
 rollback; avoid using the application until deployment succeeds. Abrupt machine
 failure or a forcibly terminated activation requires manual recovery.
 
+### Upgrading a version 9 database
+
+Before deploying, take and verify an off-host backup and rehearse the upgrade on
+a copy. Migration 10 blocks on pending relation proposals for CharacterDeity,
+CharacterItem, CharacterOrganization, CharacterPlace, or CharacterRelationship;
+resolve them first. It also rejects conflicting visibility directions within a
+historical pair for the first four relation types and invalid legacy dates.
+
+All character-to-character relationships are forced to `first_to_second`,
+including mixed or reverse-only histories. This can both expose information
+from the first character and remove visibility from the second, including
+indirectly reachable information; review player access before allowing use.
+Historical rows are merged by ordered pair: descriptions become timeline
+entries, but only the latest row's relationship type and other current fields
+are retained. Keep the backup for comparison and cleanup. The health check does
+not verify migrated content or player visibility.
+
 The temporary deployment snapshot is not a substitute for regular backups:
 
 ```bash

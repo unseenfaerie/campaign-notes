@@ -32,7 +32,8 @@ function convertLegacyRows(name, rows) {
     return [...groups.values()].map(group => {
         group.sort((a, b) => String(a[legacy.start]).localeCompare(String(b[legacy.start])));
         const directions = new Set(group.map(row => row.visibility_direction));
-        if (directions.size !== 1 || !['first_to_second', 'second_to_first', 'both'].includes(group[0].visibility_direction)) {
+        if (name !== 'CharacterRelationship' &&
+            (directions.size !== 1 || !['first_to_second', 'second_to_first', 'both'].includes(group[0].visibility_direction))) {
             throw new Error(`Conflicting visibility directions in ${definition.table} for ${keys.map(key => group[0][key]).join(', ')}; review the rows before migrating`);
         }
         const latest = group[group.length - 1];
@@ -58,6 +59,7 @@ function convertLegacyRows(name, rows) {
         for (const field of [...keys, ...Object.keys(definition.payload), 'last_edited_by', 'last_edited_at']) {
             record[field] = field === 'timeline' ? JSON.stringify(timeline) : (latest[field] ?? null);
         }
+        if (name === 'CharacterRelationship') record.visibility_direction = 'first_to_second';
         return record;
     });
 }

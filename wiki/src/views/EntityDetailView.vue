@@ -185,7 +185,7 @@ const entityFactsFields = computed(() =>
 )
 
 const relatedSectionGroups = computed(() => [
-  { key: 'outgoing', title: 'Outgoing Related Data', sections: relatedSections.value.outgoing },
+  { key: 'outgoing', title: 'Related Data', sections: relatedSections.value.outgoing },
   ...(auth.isAdmin.value
     ? [{ key: 'incoming', title: 'Incoming Related Data', sections: relatedSections.value.incoming }]
     : []),
