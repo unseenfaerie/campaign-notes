@@ -45,7 +45,8 @@ dd { margin-left: 1em; white-space: pre-wrap; overflow-wrap: break-word; }
 .prose { white-space: pre-wrap; overflow-wrap: break-word; }
 .lead { font-size: 1.05em; }
 .connections li, .entry-list li { margin: .5em 0; }
-.connections dl { padding-left: 1em; border-left: 2px solid #c8ccd1; }
+.connections > ul > li > strong, .connections > ul > li > a { font-size: 1.2em; }
+.connections dd { margin-left: 0; }
 .pagination { margin: 1em 0; }
 .pagination a { margin: 0 .5em; }
 .clear { clear: both; }
