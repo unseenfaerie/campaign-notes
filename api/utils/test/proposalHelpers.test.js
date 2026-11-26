@@ -82,6 +82,14 @@ describe('proposalHelpers', () => {
             const diff = diffAgainstCurrent({ short_description: 'Same' }, { short_description: 'Same' });
             expect(diff).toEqual({});
         });
+
+        it('compares timeline contents and order rather than array identity', () => {
+            const first = { id: 'a', description: 'First', date: null };
+            const second = { id: 'b', description: 'Second', date: null };
+            const current = { timeline: [first, second] };
+            expect(diffAgainstCurrent({ timeline: [{ ...first }, { ...second }] }, current)).toEqual({});
+            expect(diffAgainstCurrent({ timeline: [second, first] }, current)).toEqual({ timeline: [second, first] });
+        });
     });
 
     describe('mergeProposedView', () => {

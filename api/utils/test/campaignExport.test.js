@@ -56,11 +56,11 @@ describe('offline campaign export', () => {
         await run(database, `INSERT INTO aliases (entity_type, entity_id, alias, is_public)
             VALUES ('character', 'hero', 'Hero', 0)`);
         await run(database, `INSERT INTO character_places
-            (character_id, place_id, arrived_date, short_description, visibility_direction)
-            VALUES (?, ?, ?, ?, ?)`, ['hero', 'town', '0300001001_age-of-light-default', 'Hero arrived.', 'first_to_second']);
-        await run(database, `INSERT INTO character_places
-            (character_id, place_id, arrived_date, short_description, visibility_direction)
-            VALUES (?, ?, ?, ?, ?)`, ['hero', 'town', '0300001002_age-of-light-default', 'Returned.', 'both']);
+            (character_id, place_id, timeline, short_description, visibility_direction)
+            VALUES (?, ?, ?, ?, ?)`, ['hero', 'town', JSON.stringify([
+                { id: 'one', date: '0300001001_age-of-light-default', description: 'Hero arrived.' },
+                { id: 'two', date: '0300001002_age-of-light-default', description: 'Returned.' },
+            ]), 'Hero arrived.', 'first_to_second']);
         await run(database, `INSERT INTO posts VALUES (1, ?, ?, ?, 'author')`,
             ['News', 'Hero visits Town.', '2026-01-01T00:00:00Z']);
         await close(database);
@@ -115,8 +115,9 @@ describe('offline campaign export', () => {
         const campaign = await loadCampaign(databasePath);
         campaign.entities.Alias.push({ id: 2, entity_type: 'character', entity_id: 'second', alias: 'Hero' });
         campaign.relations.CharacterPlace[0].place_id = 'missing';
-        campaign.relations.CharacterPlace[1].place_id = 'missing';
-        campaign.relations.CharacterPlace[1].character_id = 'also-missing';
+        campaign.relations.CharacterPlace.push({
+            ...campaign.relations.CharacterPlace[0], place_id: 'missing', character_id: 'also-missing',
+        });
         campaign.entities.Alias.push({ id: 3, entity_type: 'character', entity_id: 'missing', alias: 'Lost alias' });
         const html = createRenderer(campaign);
         expect(html).toContain('<p class="prose">Hero visits ');

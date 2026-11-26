@@ -20,7 +20,7 @@ const tableColumns = {
   spheres: 3,
   character_deities: 7,
   character_items: 5,
-  character_organizations: 6,
+  character_organizations: 7,
   character_places: 6,
   character_relationships: 7,
   deity_spheres: 2,
@@ -41,7 +41,7 @@ const insertRegex = /INSERT OR IGNORE INTO (\w+) \([^)]+\) VALUES([\s\S]*?);/g;
 let foundIssues = false;
 let match;
 while ((match = insertRegex.exec(seedContent)) !== null) {
-  const table = match[1];
+  const table = match[1].replace(/^seed_/, '');
   const valuesBlock = match[2];
   const expectedCount = tableColumns[table];
   if (!expectedCount) continue;

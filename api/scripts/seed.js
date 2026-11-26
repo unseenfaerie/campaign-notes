@@ -3,6 +3,8 @@ const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
 const { initializeDatabase } = require('../data/db');
 const { dbPath } = require('../config');
+const { domainManifest } = require('../../common/domainManifest');
+const { legacyRelations, insertConvertedRows } = require('../migrations/010-relation-timelines');
 
 const { seedUsers } = loadSeedUsersModule();
 
@@ -192,7 +194,18 @@ async function main() {
 
   // // Join Tables
 
-  await runSql(`Inserting character_deities...`, `INSERT OR IGNORE INTO character_deities (character_id, deity_id, adopted_date, dissolution_date, relationship_type, short_description, long_explanation) VALUES
+  for (const [name, legacy] of Object.entries(legacyRelations)) {
+    const relation = domainManifest.relations[name];
+    const fields = relation.members.map(member => `${member.key} TEXT`);
+    fields.push(`${legacy.start} TEXT`, `${legacy.end} TEXT`);
+    for (const field of Object.keys(relation.payload)) {
+      if (field !== 'timeline' && field !== 'visibility_direction') fields.push(`${field} TEXT`);
+    }
+    fields.push(`visibility_direction TEXT DEFAULT '${relation.fixedVisibilityDirection || 'both'}'`, 'last_edited_by TEXT', 'last_edited_at TEXT');
+    await runSql(`Preparing ${relation.table} seed data...`, `CREATE TEMP TABLE seed_${relation.table} (${fields.join(', ')})`);
+  }
+
+  await runSql(`Inserting character_deities...`, `INSERT OR IGNORE INTO seed_character_deities (character_id, deity_id, adopted_date, dissolution_date, relationship_type, short_description, long_explanation) VALUES
     ('alann-barnett', 'achiel', '0200200001_age-of-descent-default', '', 'patron', 'Short description.', NULL),
     ('alann-barnett', 'doh', '0200200001_age-of-descent-default', '', 'patron', 'Short description.', NULL),
     ('releas-neb', 'wyaris', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'patron', 'Short description.', NULL),
@@ -202,14 +215,14 @@ async function main() {
     ('cormac', 'idona', '0200200001_age-of-descent-default', '', 'patron', 'Short description.', NULL);
   `);
 
-  await runSql(`Inserting character_items...`, `INSERT OR IGNORE INTO character_items (character_id, item_id, acquired_date, relinquished_date, short_description) VALUES
+  await runSql(`Inserting character_items...`, `INSERT OR IGNORE INTO seed_character_items (character_id, item_id, acquired_date, relinquished_date, short_description) VALUES
     ('releas-neb', 'rels-spellbook', '0200195034_age-of-descent-default', '0200200062_age-of-descent-default', 'Gained from his reclusive master in GatUn, then stolen by ruffians in Wavethorn.'),
     ('releas-neb', 'rels-spellbook', '0200200122_age-of-descent-default', NULL, 'Recovered from street ruffians.'),
     ('apollonia-palleday', 'pollys-spellbook', '0200200189_age-of-descent-default', NULL, 'Received from her betrothed, Alaric Evermoon.'),
     ('cormac', 'cormacs-spellbook', '0200195152_age-of-descent-default', NULL, 'Received from his master.');
   `);
 
-  await runSql(`Inserting character_organizations...`, `INSERT OR IGNORE INTO character_organizations (character_id, organization_id, joined_date, left_date, role, short_description, long_explanation) VALUES
+  await runSql(`Inserting character_organizations...`, `INSERT OR IGNORE INTO seed_character_organizations (character_id, organization_id, joined_date, left_date, role, short_description, long_explanation) VALUES
     ('alann-barnett', 'adventurers-guild', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'Dragonbait', 'Joined the Adventurers Guild to protect Wavethorn, left after the Night of Spiders.', NULL),
     ('alann-barnett', 'adventurers-guild', '0200201001_age-of-descent-default', NULL, 'Dragonbait', 'Rejoined due to pressure from the party.', NULL),
     ('releas-neb', 'adventurers-guild', '0200200029_age-of-descent-default', NULL, 'Dragonbait', 'Became a member of the Adventurers Guild.', NULL),
@@ -219,14 +232,14 @@ async function main() {
     ('cormac', 'adventurers-guild', '0200200085_age-of-descent-default', NULL, 'Dragonbait', 'Sworn to protect the realm as a knight.', NULL);
   `);
 
-  await runSql(`Inserting character_places...`, `INSERT OR IGNORE INTO character_places (character_id, place_id, arrived_date, left_date, short_description, long_explanation) VALUES
+  await runSql(`Inserting character_places...`, `INSERT OR IGNORE INTO seed_character_places (character_id, place_id, arrived_date, left_date, short_description, long_explanation) VALUES
     ('alann-barnett', 'wavethorn', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'Hometown and primary setting for early adventures.', NULL),
     ('releas-neb', 'gatun', '0200200029_age-of-descent-default', '0200200057_age-of-descent-default', 'Met his mentor here.', NULL),
     ('durchir', 'wavethorn', '0200200057_age-of-descent-default', '0200200085_age-of-descent-default', 'Frequent visitor due to guild activities.', NULL),
     ('cormac', 'wavethorn', '0200200085_age-of-descent-default', '0200200113_age-of-descent-default', 'Sworn to protect the town.', NULL);
   `);
 
-  await runSql(`Inserting character_relationships...`, `INSERT OR IGNORE INTO character_relationships (character_id, related_id, established_date, dissolution_date, relationship_type, short_description, long_explanation) VALUES
+  await runSql(`Inserting character_relationships...`, `INSERT OR IGNORE INTO seed_character_relationships (character_id, related_id, established_date, dissolution_date, relationship_type, short_description, long_explanation) VALUES
     ('alann-barnett', 'releas-neb', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'friend', 'Short description.', NULL),
     ('alann-barnett', 'durchir', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'associate', 'Short description.', NULL),
     ('alann-barnett', 'cormac', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'friend', 'Short description.', NULL),
@@ -242,6 +255,14 @@ async function main() {
     ('mildred-of-the-mosswood', 'orlaith-of-the-mosswood', '0200191257_age-of-descent-default', NULL, 'student', 'Mildred adopted Orlaith and trained them in Druidic ways.', NULL),
     ('cormac', 'alann-barnett', '0200200001_age-of-descent-default', '0200200336_age-of-descent-default', 'friend', 'Short description.', NULL);
   `);
+
+  for (const name of Object.keys(legacyRelations)) {
+    const table = domainManifest.relations[name].table;
+    const rows = await new Promise((resolve, reject) => {
+      db.all(`SELECT * FROM seed_${table}`, (error, records) => error ? reject(error) : resolve(records));
+    });
+    await insertConvertedRows(db, name, rows, { ignore: true });
+  }
 
   await runSql(`Inserting deity_spheres...`, `INSERT OR IGNORE INTO deity_spheres (deity_id, sphere_id) VALUES
     ('achiel', 'healing-sphere'),

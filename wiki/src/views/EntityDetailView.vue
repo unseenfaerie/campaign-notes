@@ -10,6 +10,7 @@ import FieldList from '../components/FieldList.vue'
 import LastEditedStamp from '../components/LastEditedStamp.vue'
 import ProposalBanner from '../components/ProposalBanner.vue'
 import ProposalViewToggle from '../components/ProposalViewToggle.vue'
+import RelationTimeline from '../components/RelationTimeline.vue'
 import { ApiError } from '../services/apiClient'
 import {
   getEntityFull,
@@ -224,7 +225,7 @@ function historyPayload(record: DomainEntity): DomainEntity[] {
 // Fields returned by the API that aren't manifest-declared display fields (audit stamp columns
 // live on every table, pendingProposal is attached per-request) and so need explicit stripping
 // here rather than relying on the schema-driven hidden/expository filters used elsewhere.
-const NON_DISPLAY_FIELDS = ['id', 'pendingProposal', 'last_edited_by', 'last_edited_at', 'relationAnchorIndex', 'visibility_direction']
+const NON_DISPLAY_FIELDS = ['id', 'pendingProposal', 'last_edited_by', 'last_edited_at', 'relationAnchorIndex', 'visibility_direction', 'timeline']
 
 function withoutIdField(record: DomainEntity): DomainEntity {
   return Object.fromEntries(Object.entries(record).filter(([key]) => !NON_DISPLAY_FIELDS.includes(key)))
@@ -545,7 +546,7 @@ function confirmDeleteHistoryEntry(relatedRoute: string, record: DomainEntity, h
 }
 
 function editableFields(fields: EntityFieldSchema[]): EntityFieldSchema[] {
-  return fields.filter((field) => !field.primary)
+  return fields.filter((field) => !field.primary && !field.hidden)
 }
 
 function proposableFields(fields: EntityFieldSchema[]): EntityFieldSchema[] {
@@ -1385,38 +1386,46 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
 
           <article v-for="(record, index) in records" :key="recordKey(group.key, relatedRoute, record, index)" class="related-record">
             <div class="section-heading-row">
-              <h4>
-                <button
-                  v-if="hasCollapsibleRecordBody(relatedRoute) && !record.locked"
-                  type="button"
-                  class="record-collapse-toggle"
-                  :class="{ 'is-expanded': !isRecordCollapsed(recordKey(group.key, relatedRoute, record, index)) }"
-                  :aria-expanded="!isRecordCollapsed(recordKey(group.key, relatedRoute, record, index))"
-                  :aria-label="isRecordCollapsed(recordKey(group.key, relatedRoute, record, index)) ? 'Expand details' : 'Collapse details'"
-                  @click="toggleRecordCollapse(recordKey(group.key, relatedRoute, record, index))"
-                >
-                  ▸
-                </button>
-                <RouterLink
-                  v-if="relatedRecordId(record)"
-                  :to="{
-                    name: 'entity-detail',
-                    params: { entityRoute: relatedRoute, id: relatedRecordId(record) },
-                  }"
-                >
-                  {{ relatedRecordLabel(record) }}
-                </RouterLink>
-                <template v-else>{{ relatedRecordLabel(record) }}</template>
-                <small v-if="entityRoute === 'places' && relatedRoute === 'places'">
-                  ({{ relationPayload(record).relationAnchorIndex === 0 ? 'Parent' : 'Child' }})
-                </small>
-                <small v-else-if="entityRoute === 'events' && relatedRoute === 'events'">
-                  ({{ relationPayload(record).relationAnchorIndex === 0 ? 'Next' : 'Previous' }})
-                </small>
-              </h4>
+              <div class="inline-edit-heading">
+                <h4>
+                  <button
+                    v-if="hasCollapsibleRecordBody(relatedRoute) && !record.locked"
+                    type="button"
+                    class="record-collapse-toggle"
+                    :class="{ 'is-expanded': !isRecordCollapsed(recordKey(group.key, relatedRoute, record, index)) }"
+                    :aria-expanded="!isRecordCollapsed(recordKey(group.key, relatedRoute, record, index))"
+                    :aria-label="isRecordCollapsed(recordKey(group.key, relatedRoute, record, index)) ? 'Expand details' : 'Collapse details'"
+                    @click="toggleRecordCollapse(recordKey(group.key, relatedRoute, record, index))"
+                  >
+                    ▸
+                  </button>
+                  <RouterLink
+                    v-if="relatedRecordId(record)"
+                    :to="{
+                      name: 'entity-detail',
+                      params: { entityRoute: relatedRoute, id: relatedRecordId(record) },
+                    }"
+                  >
+                    {{ relatedRecordLabel(record) }}
+                  </RouterLink>
+                  <template v-else>{{ relatedRecordLabel(record) }}</template>
+                  <small v-if="entityRoute === 'places' && relatedRoute === 'places'">
+                    ({{ relationPayload(record).relationAnchorIndex === 0 ? 'Parent' : 'Child' }})
+                  </small>
+                  <small v-else-if="entityRoute === 'events' && relatedRoute === 'events'">
+                    ({{ relationPayload(record).relationAnchorIndex === 0 ? 'Next' : 'Previous' }})
+                  </small>
+                </h4>
+                <EditButton
+                  v-if="!record.locked && (isRelationshipKind(relatedRoute) || (isSimpleRelation(relatedRoute) && auth.isAdmin.value)) && canOpenRelationEdit(relatedRoute) && editingRelationKey !== recordKey(group.key, relatedRoute, record, index) && !pendingProposalOf(relationPayload(record))"
+                  :label="`Edit ${relatedRecordLabel(record)} relation`"
+                  :disabled="directionSavingKey !== null"
+                  @click="startEditRelation(relatedRoute, record, recordKey(group.key, relatedRoute, record, index))"
+                />
+              </div>
               <div v-if="!record.locked" class="row-actions-end">
                 <DirectionSelect
-                  v-if="auth.isAdmin.value && !isHistoryKind(relatedRoute) && !pendingProposalOf(relationPayload(record))"
+                  v-if="auth.isAdmin.value && !isHistoryKind(relatedRoute) && !findRelationSchema(relatedRoute)?.fields.find(field => field.name === 'visibility_direction')?.hidden && !pendingProposalOf(relationPayload(record))"
                   :direction="relationPayload(record).visibility_direction"
                   :anchor-member-index="relationAnchor(relatedRoute, relationPayload(record))"
                   :subject="relatedRecordLabel(record)"
@@ -1424,15 +1433,6 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                   :saving="directionSavingKey === recordKey(group.key, relatedRoute, record, index)"
                   @change="changeRelationDirection(relatedRoute, record, relationPayload(record), recordKey(group.key, relatedRoute, record, index), false, $event)"
                 />
-                <button
-                  v-if="(isRelationshipKind(relatedRoute) || (isSimpleRelation(relatedRoute) && auth.isAdmin.value)) && canOpenRelationEdit(relatedRoute) && editingRelationKey !== recordKey(group.key, relatedRoute, record, index) && !pendingProposalOf(relationPayload(record))"
-                  type="button"
-                  class="secondary-button"
-                  :disabled="directionSavingKey !== null"
-                  @click="startEditRelation(relatedRoute, record, recordKey(group.key, relatedRoute, record, index))"
-                >
-                  Edit
-                </button>
                 <button
                   v-if="auth.isAdmin.value && !isHistoryKind(relatedRoute) && editingRelationKey !== recordKey(group.key, relatedRoute, record, index) && !pendingProposalOf(relationPayload(record))"
                   type="button"
@@ -1587,16 +1587,26 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                   </template>
                 </div>
               </div>
-              <LastEditedStamp
-                :by="(relationPayload(record) as any).last_edited_by"
-                :at="(relationPayload(record) as any).last_edited_at"
-              />
-              <ProposalViewToggle
-                v-if="pendingProposalOf(relationPayload(record))"
-                :model-value="getViewMode(recordKey(group.key, relatedRoute, record, index))"
-                @update:model-value="(mode) => setViewMode(recordKey(group.key, relatedRoute, record, index), mode)"
-              />
             </template>
+
+            <ProposalViewToggle
+              v-if="pendingProposalOf(relationPayload(record))"
+              :model-value="getViewMode(recordKey(group.key, relatedRoute, record, index))"
+              @update:model-value="(mode) => setViewMode(recordKey(group.key, relatedRoute, record, index), mode)"
+            />
+            <RelationTimeline
+              v-if="findRelationSchema(relatedRoute)?.timeline"
+              :entity-route="entityRoute"
+              :entity-id="id"
+              :related-route="relatedRoute"
+              :related-id="relatedRecordId(record)"
+              :anchor-member-index="relatedRoute === entityRoute ? relationAnchor(relatedRoute, relationPayload(record)) : undefined"
+              :timeline="relationDisplayPayloadForView(recordKey(group.key, relatedRoute, record, index), record).timeline"
+              :date-system="dateSystem"
+              :editable="auth.isAuthenticated.value && !pendingProposalOf(relationPayload(record))"
+              :is-admin="auth.isAdmin.value"
+              @updated="loadDetail({ silent: true })"
+            />
 
             <template v-if="historyDisplayPayload(record).length > 0">
               <p class="meta-title">History records</p>
@@ -1756,12 +1766,12 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
                       <p><LinkifiedText :text="field.value" /></p>
                     </template>
                   </div>
-                  <LastEditedStamp :by="(historyEntry as any).last_edited_by" :at="(historyEntry as any).last_edited_at" />
                   <ProposalViewToggle
                     v-if="pendingProposalOf(historyEntry)"
                     :model-value="getViewMode(historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry))"
                     @update:model-value="(mode) => setViewMode(historyKey(recordKey(group.key, relatedRoute, record, index), relatedRoute, historyEntry), mode)"
                   />
+                  <LastEditedStamp :by="(historyEntry as any).last_edited_by" :at="(historyEntry as any).last_edited_at" />
                 </div>
               </article>
             </template>
@@ -1777,6 +1787,11 @@ watch(() => [props.entityRoute, props.id], () => loadDetail())
             >
               No relationship metadata or history records for this entry.
             </p>
+            <LastEditedStamp
+              v-if="!isHistoryKind(relatedRoute)"
+              :by="(relationPayload(record) as any).last_edited_by"
+              :at="(relationPayload(record) as any).last_edited_at"
+            />
             </div>
           </article>
         </div>

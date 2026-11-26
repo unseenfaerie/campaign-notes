@@ -234,21 +234,26 @@ describe('metaRouter', () => {
         const itemsRelation = characterRelations.find((relation) => relation.relatedRoute === 'items');
         expect(itemsRelation).toMatchObject({
             relationName: 'CharacterItem',
-            kind: 'history',
+            kind: 'relationship',
+            timeline: true,
             relatedEntityRoute: 'items',
             relatedEntityLabel: 'Items',
         });
 
         const fieldNames = itemsRelation.fields.map((field) => field.name);
         expect(fieldNames).toEqual(
-            expect.arrayContaining(['acquired_date', 'relinquished_date', 'short_description'])
+            expect.arrayContaining(['timeline', 'short_description'])
         );
 
         const selfRelation = characterRelations.find((relation) => relation.relatedRoute === 'characters' && relation.relationName === 'CharacterRelationship');
         expect(selfRelation).toMatchObject({
             relationName: 'CharacterRelationship',
-            kind: 'history',
+            kind: 'relationship',
+            timeline: true,
             relatedEntityRoute: 'characters',
+        });
+        expect(selfRelation.fields.find(field => field.name === 'visibility_direction')).toMatchObject({
+            hidden: true, enum: ['first_to_second'],
         });
     });
 

@@ -46,6 +46,7 @@ const ENUMS = {
     ],
     characterRelationship: [
         'friend',
+        'rival',
         'enemy',
         'associate',
         'mentor',

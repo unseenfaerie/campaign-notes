@@ -14,12 +14,14 @@ const props = withDefaults(
     required?: boolean
     disabled?: boolean
     placeholder?: string
+    openOnClick?: boolean
   }>(),
   {
     id: undefined,
     required: false,
     disabled: false,
     placeholder: 'Select one',
+    openOnClick: false,
   }
 )
 
@@ -30,11 +32,12 @@ const emit = defineEmits<{
 const root = ref<HTMLElement | null>(null)
 const isOpen = ref(false)
 const searchText = ref('')
+const showAllOptions = ref(false)
 const emptyOptionSelected = ref(false)
 
 const selectedOption = computed(() => props.options.find((option) => option.value === props.modelValue))
 const filteredOptions = computed(() => {
-  const query = searchText.value.trim().toLocaleLowerCase()
+  const query = showAllOptions.value ? '' : searchText.value.trim().toLocaleLowerCase()
   if (!query) {
     return props.options
   }
@@ -53,15 +56,23 @@ function syncSearchText() {
 
 function openOptions() {
   if (!props.disabled) {
+    if (!isOpen.value && props.openOnClick) showAllOptions.value = true
     isOpen.value = true
   }
 }
 
+function searchOptions() {
+  openOptions()
+  showAllOptions.value = false
+}
+
 function toggleOptions() {
   if (!props.disabled) {
-    isOpen.value = !isOpen.value
-    if (!isOpen.value) {
+    if (isOpen.value) {
+      isOpen.value = false
       syncSearchText()
+    } else {
+      openOptions()
     }
   }
 }
@@ -109,7 +120,8 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', handleDocument
       :disabled="disabled"
       :placeholder="placeholder"
       @focus="openOptions"
-      @input="openOptions"
+      @click="openOnClick && openOptions()"
+      @input="searchOptions"
       @keydown.escape="isOpen = false; syncSearchText()"
     />
     <button

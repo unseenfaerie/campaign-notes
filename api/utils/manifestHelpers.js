@@ -3,8 +3,10 @@ const { validateIdFormat } = require('./idUtils');
 const { isValidLoreDate } = require('../../common/dateSystem');
 const { isValidRealDate } = require('../../common/realDate');
 const { getEnumValues } = require('../../common/enums');
+const { validateTimeline } = require('../../common/relationTimeline');
 
 function coerceValueByType(type, value, enumValues) {
+    if (type === 'timeline') return validateTimeline(value);
     if (value === undefined || value === null) return value;
 
     if (type === 'loreDate') {
@@ -284,6 +286,7 @@ function buildRelationFormSchemas(manifest = domainManifest) {
                     relationName: relation.relationName,
                     anchorMemberIndex: relation.anchorMemberIndex,
                     kind: relation.relationDef.kind,
+                    timeline: Boolean(relation.relationDef.timeline),
                     relatedEntityRoute: relation.relatedEntityRoute,
                     relatedEntityLabel: relatedEntityDef.ui?.label || relation.relatedEntityName,
                     historyKey: relation.relationDef.historyKey || null,

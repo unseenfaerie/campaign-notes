@@ -1,5 +1,6 @@
 const { getEnumValues } = require('../../common/enums');
 const { coerceValueByType } = require('./manifestHelpers');
+const { isDeepStrictEqual } = require('node:util');
 
 // Serializes an object with keys sorted alphabetically so the same logical target key
 // (e.g. a relation row looked at from either member's perspective) always produces
@@ -53,7 +54,7 @@ function filterProposableChanges(rawChanges, fieldDefsMap) {
 function diffAgainstCurrent(candidateChanges, currentRecord) {
     const diff = {};
     for (const [field, value] of Object.entries(candidateChanges)) {
-        if (currentRecord[field] !== value) {
+        if (!isDeepStrictEqual(currentRecord[field], value)) {
             diff[field] = value;
         }
     }
